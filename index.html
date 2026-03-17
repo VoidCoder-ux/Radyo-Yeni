@@ -582,15 +582,33 @@ const IM={
     },this.opts.resumeDelay);
   },
   _reload(cb){
-    if(!S.cur)return;aud.volume=0.01;aud.src=S.cur.u;aud.load();
-    aud.play().then(()=>{setPlaying(true);S.retries=0;setStatus('live');renderCards();if(cb)cb();}).catch(()=>{setTimeout(()=>{if(S.cur&&S.should){aud.play().then(()=>{setPlaying(true);if(cb)cb();}).catch(()=>{});}},1000);});
+    if(!S.cur)return;
+    // Resume AudioContext first (iOS requires this after interruption)
+    if(this._actx&&this._actx.state==='suspended'){try{this._actx.resume().catch(()=>{});}catch(e){}}
+    aud.volume=0.01;aud.src=S.cur.u;aud.load();
+    const attempt=(n)=>{
+      if(!S.cur||this._uStop)return;
+      aud.play().then(()=>{setPlaying(true);S.retries=0;setStatus('live');renderCards();IOS._startRecovery();if(cb)cb();}).catch(()=>{
+        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop){aud.src=S.cur.u;aud.load();aud.volume=0.01;attempt(n+1);}},1000*(n+1));}
+        else{setStatus('retry');toast('⚠️ Bağlantı yeniden deneniyor...');if(cb)cb();}
+      });
+    };
+    attempt(0);
   },
   initAudioContext(){
     try{this._actx=new(window.AudioContext||window.webkitAudioContext)();
     this._actx.addEventListener('statechange',()=>{
       if(this._actx.state==='suspended'&&!this._actxSuspended){this._actxSuspended=true;this._actxSuspendTime=Date.now();this.interrupt('notif');}
       else if(this._actx.state==='running'&&this._actxSuspended){this._actxSuspended=false;const dur=Date.now()-(this._actxSuspendTime||0);if(dur>=2500&&this._type==='notif'){this._type='call';g('itrTxt').textContent='📞 Arama bitti';}this.resume();}
+      else if(this._actx.state==='interrupted'){
+        // iOS specific: audio session interrupted by system
+        this._actxSuspended=true;this._actxSuspendTime=Date.now();
+        if(!this._interrupted)this.interrupt('call');
+      }
     });}catch(e){}
+  },
+  resumeAudioContext(){
+    if(this._actx&&this._actx.state!=='running'){try{this._actx.resume().catch(()=>{});}catch(e){}}
   },
   setUStop(v){this._uStop=v;if(v){this._interrupted=false;this._type=null;clearTimeout(this._resumeTimer);this._hideBanner();}},
   init(a){
@@ -608,10 +626,10 @@ const IOS={
     this.a=a;
     a.addEventListener('stalled',()=>{if(S.cur&&S.should&&!IM._uStop)setTimeout(()=>{if(S.cur&&S.should&&(a.paused||a.readyState<2))this.reload();},4000);});
     a.addEventListener('ended',()=>{if(S.cur&&S.should&&!IM._uStop)this.reload();});
-    window.addEventListener('pageshow',e=>{if(e.persisted&&S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(600);});
-    document.addEventListener('visibilitychange',()=>{if(document.hidden){IM.interrupt('bg');this._stopRecovery();}else{if(IM._interrupted&&IM._type==='bg')IM.resume();else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(800);this._startRecovery();}});
+    window.addEventListener('pageshow',e=>{if(e.persisted){IM.resumeAudioContext();if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(600);}});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){IM.interrupt('bg');this._stopRecovery();}else{IM.resumeAudioContext();if(IM._interrupted&&IM._type==='bg')IM.resume();else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(800);this._startRecovery();}});
     window.addEventListener('blur',()=>{if(!document.hidden)IM.interrupt('notif');});
-    window.addEventListener('focus',()=>{if(IM._interrupted&&IM._type==='notif')IM.resume();else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(600);});
+    window.addEventListener('focus',()=>{IM.resumeAudioContext();if(IM._interrupted&&IM._type==='notif')IM.resume();else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(600);});
     a.addEventListener('pause',()=>{if(!IM._uStop&&S.should&&!IM._interrupted){setTimeout(()=>{if(a.paused&&S.should&&!IM._uStop&&!IM._interrupted)IM.interrupt('call');},300);}});
     if(navigator.mediaDevices?.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(1200);});
   },
@@ -672,7 +690,7 @@ function play(id){
 }
 function togglePlay(){if(!S.cur)return;S.playing?userPause():userResume();}
 function userPause(){IM.setUStop(true);S.should=false;aud.pause();S.playing=false;updatePlayUI();g('ambient').classList.remove('playing');g('mplay').classList.remove('playing');g('fplay').classList.remove('playing');IOS._stopRecovery();}
-function userResume(){IM.setUStop(false);S.should=true;aud.play().catch(()=>{aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().catch(()=>toast('⚠️ Tekrar deneyin'));});}
+function userResume(){IM.setUStop(false);S.should=true;if(IM._actx&&IM._actx.state==='suspended'){try{IM._actx.resume().catch(()=>{});}catch(e){}}aud.play().then(()=>{IOS._startRecovery();}).catch(()=>{aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>{IOS._startRecovery();}).catch(()=>toast('⚠️ Tekrar deneyin'));});}
 function prevSt(){if(!S.cur||ch.length<2)return;const i=ch.findIndex(x=>x.id===S.cur.id);play((i>0?ch[i-1]:ch[ch.length-1]).id);}
 function nextSt(){if(!S.cur||ch.length<2)return;const i=ch.findIndex(x=>x.id===S.cur.id);play((i<ch.length-1?ch[i+1]:ch[0]).id);}
 function setVol(v){const vol=v/100;aud.volume=vol;IM.setBaseVol(vol);g('volM').value=v;g('volF').value=v;}
@@ -842,7 +860,7 @@ function doManualAdd(){
 
 /* ── SEARCH API ── */
 const _sr=new Map();
-function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.delete(first);}_srSet(k,v);}
+function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.delete(first);}_sr.set(k,v);}
 async function apiCall(ep){
   const reqs=APIS.map(h=>fetch(`https://${h}.api.radio-browser.info/json/${ep}`,{signal:AbortSignal.timeout(6000)}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}));
   try{return await Promise.any(reqs);}catch{return null;}
@@ -1008,6 +1026,10 @@ function init(){
 
   syncIntUI();
   updateSearchVisibility();
+
+  // Network status detection
+  window.addEventListener('online',()=>{toast('✅ İnternet bağlantısı kuruldu');if(S.cur&&S.should&&aud.paused&&!IM._uStop)IOS.resume(1000);});
+  window.addEventListener('offline',()=>{toast('⚠️ İnternet bağlantısı kesildi');});
 
   // Initial page
   goPage('f');
