@@ -128,7 +128,7 @@ background-repeat:repeat;background-size:128px 128px}
 .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.02));pointer-events:none}
 .card.on{background:linear-gradient(135deg,rgba(124,108,240,.08),rgba(255,107,157,.04));border-color:rgba(124,108,240,.15)}
 .card.on::after{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,var(--ac),var(--ac3))}
-.cico{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.2),0 0 0 1px rgba(255,255,255,.05) inset;transition:transform .3s var(--transition)}
+.cico{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.2),0 0 0 1px rgba(255,255,255,.05) inset;transition:transform .3s var(--transition)}
 .card:active .cico{transform:scale(.9)}
 .cinf{flex:1;min-width:0}
 .cnam{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
@@ -150,7 +150,7 @@ background-repeat:repeat;background-size:128px 128px}
 .mplay.s.playing .mp-progress-bar{animation:mpProgress 30s linear infinite}
 @keyframes mpProgress{0%{width:0%}100%{width:100%}}
 .mplay-r{display:flex;align-items:center;gap:11px;padding:11px 14px;pointer-events:none}
-.mplay-i{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.3),0 0 0 1px rgba(255,255,255,.05) inset;transition:transform .5s var(--transition)}
+.mplay-i{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.3),0 0 0 1px rgba(255,255,255,.05) inset;transition:transform .5s var(--transition)}
 .mplay.s.playing .mplay-i{animation:mpSpin 20s linear infinite;will-change:transform}
 @keyframes mpSpin{from{transform:rotate3d(0,0,1,0deg)}to{transform:rotate3d(0,0,1,360deg)}}
 .mplay-f{flex:1;min-width:0}
@@ -181,7 +181,7 @@ background-repeat:repeat;background-size:128px 128px}
 .fp-x:active{transform:scale(.88);background:var(--cd3)}
 .fp-t{font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1.8px}
 .fp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:10px 28px calc(var(--sb) + 20px);position:relative;z-index:1}
-.fp-art{width:clamp(150px,44vw,200px);height:clamp(150px,44vw,200px);border-radius:clamp(32px,9vw,44px);display:flex;align-items:center;justify-content:center;font-size:clamp(52px,16vw,72px);margin-bottom:24px;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06) inset;flex-shrink:0;position:relative;transition:transform .5s var(--transition)}
+.fp-art{width:clamp(150px,44vw,200px);height:clamp(150px,44vw,200px);border-radius:clamp(32px,9vw,44px);display:flex;align-items:center;justify-content:center;font-size:clamp(52px,16vw,72px);margin-bottom:24px;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06) inset;flex-shrink:0;position:relative;overflow:hidden;transition:transform .5s var(--transition)}
 .fp-art::after{content:'';position:absolute;inset:-3px;border-radius:inherit;background:conic-gradient(from 0deg,var(--ac),var(--ac3),var(--ac4),var(--ac));opacity:0;transition:opacity .5s;z-index:-1}
 .fplayer.playing .fp-art{animation:fpArtFloat 6s ease-in-out infinite;will-change:transform}
 .fplayer.playing .fp-art::after{opacity:.25}
@@ -298,7 +298,7 @@ background-repeat:repeat;background-size:128px 128px}
 .set-t{font-family:var(--font-display);font-size:9px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:2px;padding:12px 0 8px}
 .set-row{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--cd);border:1px solid var(--bd);border-radius:var(--radius);margin-bottom:6px;cursor:pointer;transition:all .2s}
 .set-row:active{background:var(--cd2);transform:scale(.98)}
-.set-ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.set-ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;overflow:hidden}
 .set-lb{flex:1}
 .set-lb h4{font-size:12.5px;font-weight:700;letter-spacing:-.1px}
 .set-lb p{font-size:9px;color:var(--tx3);margin-top:2px}
@@ -447,7 +447,7 @@ background-repeat:repeat;background-size:128px 128px}
       </div>
       <div class="fp-int-body" id="fpIntBody">
         <div class="int-row"><div class="int-lbl">Telefon aramasında durdur<small>Arama sonrası otomatik devam eder</small></div><label class="sw"><input type="checkbox" id="swCall" checked><span class="sw-sl"></span></label></div>
-        <div class="int-row"><div class="int-lbl">Bildirimde sesi kıs<small>Kısa kesintide %30'a düşür</small></div><label class="sw"><input type="checkbox" id="swNotif" checked><span class="sw-sl"></span></label></div>
+        <div class="int-row"><div class="int-lbl">Bildirimde sesi kıs<small>Kısa kesintide sesi düşür</small></div><label class="sw"><input type="checkbox" id="swNotif" checked><span class="sw-sl"></span></label></div>
         <div class="int-row"><div class="int-lbl">Arka plana alınınca kıs<small>Uygulama arka planda iken</small></div><label class="sw"><input type="checkbox" id="swBg" checked><span class="sw-sl"></span></label></div>
         <div class="int-row"><div class="int-lbl">Devam gecikme süresi<small>Kesinti sonrası bekleme</small></div><input type="range" class="rng" id="resumeDelay" min="0" max="3000" step="250" value="800" style="width:90px;flex-shrink:0"><span class="int-val" id="resumeDelayVal">0.8s</span></div>
         <div class="int-row"><div class="int-lbl">Bildirim ses seviyesi<small>Kesinti anındaki ses (0–50%)</small></div><input type="range" class="rng" id="notifVol" min="0" max="50" step="5" value="20" style="width:90px;flex-shrink:0"><span class="int-val" id="notifVolVal">20%</span></div>
@@ -663,7 +663,7 @@ function setupMS(){
 function updateMeta(s){
   if(!('mediaSession' in navigator))return;
   const artwork=[];
-  if(s.img){artwork.push({src:s.img,sizes:'256x256',type:'image/png'});}
+  if(s.img){artwork.push({src:s.img,sizes:'256x256'});}
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="${esc(s.c||'#7c6cf0')}"/><text x="256" y="340" font-size="240" text-anchor="middle">${esc(s.e)}</text></svg>`;
   artwork.push({src:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),sizes:'512x512',type:'image/svg+xml'});
   try{navigator.mediaSession.metadata=new MediaMetadata({title:s.n,artist:'Canlı Yayın',album:s.g||'TürkRadyo',artwork});}catch{}
@@ -688,7 +688,7 @@ function setStatus(t){const el=g('mStat');if(t==='live')el.innerHTML='<span clas
 /* ── PLAY ── */
 function play(id){
   const s=ch.find(x=>x.id===id);if(!s)return;
-  S.cur=s;S.retries=0;IM._uStop=false;S.should=true;IM.setUStop(false);
+  S.cur=s;S.retries=0;S.should=true;IM.setUStop(false);
   g('mplay').classList.add('s');g('scr').classList.add('mp-on');
   // Mini player icon
   g('mIco').innerHTML='';g('mIco').style.background=s.c||'var(--ac)';
@@ -812,7 +812,7 @@ function initFavDrag(container){
     dataSave();renderFavs();toast('✅ Sıralama güncellendi');
   });
   // Touch support for mobile
-  let touchDragId=null,touchClone=null,touchStartY=0,touchMoved=false;
+  let touchDragId=null,touchStartY=0,touchMoved=false;
   container.addEventListener('touchstart',e=>{
     const handle=e.target.closest('.drag-handle');if(!handle)return;
     const card=handle.closest('.card');if(!card)return;
@@ -849,7 +849,9 @@ function renderRecent(){
   valid.forEach((r,i)=>{
     const s=chMap.get(r.id);
     const div=document.createElement('div');div.className='card';div.dataset.action='play';div.dataset.id=s.id;
-    const ico=document.createElement('div');ico.className='cico';ico.style.background=s.c||'var(--ac)';ico.textContent=s.e;
+    const ico=document.createElement('div');ico.className='cico';ico.style.background=s.c||'var(--ac)';
+    if(s.img){const im=document.createElement('img');im.src=s.img;im.alt='';im.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;';im.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ico.appendChild(im);}
+    else{ico.textContent=s.e;}
     const inf=document.createElement('div');inf.className='cinf';
     const nm=document.createElement('div');nm.className='cnam';nm.textContent=s.n;
     const gn=document.createElement('div');gn.className='cgen';gn.textContent=relTime(r.t);
@@ -863,7 +865,9 @@ function renderSettings(){
   const f=document.createDocumentFragment();
   ch.forEach(s=>{
     const r=document.createElement('div');r.className='set-row';r.style.cursor='default';
-    const ic=document.createElement('div');ic.className='set-ic';ic.style.background=s.c;ic.textContent=s.e;
+    const ic=document.createElement('div');ic.className='set-ic';ic.style.background=s.c;
+    if(s.img){const im=document.createElement('img');im.src=s.img;im.alt='';im.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;';im.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(im);}
+    else{ic.textContent=s.e;}
     const lb=document.createElement('div');lb.className='set-lb';
     const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=s.g||'Radyo';
     lb.appendChild(h4);lb.appendChild(p);
@@ -909,7 +913,7 @@ function closeFP(){g('fplay').classList.remove('s');}
 let _slT=null;
 function setSleep(min){
   if(_slT){clearInterval(_slT);_slT=null;}const lbl=g('sleepLbl');
-  if(min==0){lbl.classList.remove('s');return;}
+  if(min===0){lbl.classList.remove('s');return;}
   const end=Date.now()+min*60000;lbl.classList.add('s');
   _slT=setInterval(()=>{const l=end-Date.now();if(l<=0){userPause();clearInterval(_slT);_slT=null;lbl.classList.remove('s');g('sleepSel').value='0';toast('😴 Durdu');return;}lbl.textContent=`⏰ ${Math.floor(l/60000)}:${Math.floor((l%60000)/1000).toString().padStart(2,'0')}`;},1000);
   toast(`⏰ ${min} dk sonra durur`);
@@ -997,7 +1001,7 @@ function pickSR(cacheKey,i,container,origKey){
 /* ── EXPORT/IMPORT/RESET ── */
 function doExport(){
   const blob=new Blob([JSON.stringify({version:'11.0',ch,fv,rc},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='turkradyo_yedek.json';a.click();URL.revokeObjectURL(url);toast('💾 Yedek indirildi');
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='turkradyo_yedek.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('💾 Yedek indirildi');
 }
 function doImport(e){
   const f=e.target.files[0];if(!f)return;

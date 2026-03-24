@@ -1,5 +1,5 @@
-const CACHE='turkradyo-v10.1';
-const PRECACHE=['/','index.html'];
+const CACHE='turkradyo-v11.0';
+const PRECACHE=['/','index.html','manifest.json','icons/icon.svg'];
 const FONT_CACHE='turkradyo-fonts-v1';
 
 self.addEventListener('install',e=>{
