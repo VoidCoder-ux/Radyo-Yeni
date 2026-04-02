@@ -2,7 +2,7 @@
   "name": "TürkRadyo - Canlı Radyo",
   "short_name": "TürkRadyo",
   "description": "Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#06060b",
@@ -15,13 +15,13 @@
     {
       "name": "Favoriler",
       "short_name": "Favoriler",
-      "url": "/?page=fav",
+      "url": "./?page=fav",
       "icons": [{"src": "icons/icon.svg", "sizes": "96x96"}]
     },
     {
       "name": "Radyo Ekle",
       "short_name": "Ekle",
-      "url": "/?page=add",
+      "url": "./?page=add",
       "icons": [{"src": "icons/icon.svg", "sizes": "96x96"}]
     }
   ],
