@@ -786,34 +786,53 @@ function setupMS(){
   try{navigator.mediaSession.setActionHandler('seekto',null);}catch{}
 }
 let _metaArtCache=new Map();
+function _makeArtwork(s){
+  const cacheKey=s.id+'_'+s.c+'_'+s.e+'_'+s.n;
+  if(_metaArtCache.has(cacheKey))return _metaArtCache.get(cacheKey);
+  try{
+    const sz=512,cvs=document.createElement('canvas');cvs.width=sz;cvs.height=sz;
+    const ctx=cvs.getContext('2d');
+    // Gradient background
+    const grd=ctx.createLinearGradient(0,0,sz,sz);
+    grd.addColorStop(0,s.c||'#7c6cf0');grd.addColorStop(1,darken(s.c||'#7c6cf0'));
+    ctx.fillStyle=grd;ctx.beginPath();ctx.roundRect(0,0,sz,sz,64);ctx.fill();
+    // Subtle inner glow
+    const igrd=ctx.createRadialGradient(sz/2,sz*0.38,0,sz/2,sz*0.38,sz*0.45);
+    igrd.addColorStop(0,'rgba(255,255,255,0.08)');igrd.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=igrd;ctx.fillRect(0,0,sz,sz);
+    // Emoji icon - compact size
+    ctx.font='120px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(s.e,sz/2,sz*0.38);
+    // Station name
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.font='bold 36px -apple-system,system-ui,sans-serif';
+    const name=s.n.length>18?s.n.slice(0,17)+'…':s.n;
+    ctx.fillText(name,sz/2,sz*0.62);
+    // Genre subtitle
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.font='24px -apple-system,system-ui,sans-serif';
+    ctx.fillText(s.g||'Radyo',sz/2,sz*0.72);
+    // Thin bottom accent line
+    ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(sz*0.25,sz*0.80);ctx.lineTo(sz*0.75,sz*0.80);ctx.stroke();
+    const dataUrl=cvs.toDataURL('image/png');
+    _metaArtCache.set(cacheKey,dataUrl);
+    if(_metaArtCache.size>20){const first=_metaArtCache.keys().next().value;_metaArtCache.delete(first);}
+    return dataUrl;
+  }catch{return null;}
+}
 function updateMeta(s){
   if(!('mediaSession' in navigator))return;
   const artwork=[];
   if(s.img){
-    // Use multiple sizes for iOS lock screen
+    // Station logo - primary artwork for lock screen
     artwork.push({src:s.img,sizes:'96x96',type:'image/png'});
-    artwork.push({src:s.img,sizes:'128x128',type:'image/png'});
     artwork.push({src:s.img,sizes:'192x192',type:'image/png'});
-    artwork.push({src:s.img,sizes:'256x256',type:'image/png'});
     artwork.push({src:s.img,sizes:'512x512',type:'image/png'});
   }
-  // Canvas fallback - cache per station to avoid lag
-  const cacheKey=s.id+'_'+s.c+'_'+s.e;
-  if(_metaArtCache.has(cacheKey)){
-    artwork.push({src:_metaArtCache.get(cacheKey),sizes:'512x512',type:'image/png'});
-  }else{
-    try{
-      const cvs=document.createElement('canvas');cvs.width=512;cvs.height=512;
-      const ctx=cvs.getContext('2d');
-      const grd=ctx.createLinearGradient(0,0,512,512);grd.addColorStop(0,s.c||'#7c6cf0');grd.addColorStop(1,darken(s.c||'#7c6cf0'));
-      ctx.fillStyle=grd;ctx.beginPath();ctx.roundRect(0,0,512,512,80);ctx.fill();
-      ctx.font='240px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.e,256,270);
-      const dataUrl=cvs.toDataURL('image/png');
-      _metaArtCache.set(cacheKey,dataUrl);
-      if(_metaArtCache.size>20){const first=_metaArtCache.keys().next().value;_metaArtCache.delete(first);}
-      artwork.push({src:dataUrl,sizes:'512x512',type:'image/png'});
-    }catch{}
-  }
+  // Canvas fallback with station branding
+  const fallback=_makeArtwork(s);
+  if(fallback&&!s.img)artwork.push({src:fallback,sizes:'512x512',type:'image/png'});
   try{
     navigator.mediaSession.metadata=new MediaMetadata({
       title:s.n,
