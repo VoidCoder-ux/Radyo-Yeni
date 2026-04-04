@@ -459,6 +459,7 @@ background-repeat:repeat;background-size:128px 128px}
         <div class="set-row" id="btnExport"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">💾</div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div></div>
         <div class="set-row" id="btnImport"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📂</div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div></div>
         <input type="file" id="fileIn" accept=".json" style="display:none">
+        <div class="set-row" id="btnFetchLogos"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">🖼️</div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div></div>
         <div class="set-row" id="btnReset"><div class="set-ic" style="background:rgba(255,92,108,.08);color:#ff5c6c">🗑️</div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div></div>
         <div class="set-t">Kanallarım (<span id="chCount">0</span>)</div>
         <div id="chList"></div>
@@ -1100,7 +1101,10 @@ function setSleep(min){
 function addCh(name,url,genre,emoji,imgUrl,bitrate){
   if(!isUrl(url)){toast('Geçersiz URL','err');return false;}if(ch.find(x=>x.u===url)){toast('Bu kanal zaten ekli','warn');return false;}
   ch.push({id:mkId(),n:name.slice(0,MAX_N),g:(genre||'Diğer').slice(0,MAX_G),u:url,e:(emoji||'📻').slice(0,4),c:COLORS[Math.floor(Math.random()*COLORS.length)],img:(imgUrl&&isUrl(imgUrl))?imgUrl:'',br:bitrate||0});
-  dataSave();renderCards();renderSettings();updateSearchVisibility();updateNavBadge();toast(name+' eklendi','ok');return true;
+  dataSave();renderCards();renderSettings();updateSearchVisibility();updateNavBadge();toast(name+' eklendi','ok');
+  // Auto-fetch logo if not provided
+  if(!imgUrl||!isUrl(imgUrl))setTimeout(autoFetchLogos,500);
+  return true;
 }
 async function delCh(id){
   const s=ch.find(x=>x.id===id);
@@ -1173,6 +1177,62 @@ function pickSR(cacheKey,i,container,origKey){
   if(t.includes('pop'))genre='Pop';else if(t.includes('rock'))genre='Rock';else if(/jazz/.test(t))genre='Caz';else if(/news|haber|talk/.test(t))genre='Haber';else if(/türk|turkish|folk/.test(t))genre='THM';else if(/islam|quran|dini/.test(t))genre='Dini';else if(/electro|dance|edm|house|techno/.test(t))genre='Elektronik';else if(/classic/.test(t))genre='TSM';else if(/sport/.test(t))genre='Spor';else if(/child|kid|çocuk/.test(t))genre='Çocuk';
   const favicon=(x.favicon&&isUrl(x.favicon))?x.favicon:'';
   if(addCh(x.name,url,genre,'📻',favicon,x.bitrate||0)){const fresh=_sr.get(origKey);if(fresh)renderSR(fresh,container,origKey);}
+}
+
+/* ── AUTO FETCH LOGOS ── */
+let _logoFetching=false;
+async function autoFetchLogos(){
+  if(_logoFetching)return;
+  const missing=ch.filter(s=>!s.img);
+  if(!missing.length)return;
+  _logoFetching=true;
+  let updated=0;
+  // Batch: search by URL for each station without logo
+  for(const s of missing){
+    try{
+      // Try exact URL match first
+      let d=await apiCall(`stations/byurl?url=${encodeURIComponent(s.u)}`);
+      if(!d?.length){
+        // Fallback: search by name
+        d=await apiCall(`stations/search?name=${encodeURIComponent(s.n)}&limit=5&hidebroken=true&order=clickcount&reverse=true`);
+      }
+      if(d?.length){
+        // Find best match with a valid favicon
+        const match=d.find(x=>x.favicon&&isUrl(x.favicon));
+        if(match){
+          s.img=match.favicon;
+          updated++;
+        }
+      }
+    }catch{}
+    // Small delay to avoid hammering the API
+    await new Promise(r=>setTimeout(r,300));
+  }
+  _logoFetching=false;
+  if(updated>0){
+    dataSave();renderCards();
+    if(S.cur){
+      const cur=ch.find(x=>x.id===S.cur.id);
+      if(cur&&cur.img&&!S.cur.img){S.cur=cur;updatePlayerArt();}
+    }
+    toast(`${updated} logo otomatik indirildi`,'ok');
+  }
+}
+function updatePlayerArt(){
+  if(!S.cur)return;
+  const s=S.cur;
+  // Mini player icon
+  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=s.c||'var(--ac)';
+  if(s.img){const mi=document.createElement('img');mi.src=s.img;mi.alt='';mi.loading='lazy';mi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};mIco.appendChild(mi);}
+  else{mIco.textContent=s.e;}
+  // Full player art
+  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'var(--ac)'},${darken(s.c||'#7c6cf0')})`;
+  if(s.img){const fi=document.createElement('img');fi.src=s.img;fi.alt='';fi.loading='lazy';fi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};fpArt.appendChild(fi);}
+  else{fpArt.textContent=s.e;}
+  // MediaSession artwork
+  if('mediaSession' in navigator&&s.img){
+    navigator.mediaSession.metadata=new MediaMetadata({title:s.n,artist:s.g||'Radyo',artwork:[{src:s.img,sizes:'512x512',type:'image/png'}]});
+  }
 }
 
 /* ── EXPORT/IMPORT/RESET ── */
@@ -1263,6 +1323,8 @@ function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
+  // Auto-fetch missing logos after a short delay
+  setTimeout(autoFetchLogos,2500);
 
   // Visualizer bars
   const vis=g('fpVis');
@@ -1348,6 +1410,12 @@ function init(){
   g('btnImport').addEventListener('click',()=>g('fileIn').click());
   g('fileIn').addEventListener('change',doImport);
   g('btnReset').addEventListener('click',doReset);
+  g('btnFetchLogos').addEventListener('click',()=>{
+    const missing=ch.filter(s=>!s.img).length;
+    if(!missing){toast('Tüm logolar mevcut','ok');return;}
+    if(_logoFetching){toast('Logolar zaten indiriliyor...','warn');return;}
+    toast(`${missing} logo aranıyor...`);autoFetchLogos();
+  });
 
   /* nav */
   document.querySelectorAll('.bnav button[data-pg]').forEach(btn=>{btn.addEventListener('click',()=>goPage(btn.dataset.pg));});
