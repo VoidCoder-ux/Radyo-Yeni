@@ -542,9 +542,8 @@ background-repeat:repeat;background-size:128px 128px}
         <span class="arr">▼</span>
       </div>
       <div class="fp-int-body" id="fpIntBody">
-        <div class="int-row"><div class="int-lbl">Telefon aramasında durdur<small>Arama sonrası otomatik devam eder</small></div><label class="sw"><input type="checkbox" id="swCall" checked><span class="sw-sl"></span></label></div>
-        <div class="int-row"><div class="int-lbl">Bildirimde sesi kıs<small>Kısa kesintide sesi düşür</small></div><label class="sw"><input type="checkbox" id="swNotif" checked><span class="sw-sl"></span></label></div>
-        <div class="int-row"><div class="int-lbl">Arka plana alınınca kıs<small>Uygulama arka planda iken</small></div><label class="sw"><input type="checkbox" id="swBg" checked><span class="sw-sl"></span></label></div>
+        <div class="int-row"><div class="int-lbl">Telefon aramasında durdur<small>Arama bitince otomatik devam eder</small></div><label class="sw"><input type="checkbox" id="swCall" checked><span class="sw-sl"></span></label></div>
+        <div class="int-row"><div class="int-lbl">Bildirimde sesi kıs<small>Bildirim gelince ses düşer, bitince geri gelir</small></div><label class="sw"><input type="checkbox" id="swNotif" checked><span class="sw-sl"></span></label></div>
         <div class="int-row"><div class="int-lbl">Devam gecikme süresi<small>Kesinti sonrası bekleme</small></div><input type="range" class="rng" id="resumeDelay" min="0" max="3000" step="250" value="800" style="width:90px;flex-shrink:0"><span class="int-val" id="resumeDelayVal">0.8s</span></div>
         <div class="int-row"><div class="int-lbl">Bildirim ses seviyesi<small>Kesinti anındaki ses (0–50%)</small></div><input type="range" class="rng" id="notifVol" min="0" max="50" step="5" value="20" style="width:90px;flex-shrink:0"><span class="int-val" id="notifVolVal">20%</span></div>
       </div>
@@ -663,14 +662,14 @@ function getFiltered(list){
   return out;
 }
 
-/* ═══ INTERRUPT MANAGER ═══ */
+/* ═══ INTERRUPT MANAGER v2 ═══ */
 const IM={
-  opts:{call:true,notif:true,bg:true,resumeDelay:800,notifVol:20},
-  _baseVol:0.8,_curVol:0.8,_type:null,_interruptStart:0,_interrupted:false,_resumeTimer:null,_fadeTimer:null,_uStop:false,_actxSuspended:false,_actx:null,
+  opts:{call:true,notif:true,bg:false,resumeDelay:800,notifVol:20},
+  _baseVol:0.8,_curVol:0.8,_type:null,_interrupted:false,_resumeTimer:null,_fadeTimer:null,_notifAutoTimer:null,_uStop:false,_actx:null,_actxState:null,
 
   _showBanner(type,extraTxt){
     const el=g('itr');el.className='itr';
-    const map={call:{cls:'type-call',txt:'📞 Telefon araması'},notif:{cls:'type-notif',txt:'🔔 Bildirim'},bg:{cls:'type-bg',txt:'📱 Arka plan'},resume:{cls:'type-resume',txt:'▶ Devam ediliyor...'}};
+    const map={call:{cls:'type-call',txt:'📞 Telefon araması'},notif:{cls:'type-notif',txt:'🔔 Bildirim'},resume:{cls:'type-resume',txt:'▶ Devam ediliyor...'}};
     const info=map[type]||map.resume;el.classList.add(info.cls);g('itrTxt').textContent=info.txt+(extraTxt?' '+extraTxt:'');g('itrVol').textContent='';el.classList.add('s');
   },
   _hideBanner(){const el=g('itr');el.classList.remove('s');setTimeout(()=>{el.className='itr';},500);},
@@ -689,23 +688,70 @@ const IM={
   _setVol(v){this._curVol=v;if(aud&&!aud.paused)aud.volume=v;},
   setBaseVol(v){this._baseVol=v;if(!this._interrupted)this._curVol=v;},
 
-  interrupt(type){
-    if(this._uStop||this._interrupted)return;if(!S.cur||!S.playing)return;
-    this._interrupted=true;this._type=type;this._interruptStart=Date.now();
-    if(type==='call'&&this.opts.call){this._fadeOut(0,200);setTimeout(()=>{if(aud&&!aud.paused){aud.pause();S.playing=false;updatePlayUI();}},250);this._showBanner('call');}
-    else if(type==='notif'&&this.opts.notif){const tv=this.opts.notifVol/100;this._fadeOut(tv,150);this._showBanner('notif',`(${this.opts.notifVol}%)`);g('itrVol').textContent=`🔉 ${this.opts.notifVol}%`;}
-    else if(type==='bg'&&this.opts.bg){const tv=Math.max(0.1,this._baseVol*0.45);this._fadeOut(tv,400);this._showBanner('bg');}
-    else{this._interrupted=false;this._type=null;}
+  /* ── Bildirim: sesi kıs, durma ── */
+  interruptNotif(){
+    if(this._uStop||!S.cur||!S.playing)return;
+    if(this._interrupted&&this._type==='call')return; // Arama varsa bildirim yoksay
+    if(!this.opts.notif)return;
+    clearTimeout(this._notifAutoTimer);
+    const wasInterrupted=this._interrupted;
+    this._interrupted=true;this._type='notif';
+    const tv=this.opts.notifVol/100;
+    if(!wasInterrupted){
+      this._fadeOut(tv,150);
+      this._showBanner('notif',`(${this.opts.notifVol}%)`);
+      g('itrVol').textContent=`🔉 ${this.opts.notifVol}%`;
+    }
+    // Bildirim 6sn içinde bitmezse otomatik geri getir
+    this._notifAutoTimer=setTimeout(()=>{if(this._interrupted&&this._type==='notif')this.resumeFromNotif();},6000);
   },
-  resume(){
-    if(!this._interrupted)return;const type=this._type;this._interrupted=false;this._type=null;
-    if(!S.cur||this._uStop)return;clearTimeout(this._resumeTimer);
+  resumeFromNotif(){
+    if(!this._interrupted||this._type!=='notif')return;
+    clearTimeout(this._notifAutoTimer);
+    this._interrupted=false;this._type=null;
+    if(!S.cur||this._uStop)return;
+    this._showBanner('resume');
+    // Ses devam ediyorsa fade in, durmuşsa reload
+    if(aud&&!aud.paused){
+      this._fadeIn(this._curVol,500,()=>this._hideBanner());
+    }else if(S.should){
+      this._reload(()=>{this._fadeIn(0.05,600,()=>this._hideBanner());});
+    }else{this._hideBanner();}
+  },
+
+  /* ── Arama: sesi durdur ── */
+  interruptCall(){
+    if(this._uStop||!S.cur||(!S.playing&&!S.should))return;
+    if(!this.opts.call)return;
+    clearTimeout(this._notifAutoTimer);
+    this._interrupted=true;this._type='call';
+    this._fadeOut(0,200);
+    setTimeout(()=>{
+      if(aud&&!aud.paused){aud.pause();S.playing=false;updatePlayUI();}
+    },250);
+    this._showBanner('call');
+  },
+  resumeFromCall(){
+    if(!this._interrupted||this._type!=='call')return;
+    this._interrupted=false;this._type=null;
+    if(!S.cur||this._uStop)return;
+    clearTimeout(this._resumeTimer);
     this._resumeTimer=setTimeout(()=>{
-      if(!S.cur||this._uStop)return;this._showBanner('resume');const sv=this._curVol;
-      if(type==='call'){this._reload(()=>{this._fadeIn(0.05,700,()=>this._hideBanner());});}
-      else{if(aud&&aud.paused&&S.should){this._reload(()=>{this._fadeIn(0.05,700,()=>this._hideBanner());});}else{this._fadeIn(sv,600,()=>this._hideBanner());}}
+      if(!S.cur||this._uStop)return;
+      this._showBanner('resume');
+      S.should=true;
+      this._reload(()=>{this._fadeIn(0.05,800,()=>this._hideBanner());});
     },this.opts.resumeDelay);
   },
+
+  /* ── Genel resume (eski API uyumluluğu) ── */
+  resume(){
+    if(!this._interrupted)return;
+    if(this._type==='call')this.resumeFromCall();
+    else if(this._type==='notif')this.resumeFromNotif();
+    else{this._interrupted=false;this._type=null;}
+  },
+
   _reload(cb){
     if(!S.cur)return;
     if(this._actx&&this._actx.state==='suspended'){try{this._actx.resume().catch(()=>{});}catch(e){}}
@@ -722,32 +768,36 @@ const IM={
   initAudioContext(){
     try{this._actx=new(window.AudioContext||window.webkitAudioContext)();
     this._actx.addEventListener('statechange',()=>{
-      if(this._actx.state==='interrupted'){
-        // Real iOS audio interruption (phone call, Siri, etc.)
-        this._actxSuspended=true;this._actxSuspendTime=Date.now();
-        if(!this._interrupted)this.interrupt('call');
+      const st=this._actx.state;
+      if(st==='interrupted'){
+        // iOS gerçek kesinti: telefon araması, Siri, alarm
+        this._actxState='interrupted';
+        if(!this._interrupted||this._type==='notif')this.interruptCall();
       }
-      else if(this._actx.state==='suspended'&&!this._actxSuspended){
-        // Only interrupt if not just screen lock
-        this._actxSuspended=true;this._actxSuspendTime=Date.now();
-        if(!document.hidden)this.interrupt('notif');
+      else if(st==='suspended'&&this._actxState!=='suspended'){
+        this._actxState='suspended';
+        // Ekran kilitliyse müdahale etme, sadece bildirimse kıs
+        if(!document.hidden&&!this._interrupted)this.interruptNotif();
       }
-      else if(this._actx.state==='running'&&this._actxSuspended){
-        this._actxSuspended=false;
-        const dur=Date.now()-(this._actxSuspendTime||0);
-        if(dur>=2500&&this._type==='notif'){this._type='call';g('itrTxt').textContent='📞 Arama bitti';}
-        this.resume();
+      else if(st==='running'&&this._actxState){
+        const prevState=this._actxState;
+        this._actxState=null;
+        if(this._interrupted){
+          if(prevState==='interrupted')this.resumeFromCall();
+          else this.resumeFromNotif();
+        }
       }
     });}catch(e){}
   },
   resumeAudioContext(){
     if(this._actx&&this._actx.state!=='running'){try{this._actx.resume().catch(()=>{});}catch(e){}}
   },
-  setUStop(v){this._uStop=v;if(v){this._interrupted=false;this._type=null;clearTimeout(this._resumeTimer);this._hideBanner();}},
+  setUStop(v){this._uStop=v;if(v){this._interrupted=false;this._type=null;clearTimeout(this._resumeTimer);clearTimeout(this._notifAutoTimer);this._hideBanner();}},
   init(a){
     this.aud=a;
-    a.addEventListener('webkitInterruptBegin',()=>{if(!this._uStop&&(S.playing||S.should))this.interrupt('call');});
-    a.addEventListener('webkitInterruptEnd',()=>{if(this._interrupted)this.resume();});
+    // iOS Safari eski API
+    a.addEventListener('webkitInterruptBegin',()=>{if(!this._uStop&&(S.playing||S.should))this.interruptCall();});
+    a.addEventListener('webkitInterruptEnd',()=>{if(this._interrupted&&this._type==='call')this.resumeFromCall();});
     this.initAudioContext();
   }
 };
@@ -757,18 +807,44 @@ const IOS={
   _rt:null,_rel:false,_recoveryTimer:null,
   init(a){
     this.a=a;
-    a.addEventListener('stalled',()=>{if(S.cur&&S.should&&!IM._uStop)setTimeout(()=>{if(S.cur&&S.should&&(a.paused||a.readyState<2))this.reload();},4000);});
+    a.addEventListener('stalled',()=>{if(S.cur&&S.should&&!IM._uStop&&!IM._interrupted)setTimeout(()=>{if(S.cur&&S.should&&(a.paused||a.readyState<2)&&!IM._interrupted)this.reload();},4000);});
     a.addEventListener('ended',()=>{if(S.cur&&S.should&&!IM._uStop)this.reload();});
-    window.addEventListener('pageshow',e=>{if(e.persisted){IM.resumeAudioContext();if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(600);}});
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden){IM.resumeAudioContext();if(IM._interrupted&&IM._type==='bg')IM.resume();else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(800);this._startRecovery();if(S.cur&&S.playing&&'mediaSession' in navigator)updateMeta(S.cur);}else{this._stopRecovery();}});
-    window.addEventListener('blur',()=>{if(!document.hidden&&document.hasFocus&&!document.hasFocus())IM.interrupt('notif');});
-    window.addEventListener('focus',()=>{IM.resumeAudioContext();if(IM._interrupted&&IM._type==='notif')IM.resume();else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(600);});
-    a.addEventListener('pause',()=>{if(!IM._uStop&&S.should&&!IM._interrupted&&!document.hidden){setTimeout(()=>{if(a.paused&&S.should&&!IM._uStop&&!IM._interrupted&&!document.hidden)IM.interrupt('call');},500);}});
-    if(navigator.mediaDevices?.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(1200);});
+    window.addEventListener('pageshow',e=>{if(e.persisted){IM.resumeAudioContext();if(S.cur&&S.should&&a.paused&&!IM._uStop&&!IM._interrupted)this.resume(600);}});
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden){
+        IM.resumeAudioContext();
+        if(IM._interrupted&&IM._type==='notif')IM.resumeFromNotif();
+        else if(S.cur&&S.should&&a.paused&&!IM._uStop&&!IM._interrupted)this.resume(800);
+        this._startRecovery();
+        if(S.cur&&S.playing&&'mediaSession' in navigator)updateMeta(S.cur);
+      }else{
+        this._stopRecovery();
+        // Ekran kilitlendiğinde sese dokunma - arka planda çalmaya devam etsin
+      }
+    });
+    window.addEventListener('focus',()=>{
+      IM.resumeAudioContext();
+      if(IM._interrupted&&IM._type==='notif')IM.resumeFromNotif();
+      else if(S.cur&&S.should&&a.paused&&!IM._uStop&&!IM._interrupted)this.resume(600);
+    });
+    // Ses sistemi tarafından durdurulursa (arama/Siri) - sadece gerçek kesintilerde
+    a.addEventListener('pause',()=>{
+      if(!IM._uStop&&S.should&&!IM._interrupted&&!document.hidden){
+        // AudioContext interrupted ise zaten interruptCall çalıştı, tekrar tetikleme
+        setTimeout(()=>{
+          if(a.paused&&S.should&&!IM._uStop&&!IM._interrupted&&!document.hidden){
+            if(IM._actx&&IM._actx.state==='interrupted')IM.interruptCall();
+            // suspended veya running ise muhtemelen bildirim
+            else if(IM._actx&&IM._actx.state==='suspended')IM.interruptNotif();
+          }
+        },600);
+      }
+    });
+    if(navigator.mediaDevices?.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(S.cur&&S.should&&a.paused&&!IM._uStop&&!IM._interrupted)this.resume(1200);});
   },
   _startRecovery(){if(this._recoveryTimer)return;this._recoveryTimer=setInterval(()=>{if(S.cur&&S.should&&this.a.paused&&!IM._uStop&&!IM._interrupted&&!this._rel)this.resume(0);},12000);},
   _stopRecovery(){if(this._recoveryTimer){clearInterval(this._recoveryTimer);this._recoveryTimer=null;}},
-  resume(delay){clearTimeout(this._rt);this._rt=setTimeout(()=>{if(!S.cur||IM._uStop||!S.should)return;aud.volume=IM._baseVol;aud.play().then(()=>{setPlaying(true);S.retries=0;setStatus('live');IM._hideBanner();renderCards();}).catch(()=>this.reload());},Math.max(0,delay));},
+  resume(delay){clearTimeout(this._rt);this._rt=setTimeout(()=>{if(!S.cur||IM._uStop||!S.should||IM._interrupted)return;aud.volume=IM._baseVol;aud.play().then(()=>{setPlaying(true);S.retries=0;setStatus('live');IM._hideBanner();renderCards();}).catch(()=>this.reload());},Math.max(0,delay));},
   reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>{setPlaying(true);S.retries=0;this._rel=false;setStatus('live');renderCards();}).catch(()=>{this._rel=false;});}
 };
 
@@ -927,7 +1003,7 @@ function shareStation(){
 /* ── INT OPTS ── */
 function loadIntOpts(){const saved=lsLoad(LS.INT,null);if(saved&&typeof saved==='object'){if(typeof saved.call==='boolean')IM.opts.call=saved.call;if(typeof saved.notif==='boolean')IM.opts.notif=saved.notif;if(typeof saved.bg==='boolean')IM.opts.bg=saved.bg;if(typeof saved.resumeDelay==='number')IM.opts.resumeDelay=saved.resumeDelay;if(typeof saved.notifVol==='number')IM.opts.notifVol=saved.notifVol;}}
 function saveIntOpts(){lsSave(LS.INT,IM.opts);}
-function syncIntUI(){g('swCall').checked=IM.opts.call;g('swNotif').checked=IM.opts.notif;g('swBg').checked=IM.opts.bg;g('resumeDelay').value=IM.opts.resumeDelay;g('resumeDelayVal').textContent=(IM.opts.resumeDelay/1000).toFixed(2).replace(/\.?0+$/,'')+'s';g('notifVol').value=IM.opts.notifVol;g('notifVolVal').textContent=IM.opts.notifVol+'%';}
+function syncIntUI(){g('swCall').checked=IM.opts.call;g('swNotif').checked=IM.opts.notif;g('resumeDelay').value=IM.opts.resumeDelay;g('resumeDelayVal').textContent=(IM.opts.resumeDelay/1000).toFixed(2).replace(/\.?0+$/,'')+'s';g('notifVol').value=IM.opts.notifVol;g('notifVolVal').textContent=IM.opts.notifVol+'%';}
 
 /* ── FAV & HIST ── */
 function toggleFav(id){const i=fv.indexOf(id);if(i>=0){fv.splice(i,1);toast('Favoriden çıkarıldı');}else{fv.push(id);toast('Favorilere eklendi','ok');}dataSave();renderCards();updateFavBtn();updateNavBadge();}
@@ -1451,7 +1527,6 @@ function init(){
   g('fpIntHdr').addEventListener('click',()=>{g('fpIntBody').classList.toggle('open');g('fpIntHdr').classList.toggle('open');});
   g('swCall').addEventListener('change',e=>{IM.opts.call=e.target.checked;saveIntOpts();toast(e.target.checked?'Arama koruması açık':'Arama koruması kapalı');});
   g('swNotif').addEventListener('change',e=>{IM.opts.notif=e.target.checked;saveIntOpts();toast(e.target.checked?'Bildirim ses kısma açık':'Bildirim ses kısma kapalı');});
-  g('swBg').addEventListener('change',e=>{IM.opts.bg=e.target.checked;saveIntOpts();toast(e.target.checked?'Arka plan kısma açık':'Arka plan kısma kapalı');});
   g('resumeDelay').addEventListener('input',e=>{const v=parseInt(e.target.value);IM.opts.resumeDelay=v;g('resumeDelayVal').textContent=(v/1000).toFixed(2).replace(/\.?0+$/,'')+'s';});
   g('resumeDelay').addEventListener('change',()=>saveIntOpts());
   g('notifVol').addEventListener('input',e=>{const v=parseInt(e.target.value);IM.opts.notifVol=v;g('notifVolVal').textContent=v+'%';});
