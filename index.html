@@ -279,6 +279,25 @@ background-repeat:repeat;background-size:128px 128px}
 .sw input:checked+.sw-sl::before{transform:translateX(16px)}
 .int-val{font-size:10px;color:var(--ac2);font-weight:700;min-width:30px;text-align:right}
 
+/* ─── IOS INSTALL MODAL ─── */
+.ios-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:0}
+.ios-ov.s{display:flex}
+.ios-box{background:linear-gradient(170deg,rgba(18,16,36,.98),rgba(10,10,22,.98));border-radius:24px 24px 0 0;padding:0 0 calc(20px + var(--sb)) 0;max-width:500px;width:100%;border:1px solid var(--bd2);border-bottom:none;box-shadow:0 -8px 40px rgba(0,0,0,.5);animation:iosSlide .35s var(--transition) forwards}
+@keyframes iosSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ios-drag{width:36px;height:4px;border-radius:2px;background:var(--bd2);margin:12px auto 20px}
+.ios-box h3{font-family:var(--font-display);font-size:17px;font-weight:800;text-align:center;margin-bottom:4px;padding:0 24px}
+.ios-box .ios-sub{font-size:12px;color:var(--tx3);text-align:center;margin-bottom:22px;padding:0 24px;line-height:1.5}
+.ios-steps{display:flex;flex-direction:column;gap:0;padding:0 20px;margin-bottom:20px}
+.ios-step{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.ios-step:last-child{border-bottom:none}
+.ios-step-num{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac3));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;color:#fff}
+.ios-step-body{flex:1}
+.ios-step-body strong{font-size:13px;font-weight:700;display:block;margin-bottom:2px}
+.ios-step-body span{font-size:11px;color:var(--tx3);line-height:1.4}
+.ios-step-icon{font-size:22px;flex-shrink:0}
+.ios-close-btn{display:block;margin:0 20px;padding:13px;border-radius:var(--radius-sm);border:none;background:var(--cd2);color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);width:calc(100% - 40px);transition:all .15s}
+.ios-close-btn:active{transform:scale(.97)}
+
 /* ─── CONFIRM MODAL ─── */
 .cfm-ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:24px}
 .cfm-ov.s{display:flex}
@@ -415,6 +434,43 @@ background-repeat:repeat;background-size:128px 128px}
   <button class="ib-close" id="installClose">✕</button>
 </div>
 
+<div class="ios-ov" id="iosInstallOv">
+  <div class="ios-box">
+    <div class="ios-drag"></div>
+    <h3>Ana Ekrana Ekle</h3>
+    <p class="ios-sub">TürkRadyo'yu ana ekranına ekle, uygulama gibi aç!</p>
+    <div class="ios-steps">
+      <div class="ios-step">
+        <div class="ios-step-num">1</div>
+        <div class="ios-step-body">
+          <strong>Safari'de Paylaş'a dokun</strong>
+          <span>Ekranın altındaki paylaş simgesine bas</span>
+        </div>
+        <div class="ios-step-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </div>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-num">2</div>
+        <div class="ios-step-body">
+          <strong>"Ana Ekrana Ekle" seçeneğini seç</strong>
+          <span>Menüde aşağı kaydırarak bul ve dokun</span>
+        </div>
+        <div class="ios-step-icon">➕</div>
+      </div>
+      <div class="ios-step">
+        <div class="ios-step-num">3</div>
+        <div class="ios-step-body">
+          <strong>"Ekle" butonuna bas</strong>
+          <span>TürkRadyo ana ekranına uygulama olarak eklenir</span>
+        </div>
+        <div class="ios-step-icon">✅</div>
+      </div>
+    </div>
+    <button class="ios-close-btn" id="iosInstallClose">Anladım</button>
+  </div>
+</div>
+
 <div class="cfm-ov" id="cfmOv">
   <div class="cfm-box">
     <h3 id="cfmTitle"></h3>
@@ -456,6 +512,9 @@ background-repeat:repeat;background-size:128px 128px}
           <div class="stat-card"><div class="stat-val" id="statFav">0</div><div class="stat-lbl">Favori</div></div>
           <div class="stat-card"><div class="stat-val" id="statRec">0</div><div class="stat-lbl">Dinlenen</div></div>
         </div>
+        <div class="set-t">Uygulama</div>
+        <div class="set-row" id="btnInstallApp" style="display:none"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📲</div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="set-row" id="btnAlreadyInstalled" style="display:none;cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">✅</div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
         <div class="set-t">Veriler</div>
         <div class="set-row" id="btnExport"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">💾</div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div></div>
         <div class="set-row" id="btnImport"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📂</div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div></div>
@@ -1408,13 +1467,38 @@ function handleKeyboard(e){
 
 /* ── PWA INSTALL ── */
 let _deferredPrompt=null;
+function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;}
+function _isSafari(){return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);}
+function _isStandalone(){return window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone===true;}
+function openIOSInstall(){g('iosInstallOv').classList.add('s');}
+function closeIOSInstall(){g('iosInstallOv').classList.remove('s');lsSave('pwa_dismissed',true);}
+function _updateInstallSettingRow(){
+  if(_isStandalone()){
+    g('btnInstallApp').style.display='none';
+    g('btnAlreadyInstalled').style.display='flex';
+  } else {
+    g('btnAlreadyInstalled').style.display='none';
+    g('btnInstallApp').style.display='flex';
+  }
+}
 function setupInstallPrompt(){
+  // iOS instructions modal close
+  g('iosInstallOv').addEventListener('click',e=>{if(e.target===g('iosInstallOv'))closeIOSInstall();});
+  g('iosInstallClose').addEventListener('click',closeIOSInstall);
+
+  // Android/Chrome native install
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();_deferredPrompt=e;
-    // Don't show if already dismissed
-    if(lsLoad('pwa_dismissed',false))return;
-    setTimeout(()=>{g('installBar').style.display='flex';},3000);
+    if(!_isStandalone()&&!lsLoad('pwa_dismissed',false)){
+      setTimeout(()=>{g('installBar').style.display='flex';},3000);
+    }
+    _updateInstallSettingRow();
   });
+  window.addEventListener('appinstalled',()=>{
+    _deferredPrompt=null;g('installBar').style.display='none';
+    _updateInstallSettingRow();toast('Uygulama yüklendi!','ok');
+  });
+
   g('installBtn').addEventListener('click',async()=>{
     if(!_deferredPrompt)return;
     _deferredPrompt.prompt();
@@ -1423,9 +1507,33 @@ function setupInstallPrompt(){
     _deferredPrompt=null;g('installBar').style.display='none';
   });
   g('installClose').addEventListener('click',()=>{
-    g('installBar').style.display='none';
-    lsSave('pwa_dismissed',true);
+    g('installBar').style.display='none';lsSave('pwa_dismissed',true);
   });
+
+  // Settings install button
+  g('btnInstallApp').addEventListener('click',()=>{
+    if(_deferredPrompt){
+      _deferredPrompt.prompt();
+      _deferredPrompt.userChoice.then(({outcome})=>{
+        if(outcome==='accepted')toast('Uygulama yükleniyor!','ok');
+        _deferredPrompt=null;_updateInstallSettingRow();
+      });
+    } else if(_isIOS()&&_isSafari()){
+      openIOSInstall();
+    } else if(_isIOS()){
+      toast('Safari ile açıp "Ana Ekrana Ekle" seçeneğini kullanın','warn');
+    } else {
+      toast('Tarayıcınız yüklemeyi desteklemiyor','warn');
+    }
+  });
+
+  // Show on settings page render
+  _updateInstallSettingRow();
+
+  // iOS: show instructions automatically (first visit, Safari only)
+  if(_isIOS()&&_isSafari()&&!_isStandalone()&&!lsLoad('pwa_dismissed',false)){
+    setTimeout(openIOSInstall,4000);
+  }
 }
 
 /* ── OFFLINE DETECTION ── */
