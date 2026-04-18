@@ -279,6 +279,54 @@ background-repeat:repeat;background-size:128px 128px}
 .sw input:checked+.sw-sl::before{transform:translateX(16px)}
 .int-val{font-size:10px;color:var(--ac2);font-weight:700;min-width:30px;text-align:right}
 
+/* ─── NOW PLAYING (ICY metadata) ─── */
+.np-pill{display:none;align-items:center;gap:8px;margin:-8px 0 14px;padding:8px 14px;background:linear-gradient(135deg,rgba(124,108,240,.12),rgba(255,107,157,.08));border:1px solid rgba(124,108,240,.18);border-radius:20px;max-width:100%;font-size:11px;color:var(--ac2);font-weight:600;text-align:center;line-height:1.4}
+.np-pill.s{display:inline-flex}
+.np-pill .np-ic{flex-shrink:0;font-size:12px;animation:npPulse 1.6s ease-in-out infinite}
+@keyframes npPulse{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.5;transform:scale(1.12)}}
+.np-pill .np-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.1px}
+.mplay-n.has-np{font-size:12px}
+.mplay-np{font-size:9.5px;color:var(--ac2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;display:none}
+.mplay-np.s{display:block}
+
+/* ─── CAR MODE ─── */
+.car-mode{position:fixed;inset:0;background:var(--bg);z-index:400;display:none;flex-direction:column;padding:calc(var(--st) + 16px) 18px calc(var(--sb) + 16px);overflow:hidden}
+.car-mode.s{display:flex;animation:carIn .35s var(--transition)}
+@keyframes carIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.car-mode .car-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.car-mode .car-bg-orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:.25}
+.car-mode .car-bg-orb:nth-child(1){width:380px;height:380px;top:-90px;right:-80px;background:var(--ac)}
+.car-mode .car-bg-orb:nth-child(2){width:320px;height:320px;bottom:10%;left:-80px;background:var(--ac3)}
+.car-hdr{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;flex-shrink:0}
+.car-ttl{font-family:var(--font-display);font-size:14px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.car-ttl::before{content:'🚗';font-size:18px}
+.car-close{width:52px;height:52px;border-radius:50%;background:var(--cd2);border:1.5px solid var(--bd2);color:var(--tx);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.car-close:active{transform:scale(.88)}
+.car-now{position:relative;z-index:1;padding:18px 14px;margin:14px 0;background:var(--cd);border:1.5px solid var(--bd2);border-radius:22px;text-align:center}
+.car-nm{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:6px;line-height:1.2;min-height:28px;word-break:break-word}
+.car-np{font-size:14px;color:var(--ac2);font-weight:700;margin-bottom:2px;min-height:20px;word-break:break-word}
+.car-np:empty::before{content:'—';color:var(--tx3);font-weight:400}
+.car-gn{font-size:11px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:1.2px}
+.car-ctrls{display:flex;align-items:center;justify-content:center;gap:18px;margin:6px 0 18px;position:relative;z-index:1;flex-shrink:0}
+.car-sb{width:72px;height:72px;border-radius:50%;border:1.5px solid var(--bd2);background:var(--cd2);color:var(--tx);font-size:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0}
+.car-sb:active{transform:scale(.88);background:var(--cd3)}
+.car-pb{width:108px;height:108px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--ac),var(--ac3));color:#fff;font-size:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 12px 40px rgba(124,108,240,.45),0 0 0 2px rgba(255,255,255,.08) inset;transition:all .15s;flex-shrink:0}
+.car-pb:active{transform:scale(.92)}
+.car-favs-ttl{font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:0 4px 8px;position:relative;z-index:1;flex-shrink:0}
+.car-favs{flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative;z-index:1;align-content:start;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.car-favs::-webkit-scrollbar{display:none}
+.car-fav{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 12px;min-height:96px;border-radius:18px;background:var(--cd);border:1.5px solid var(--bd2);cursor:pointer;transition:all .18s;text-align:center;gap:6px}
+.car-fav:active{transform:scale(.96);background:var(--cd2)}
+.car-fav.on{background:linear-gradient(135deg,rgba(124,108,240,.18),rgba(255,107,157,.08));border-color:rgba(124,108,240,.4);box-shadow:0 4px 18px rgba(124,108,240,.18)}
+.car-fav-ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;flex-shrink:0}
+.car-fav-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.car-fav-nm{font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;line-height:1.2}
+.car-fav-empty{grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--tx3);font-size:12px;line-height:1.6}
+
+/* ─── DATA SAVER UI ─── */
+.ds-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(255,200,87,.1);color:var(--warn);border:1px solid rgba(255,200,87,.18);border-radius:10px;font-size:9px;font-weight:700;margin-left:6px}
+.ds-pill.s{display:inline-flex}
+
 /* ─── IOS INSTALL MODAL ─── */
 .ios-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:0}
 .ios-ov.s{display:flex}
@@ -487,6 +535,7 @@ background-repeat:repeat;background-size:128px 128px}
     <div class="hdr-r">
       <div class="logo"><div class="logo-ic">📻</div><span>TürkRadyo</span></div>
       <div class="hdr-acts">
+        <button class="abtn" id="btnCarMode" aria-label="Araba Modu" title="Araba Modu">🚗</button>
         <button class="abtn" id="btnShuffle" aria-label="Karışık Çal" title="Karışık Çal">🔀</button>
         <button class="abtn" id="btnAdd" aria-label="Radyo Ekle">➕</button>
       </div>
@@ -512,6 +561,10 @@ background-repeat:repeat;background-size:128px 128px}
           <div class="stat-card"><div class="stat-val" id="statFav">0</div><div class="stat-lbl">Favori</div></div>
           <div class="stat-card"><div class="stat-val" id="statRec">0</div><div class="stat-lbl">Dinlenen</div></div>
         </div>
+        <div class="set-t">Dinleme</div>
+        <div class="set-row" id="btnOpenCar"><div class="set-ic" style="background:rgba(255,200,87,.08);color:#ffc857">🚗</div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">📊</div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill" id="dsPill" style="display:none">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
+        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">📶</div><div class="set-lb"><h4>Bu Ay Harcanan Veri</h4><p id="dataUsageTxt">—</p></div><button class="del-b" id="btnResetData" title="Sıfırla" style="background:var(--cd2);color:var(--tx3);padding:6px 10px;border-radius:10px;font-size:10px">Sıfırla</button></div>
         <div class="set-t">Uygulama</div>
         <div class="set-row" id="btnInstallApp" style="display:none"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📲</div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
         <div class="set-row" id="btnAlreadyInstalled" style="display:none;cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">✅</div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
@@ -535,7 +588,7 @@ background-repeat:repeat;background-size:128px 128px}
           </div>
         </div>
         <div class="set-t">Hakkında</div>
-        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(180,169,255,.08);color:#b4a9ff">📻</div><div class="set-lb"><h4>TürkRadyo v12.0</h4><p>Profesyonel Radyo Deneyimi · PWA · Klavye Kısayolları · Karışık Çal · Paylaş</p></div></div>
+        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(180,169,255,.08);color:#b4a9ff">📻</div><div class="set-lb"><h4>TürkRadyo v13.0</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
       </div>
     </div>
   </div>
@@ -547,6 +600,7 @@ background-repeat:repeat;background-size:128px 128px}
     <div class="mplay-i" id="mIco">📻</div>
     <div class="mplay-f">
       <div class="mplay-n" id="mName">—</div>
+      <div class="mplay-np" id="mNow"></div>
       <div class="mplay-s" id="mStat"><span class="cdot"></span>Hazır</div>
     </div>
     <button class="ppb" id="btnPP" aria-label="Oynat/Durdur">▶</button>
@@ -573,6 +627,7 @@ background-repeat:repeat;background-size:128px 128px}
     <div class="fp-name" id="fpName">—</div>
     <div class="fp-genre" id="fpGenre">—</div>
     <div class="fp-bitrate" id="fpBitrate" style="display:none"></div>
+    <div class="np-pill" id="npPill"><span class="np-ic">🎵</span><span class="np-txt" id="npTxt">—</span></div>
     <div class="fp-vis paused" id="fpVis"></div>
     <div class="fp-ctrls">
       <button class="fp-sb" id="btnFpShuffle" aria-label="Karışık" title="Karışık Çal">🔀</button>
@@ -608,6 +663,26 @@ background-repeat:repeat;background-size:128px 128px}
       </div>
     </div>
   </div>
+</div>
+
+<div class="car-mode" id="carMode">
+  <div class="car-bg"><div class="car-bg-orb"></div><div class="car-bg-orb"></div></div>
+  <div class="car-hdr">
+    <div class="car-ttl">Araba Modu</div>
+    <button class="car-close" id="carClose" aria-label="Çıkış">✕</button>
+  </div>
+  <div class="car-now">
+    <div class="car-nm" id="carNm">Radyo seç</div>
+    <div class="car-np" id="carNp"></div>
+    <div class="car-gn" id="carGn"></div>
+  </div>
+  <div class="car-ctrls">
+    <button class="car-sb" id="carPrev" aria-label="Önceki">⏮</button>
+    <button class="car-pb" id="carPlay" aria-label="Oynat/Durdur">▶</button>
+    <button class="car-sb" id="carNext" aria-label="Sonraki">⏭</button>
+  </div>
+  <div class="car-favs-ttl">Favoriler — Büyük Butonlar</div>
+  <div class="car-favs" id="carFavs"></div>
 </div>
 
 <div class="modal" id="addMod">
@@ -656,7 +731,7 @@ background-repeat:repeat;background-size:128px 128px}
 (function(){
 'use strict';
 
-const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9'};
+const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1'};
 const COLORS=['#7c6cf0','#ff6b9d','#3dd68c','#ffc857','#4834d4','#1abc9c','#ff5c6c','#00bcd4','#e91e63','#ff9a76','#6c5ce7','#00b894'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -669,6 +744,15 @@ function lsSave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){if(
 function lsLoad(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
 function g(id){return document.getElementById(id);}
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+/* Türkçe toleranslı arama: şapkalı harf, ı/i, büyük/küçük, boşluk/noktalama normalize */
+function trNormalize(s){
+  if(s==null)return'';
+  let x=String(s).toLocaleLowerCase('tr-TR');
+  const map={'ı':'i','İ':'i','ş':'s','Ş':'s','ğ':'g','Ğ':'g','ü':'u','Ü':'u','ö':'o','Ö':'o','ç':'c','Ç':'c','â':'a','Â':'a','î':'i','Î':'i','û':'u','Û':'u','ô':'o','Ô':'o','ê':'e','Ê':'e'};
+  x=x.replace(/[ıİşŞğĞüÜöÖçÇâÂîÎûÛôÔêÊ]/g,c=>map[c]||c);
+  try{x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch{}
+  return x.replace(/[^\p{L}\p{N}]+/gu,'').trim();
+}
 
 /* ── TOAST v2 ── */
 let _toastT=null;
@@ -715,11 +799,170 @@ function dataSave(){const ids=new Set(ch.map(x=>x.id));fv=fv.filter(f=>ids.has(f
 function getFiltered(list){
   let out=list;
   if(_filterGenre!=='Tümü') out=out.filter(x=>(x.g||'Diğer')===_filterGenre);
-  if(_searchQ){const q=_searchQ.toLowerCase();out=out.filter(x=>x.n.toLowerCase().includes(q)||(x.g||'').toLowerCase().includes(q));}
+  if(_searchQ){
+    const q=trNormalize(_searchQ);
+    if(q)out=out.filter(x=>trNormalize(x.n).includes(q)||trNormalize(x.g||'').includes(q));
+  }
   if(_sortMode==='az') out=[...out].sort((a,b)=>a.n.localeCompare(b.n,'tr'));
   else if(_sortMode==='za') out=[...out].sort((a,b)=>b.n.localeCompare(a.n,'tr'));
   return out;
 }
+
+/* ═══ DATA SAVER + DATA USAGE ═══ */
+const DS={enabled:false,warnedThisSession:false};
+const DU={
+  _tickT:null,_lastTick:0,_monthKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');},
+  load(){const raw=lsLoad(LS.DU,null);if(!raw||typeof raw!=='object'||raw.month!==this._monthKey())return{month:this._monthKey(),bytes:0};return{month:raw.month,bytes:typeof raw.bytes==='number'?raw.bytes:0};},
+  save(o){lsSave(LS.DU,o);},
+  add(bytes){const o=this.load();o.bytes+=bytes;this.save(o);this.render();},
+  startTick(){
+    if(this._tickT)return;
+    this._lastTick=Date.now();
+    this._tickT=setInterval(()=>{
+      if(!S.cur||!S.playing){this.stopTick();return;}
+      const now=Date.now();const dt=(now-this._lastTick)/1000;this._lastTick=now;
+      const br=(S.cur.br&&S.cur.br>0)?S.cur.br:96; // varsayılan 96 kbps tahmin
+      const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
+      this.add(bytes);
+    },5000);
+  },
+  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}},
+  reset(){this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
+  format(bytes){
+    if(bytes<1024)return bytes+' B';
+    if(bytes<1024*1024)return(bytes/1024).toFixed(1)+' KB';
+    if(bytes<1024*1024*1024)return(bytes/1024/1024).toFixed(1)+' MB';
+    return(bytes/1024/1024/1024).toFixed(2)+' GB';
+  },
+  render(){
+    const el=g('dataUsageTxt');if(!el)return;
+    const o=this.load();
+    const [y,m]=o.month.split('-');
+    const names=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+    el.textContent=`${names[parseInt(m,10)-1]} ${y}: ${this.format(o.bytes)}`;
+  }
+};
+function isCellular(){
+  const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(!c)return false;
+  if(c.saveData)return true;
+  const t=(c.type||'').toLowerCase();
+  if(t==='cellular')return true;
+  const et=(c.effectiveType||'').toLowerCase();
+  return et==='2g'||et==='slow-2g'||et==='3g';
+}
+function dsWarnMaybe(station){
+  if(!DS.enabled||!station)return;
+  if(DS.warnedThisSession)return;
+  const br=station.br||0;
+  const cell=isCellular();
+  if(cell&&br>96){
+    toast(`📶 Ekonomi modu: ${br}kbps yayın, mobil veri hızlı biter`,'warn');
+    DS.warnedThisSession=true;
+  }else if(cell){
+    DS.warnedThisSession=true;
+  }
+}
+function loadDS(){DS.enabled=!!lsLoad(LS.DS,false);g('dsPill').style.display=DS.enabled?'inline-flex':'none';g('swDataSaver').checked=DS.enabled;}
+function saveDS(){lsSave(LS.DS,DS.enabled);g('dsPill').style.display=DS.enabled?'inline-flex':'none';}
+
+/* ═══ NOW PLAYING (Icecast/Shoutcast metadata best-effort) ═══ */
+const NP={
+  _timer:null,_curId:null,_curTitle:'',_cooldown:new Map(),
+  _parseIcecast(d,streamUrl){
+    try{
+      const src=d?.icestats?.source;
+      const list=Array.isArray(src)?src:src?[src]:[];
+      if(!list.length)return null;
+      let best=null;
+      try{
+        const u=new URL(streamUrl);
+        best=list.find(s=>{
+          const lu=s?.listenurl||'';
+          if(!lu)return false;
+          try{return new URL(lu).pathname===u.pathname;}catch{return lu.endsWith(u.pathname);}
+        });
+      }catch{}
+      const src1=best||list[0];
+      return (src1?.title||src1?.yp_currently_playing||'').trim()||null;
+    }catch{return null;}
+  },
+  _parseShoutcast7(txt){
+    try{
+      const m=txt.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if(!m)return null;
+      const parts=m[1].split(',');
+      if(parts.length>=7)return parts.slice(6).join(',').trim()||null;
+    }catch{}
+    return null;
+  },
+  async _fetchFor(stream){
+    const now=Date.now();
+    const cd=this._cooldown.get(stream)||0;
+    if(cd>now)return null;
+    let origin,path;
+    try{const u=new URL(stream);origin=u.origin;path=u.pathname;}catch{return null;}
+    const sig=()=>AbortSignal.timeout(3500);
+    // 1) Icecast status-json
+    try{
+      const r=await fetch(origin+'/status-json.xsl',{signal:sig(),cache:'no-store'});
+      if(r.ok){const d=await r.json();const t=this._parseIcecast(d,stream);if(t)return t;}
+    }catch{}
+    // 2) Shoutcast v2 stats
+    try{
+      const r=await fetch(origin+'/stats?json=1',{signal:sig(),cache:'no-store'});
+      if(r.ok){const d=await r.json();const t=(d?.songtitle||'').trim();if(t)return t;}
+    }catch{}
+    // 3) Shoutcast v1 7.html
+    try{
+      const r=await fetch(origin+'/7.html',{signal:sig(),cache:'no-store'});
+      if(r.ok){const t=this._parseShoutcast7(await r.text());if(t)return t;}
+    }catch{}
+    // 4) Icecast v2 nometadata JSON at path /status.json
+    try{
+      const r=await fetch(origin+path.replace(/\/?$/,'')+'.json',{signal:sig(),cache:'no-store'});
+      if(r.ok){const d=await r.json();const t=(d?.title||d?.now_playing||d?.song||'').trim();if(t)return t;}
+    }catch{}
+    // All failed — cooldown 10 min to avoid CORS spam
+    this._cooldown.set(stream,now+10*60*1000);
+    return null;
+  },
+  _setTitle(t){
+    const clean=(t||'').replace(/\s+/g,' ').trim();
+    this._curTitle=clean;
+    const np=g('npPill'),npTxt=g('npTxt'),mNow=g('mNow'),mName=g('mName'),carNp=g('carNp');
+    if(clean){
+      npTxt.textContent=clean;np.classList.add('s');
+      mNow.textContent=clean;mNow.classList.add('s');
+      mName?.classList.add('has-np');
+      if(carNp)carNp.textContent=clean;
+      if('mediaSession' in navigator&&navigator.mediaSession.metadata&&S.cur){
+        try{navigator.mediaSession.metadata=new MediaMetadata({
+          title:clean,
+          artist:S.cur.n,
+          album:'TürkRadyo',
+          artwork:navigator.mediaSession.metadata.artwork||[]
+        });}catch{}
+      }
+    }else{
+      np.classList.remove('s');mNow.classList.remove('s');mName?.classList.remove('has-np');
+      if(carNp)carNp.textContent='';
+    }
+  },
+  stop(){clearInterval(this._timer);this._timer=null;this._curId=null;this._setTitle('');},
+  start(station){
+    this.stop();
+    if(!station)return;
+    this._curId=station.id;
+    const run=async()=>{
+      if(!S.cur||S.cur.id!==this._curId)return;
+      const t=await this._fetchFor(station.u);
+      if(S.cur&&S.cur.id===this._curId&&t&&t!==this._curTitle)this._setTitle(t);
+    };
+    run();
+    this._timer=setInterval(run,20000);
+  }
+};
 
 /* ═══ INTERRUPT MANAGER v3 ═══ */
 const IM={
@@ -890,18 +1133,35 @@ const IOS={
   reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>{setPlaying(true);S.retries=0;this._rel=false;setStatus('live');renderCards();}).catch(()=>{this._rel=false;});}
 };
 
-/* ── MEDIA SESSION ── */
+/* ── MEDIA SESSION ──
+   BT kulaklık/kilit ekranı kontrolleri. Double-tap (nexttrack) = sonraki favori,
+   previoustrack = önceki favori. Favori yoksa tüm kanallar arasında gezer. */
+function msNext(){
+  const favStations=ch.filter(x=>fv.includes(x.id));
+  if(favStations.length>=2&&S.cur&&fv.includes(S.cur.id)){
+    const i=favStations.findIndex(x=>x.id===S.cur.id);
+    const next=favStations[(i+1)%favStations.length];play(next.id);return;
+  }
+  nextSt();
+}
+function msPrev(){
+  const favStations=ch.filter(x=>fv.includes(x.id));
+  if(favStations.length>=2&&S.cur&&fv.includes(S.cur.id)){
+    const i=favStations.findIndex(x=>x.id===S.cur.id);
+    const prev=favStations[(i-1+favStations.length)%favStations.length];play(prev.id);return;
+  }
+  prevSt();
+}
 function setupMS(){
   if(!('mediaSession' in navigator))return;
-  navigator.mediaSession.setActionHandler('play',()=>{if(S.cur){IM.setUStop(false);S.should=true;aud.play().catch(()=>IOS.reload());navigator.mediaSession.playbackState='playing';}});
-  navigator.mediaSession.setActionHandler('pause',()=>{if(S.cur){userPause();navigator.mediaSession.playbackState='paused';}});
-  navigator.mediaSession.setActionHandler('previoustrack',prevSt);
-  navigator.mediaSession.setActionHandler('nexttrack',nextSt);
-  try{navigator.mediaSession.setActionHandler('seekbackward',prevSt);}catch{}
-  try{navigator.mediaSession.setActionHandler('seekforward',nextSt);}catch{}
-  try{navigator.mediaSession.setActionHandler('stop',()=>{if(S.cur){userPause();navigator.mediaSession.playbackState='none';}});}catch{}
-  // Prevent iOS seek bar from appearing
-  try{navigator.mediaSession.setActionHandler('seekto',null);}catch{}
+  const set=(a,h)=>{try{navigator.mediaSession.setActionHandler(a,h);}catch{}};
+  set('play',()=>{if(S.cur){IM.setUStop(false);S.should=true;aud.play().catch(()=>IOS.reload());navigator.mediaSession.playbackState='playing';}});
+  set('pause',()=>{if(S.cur){userPause();navigator.mediaSession.playbackState='paused';}});
+  set('previoustrack',msPrev);
+  set('nexttrack',msNext);
+  set('stop',()=>{if(S.cur){userPause();navigator.mediaSession.playbackState='none';}});
+  // Canlı yayında seek bar gözükmesin
+  set('seekto',null);set('seekbackward',null);set('seekforward',null);
 }
 let _metaArtCache=new Map();
 function _makeArtwork(s){
@@ -974,6 +1234,8 @@ function setPlaying(v){
   g('ambient').classList.toggle('playing',v);
   g('mplay').classList.toggle('playing',v);
   g('fplay').classList.toggle('playing',v);
+  if(v)DU.startTick();else DU.stopTick();
+  updateCarNow();
 }
 function updatePlayUI(){const ic=S.playing?'⏸':'▶';g('btnPP').textContent=ic;g('btnFpPlay').textContent=ic;g('fpVis').classList.toggle('paused',!S.playing);}
 function setStatus(t){
@@ -1003,13 +1265,13 @@ function play(id){
   g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
   // Bitrate
   if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;g('fpBitrate').style.display='';}else{g('fpBitrate').style.display='none';}
-  setStatus('conn');updateFavBtn();addHist(s);updateMeta(s);
+  setStatus('conn');updateFavBtn();addHist(s);updateMeta(s);NP.start(s);updateCarNow();dsWarnMaybe(s);
   aud.src=s.u;aud.load();aud.volume=IM._baseVol;
   aud.play().then(()=>setPlaying(true)).catch(()=>setTimeout(()=>{if(S.cur?.id===id&&S.should)aud.play().then(()=>setPlaying(true)).catch(()=>setTimeout(()=>{if(S.cur?.id===id&&S.should){aud.src=s.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>setPlaying(true)).catch(()=>{toast('Yanıt yok','err');S.should=false;S.playing=false;updatePlayUI();});}},2000));},1500));
   renderCards();
 }
 function togglePlay(){if(!S.cur)return;S.playing?userPause():userResume();}
-function userPause(){IM.setUStop(true);S.should=false;aud.pause();S.playing=false;updatePlayUI();g('ambient').classList.remove('playing');g('mplay').classList.remove('playing');g('fplay').classList.remove('playing');IOS._stopRecovery();}
+function userPause(){IM.setUStop(true);S.should=false;aud.pause();S.playing=false;updatePlayUI();g('ambient').classList.remove('playing');g('mplay').classList.remove('playing');g('fplay').classList.remove('playing');IOS._stopRecovery();DU.stopTick();NP.stop();}
 function userResume(){IM.setUStop(false);S.should=true;if(IM._actx&&IM._actx.state==='suspended'){try{IM._actx.resume().catch(()=>{});}catch(e){}}aud.play().then(()=>{IOS._startRecovery();}).catch(()=>{aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>{IOS._startRecovery();}).catch(()=>toast('Tekrar deneyin','warn'));});}
 function prevSt(){
   if(!S.cur||ch.length<2)return;
@@ -1048,7 +1310,7 @@ function saveIntOpts(){lsSave(LS.INT,IM.opts);}
 function syncIntUI(){g('swCall').checked=IM.opts.call;g('swNotif').checked=IM.opts.notif;g('resumeDelay').value=IM.opts.resumeDelay;g('resumeDelayVal').textContent=(IM.opts.resumeDelay/1000).toFixed(2).replace(/\.?0+$/,'')+'s';g('notifVol').value=IM.opts.notifVol;g('notifVolVal').textContent=IM.opts.notifVol+'%';}
 
 /* ── FAV & HIST ── */
-function toggleFav(id){const i=fv.indexOf(id);if(i>=0){fv.splice(i,1);toast('Favoriden çıkarıldı');}else{fv.push(id);toast('Favorilere eklendi','ok');}dataSave();renderCards();updateFavBtn();updateNavBadge();}
+function toggleFav(id){const i=fv.indexOf(id);if(i>=0){fv.splice(i,1);toast('Favoriden çıkarıldı');}else{fv.push(id);toast('Favorilere eklendi','ok');}dataSave();renderCards();updateFavBtn();updateNavBadge();if(_carOpen)renderCarFavs();}
 function updateFavBtn(){if(S.cur)g('btnFpFav').textContent=fv.includes(S.cur.id)?'❤️':'🤍';}
 function addHist(s){rc=rc.filter(r=>r.id!==s.id);rc.unshift({id:s.id,t:Date.now()});if(rc.length>MAX_H)rc=rc.slice(0,MAX_H);dataSave();}
 function updateNavBadge(){const badge=g('favBadge');if(fv.length>0){badge.textContent=fv.length;badge.style.display='';}else{badge.style.display='none';}}
@@ -1270,6 +1532,47 @@ function goPage(p){
 function openFP(){g('fplay').classList.add('s');syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);}
 function closeFP(){g('fplay').classList.remove('s');}
 
+/* ── CAR MODE ── */
+let _carOpen=false;
+function openCar(){
+  _carOpen=true;
+  g('carMode').classList.add('s');
+  renderCarFavs();updateCarNow();
+  try{if(screen.orientation?.lock)screen.orientation.lock('landscape').catch(()=>{});}catch{}
+  try{const wl=navigator.wakeLock?.request('screen');if(wl)wl.catch(()=>{});}catch{}
+}
+function closeCar(){
+  _carOpen=false;
+  g('carMode').classList.remove('s');
+  try{if(screen.orientation?.unlock)screen.orientation.unlock();}catch{}
+}
+function updateCarNow(){
+  if(!_carOpen)return;
+  const nm=g('carNm'),np=g('carNp'),gn=g('carGn'),pb=g('carPlay');
+  if(S.cur){nm.textContent=S.cur.n;gn.textContent=S.cur.g||'Radyo';np.textContent=NP._curTitle||'';}
+  else{nm.textContent='Radyo seç';gn.textContent='';np.textContent='';}
+  pb.textContent=S.playing?'⏸':'▶';
+  renderCarFavs();
+}
+function renderCarFavs(){
+  const w=g('carFavs');if(!w)return;
+  w.innerHTML='';
+  const list=ch.filter(x=>fv.includes(x.id));
+  list.sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id));
+  if(!list.length){w.innerHTML='<div class="car-fav-empty">Henüz favori yok.<br>Favoriler ana ekrandan ❤️ ile eklenir.</div>';return;}
+  const f=document.createDocumentFragment();
+  list.slice(0,12).forEach(s=>{
+    const d=document.createElement('button');d.type='button';d.className='car-fav'+(S.cur?.id===s.id?' on':'');d.dataset.id=s.id;
+    const ic=document.createElement('div');ic.className='car-fav-ic';ic.style.background=s.c||'var(--ac)';
+    if(s.img){const im=document.createElement('img');im.src=s.img;im.alt='';im.loading='lazy';im.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(im);}
+    else{ic.textContent=s.e;}
+    const nm=document.createElement('div');nm.className='car-fav-nm';nm.textContent=s.n;
+    d.appendChild(ic);d.appendChild(nm);f.appendChild(d);
+  });
+  w.appendChild(f);
+  w.onclick=e=>{const b=e.target.closest('.car-fav');if(b)play(b.dataset.id);};
+}
+
 /* ── SLEEP ── */
 let _slT=null;
 function setSleep(min){
@@ -1461,7 +1764,7 @@ function handleKeyboard(e){
     case 'KeyM':if(aud.volume>0){aud._prevVol=aud.volume;setVol(0);showKbdHint('🔇 Sessiz');}else{setVol(Math.round((aud._prevVol||0.8)*100));showKbdHint('🔊 Ses açıldı');}break;
     case 'KeyF':if(S.cur){toggleFav(S.cur.id);showKbdHint(fv.includes(S.cur.id)?'❤️ Favorilere eklendi':'💔 Favoriden çıkarıldı');}break;
     case 'KeyS':toggleShuffle();break;
-    case 'Escape':closeFP();closeMod();break;
+    case 'Escape':closeFP();closeMod();if(_carOpen)closeCar();break;
   }
 }
 
@@ -1590,10 +1893,34 @@ function init(){
     }
   });
   aud.addEventListener('waiting',()=>setStatus('load'));
+  /* Exponential backoff reconnect — tünel/sinyal kesintisi için
+     Gecikmeler: 2s,4s,8s,16s,32s sonra 60s cap; online geri gelince anında dener */
   aud.addEventListener('error',()=>{
-    if(S.cur&&S.should&&!IM._uStop&&S.retries<4){S.retries++;toast(`Deneniyor (${S.retries}/4)...`,'warn');setStatus('retry');setTimeout(()=>{if(S.cur&&S.should){aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().catch(()=>{});}},2000*S.retries);}
-    else if(S.retries>=4){toast('Bağlantı kurulamadı','err');S.should=false;S.playing=false;updatePlayUI();}
+    if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+    const n=Math.min(S.retries,6);
+    const delay=Math.min(60000,2000*Math.pow(2,n));
+    S.retries++;
+    setStatus('retry');
+    if(S.retries<=5)toast(`Bağlantı yeniden deneniyor (${S.retries})`,'warn');
+    else if(S.retries===6)toast('Bağlantı düşük, denemeye devam ediliyor...','warn');
+    setTimeout(()=>{
+      if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+      if(!navigator.onLine)return; // online event'i kendi dener
+      aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;
+      aud.play().catch(()=>{});
+    },delay);
   });
+  /* Stalled/waiting — 8sn yanıtsızsa tetikle */
+  let _stallT=null;
+  aud.addEventListener('stalled',()=>{
+    clearTimeout(_stallT);
+    _stallT=setTimeout(()=>{
+      if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+      if(aud.readyState>=2&&!aud.paused)return;
+      try{aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().catch(()=>{});}catch{}
+    },8000);
+  });
+  aud.addEventListener('playing',()=>{clearTimeout(_stallT);_stallT=null;});
 
   /* confirm modal */
   g('cfmYes').addEventListener('click',()=>_cfmClose(true));
@@ -1634,6 +1961,21 @@ function init(){
 
   /* shuffle button (header) */
   g('btnShuffle').addEventListener('click',()=>{if(ch.length<2){toast('En az 2 kanal gerekli','warn');return;}shufflePlay();});
+
+  /* car mode */
+  g('btnCarMode').addEventListener('click',openCar);
+  g('btnOpenCar').addEventListener('click',openCar);
+  g('carClose').addEventListener('click',closeCar);
+  g('carPlay').addEventListener('click',()=>{if(S.cur)togglePlay();});
+  g('carPrev').addEventListener('click',msPrev);
+  g('carNext').addEventListener('click',msNext);
+
+  /* data saver + data usage */
+  loadDS();DU.render();
+  g('swDataSaver').addEventListener('change',e=>{DS.enabled=e.target.checked;DS.warnedThisSession=false;saveDS();toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');});
+  g('btnResetData').addEventListener('click',()=>DU.reset());
+  /* Online geri gelince anında reconnect dene */
+  window.addEventListener('online',()=>{if(S.cur&&S.should&&aud.paused&&!IM._uStop&&!IM._interrupted){S.retries=0;try{aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().catch(()=>{});}catch{}}});
 
   /* search API */
   g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'&countrycode=TR','rTR','tr');});
