@@ -1,4 +1,4 @@
-const CACHE='turkradyo-v12.1';
+const CACHE='turkradyo-v13.0';
 const PRECACHE=['./','index.html','manifest.json','icons/icon.svg'];
 const FONT_CACHE='turkradyo-fonts-v2';
 
