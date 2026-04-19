@@ -1272,7 +1272,7 @@ function play(id){
 }
 function togglePlay(){if(!S.cur)return;S.playing?userPause():userResume();}
 function userPause(){IM.setUStop(true);S.should=false;aud.pause();S.playing=false;updatePlayUI();g('ambient').classList.remove('playing');g('mplay').classList.remove('playing');g('fplay').classList.remove('playing');IOS._stopRecovery();DU.stopTick();NP.stop();}
-function userResume(){IM.setUStop(false);S.should=true;if(IM._actx&&IM._actx.state==='suspended'){try{IM._actx.resume().catch(()=>{});}catch(e){}}aud.play().then(()=>{IOS._startRecovery();}).catch(()=>{aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>{IOS._startRecovery();}).catch(()=>toast('Tekrar deneyin','warn'));});}
+function userResume(){IM.setUStop(false);S.should=true;if(IM._actx&&IM._actx.state==='suspended'){try{IM._actx.resume().catch(()=>{});}catch(e){}}aud.play().then(()=>{IOS._startRecovery();}).catch(()=>{if(!S.cur)return;aud.src=S.cur.u;aud.load();aud.volume=IM._baseVol;aud.play().then(()=>{IOS._startRecovery();}).catch(()=>toast('Tekrar deneyin','warn'));});}
 function prevSt(){
   if(!S.cur||ch.length<2)return;
   if(_shuffle){shufflePlay();return;}
@@ -1624,20 +1624,26 @@ async function apiCall(ep){
   try{return await Promise.any(reqs);}catch{return null;}
 }
 async function doSearch(q,extra,targetId,key){
-  const el=g(targetId);el.innerHTML='<div class="sr-msg"><div class="skeleton" style="width:60%;height:12px;margin:0 auto 6px"></div><div class="skeleton" style="width:40%;height:10px;margin:0 auto"></div></div>';
-  const seen=new Set(),all=[];
-  const d1=await apiCall(`stations/search?name=${encodeURIComponent(q)}${extra}&limit=35&hidebroken=true&order=clickcount&reverse=true`);
-  if(d1)d1.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});
-  if(all.length<8){const d2=await apiCall(`stations/search?tag=${encodeURIComponent(q)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);if(d2)d2.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});}
-  if(!all.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return;}
-  _srSet(key,all);renderSR(all,el,key);
+  const el=g(targetId);
+  try{
+    el.innerHTML='<div class="sr-msg"><div class="skeleton" style="width:60%;height:12px;margin:0 auto 6px"></div><div class="skeleton" style="width:40%;height:10px;margin:0 auto"></div></div>';
+    const seen=new Set(),all=[];
+    const d1=await apiCall(`stations/search?name=${encodeURIComponent(q)}${extra}&limit=35&hidebroken=true&order=clickcount&reverse=true`);
+    if(d1)d1.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});
+    if(all.length<8){const d2=await apiCall(`stations/search?tag=${encodeURIComponent(q)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);if(d2)d2.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});}
+    if(!all.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return;}
+    _srSet(key,all);renderSR(all,el,key);
+  }catch{el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';}
 }
 async function doTagSearch(q){
-  const el=g('rTG');el.innerHTML='<div class="sr-msg"><div class="skeleton" style="width:60%;height:12px;margin:0 auto 6px"></div><div class="skeleton" style="width:40%;height:10px;margin:0 auto"></div></div>';
-  let d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&countrycode=TR&limit=30&hidebroken=true&order=clickcount&reverse=true`);
-  if(!d?.length)d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&limit=30&hidebroken=true&order=clickcount&reverse=true`);
-  if(!d?.length){el.innerHTML='<div class="sr-msg">Bulunamadı.</div>';return;}
-  _srSet('tag',d);renderSR(d,el,'tag');
+  const el=g('rTG');
+  try{
+    el.innerHTML='<div class="sr-msg"><div class="skeleton" style="width:60%;height:12px;margin:0 auto 6px"></div><div class="skeleton" style="width:40%;height:10px;margin:0 auto"></div></div>';
+    let d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&countrycode=TR&limit=30&hidebroken=true&order=clickcount&reverse=true`);
+    if(!d?.length)d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&limit=30&hidebroken=true&order=clickcount&reverse=true`);
+    if(!d?.length){el.innerHTML='<div class="sr-msg">Bulunamadı.</div>';return;}
+    _srSet('tag',d);renderSR(d,el,'tag');
+  }catch{el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';}
 }
 function renderSR(data,container,key){
   const wrap=document.createElement('div');wrap.className='srch-res';
@@ -1673,6 +1679,7 @@ async function autoFetchLogos(){
   if(!missing.length)return;
   _logoFetching=true;
   let updated=0;
+  try{
   // Batch: search by URL for each station without logo
   for(const s of missing){
     try{
@@ -1694,7 +1701,7 @@ async function autoFetchLogos(){
     // Small delay to avoid hammering the API
     await new Promise(r=>setTimeout(r,300));
   }
-  _logoFetching=false;
+  }finally{_logoFetching=false;}
   if(updated>0){
     dataSave();renderCards();
     if(S.cur){
@@ -1738,7 +1745,7 @@ function doImport(e){
       dataSave();renderCards();renderSettings();updateSearchVisibility();updateNavBadge();toast(`${added} kanal yüklendi`,'ok');
     }catch{toast('Geçersiz dosya formatı','err');}
   };
-  reader.readAsText(f);e.target.value='';
+  reader.onerror=()=>toast('Dosya okunamadı','err');reader.readAsText(f);e.target.value='';
 }
 async function doReset(){
   const ok=await confirm2('Tümünü sil','Tüm kanallar, favoriler ve geçmiş kalıcı olarak silinecek.');if(!ok)return;
