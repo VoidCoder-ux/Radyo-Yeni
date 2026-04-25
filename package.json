@@ -1,0 +1,15 @@
+{
+  "name": "radyo-yeni",
+  "version": "13.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/static-server.mjs",
+    "lint": "node scripts/lint.mjs",
+    "test": "node --test tests/unit.test.mjs",
+    "test:e2e": "node tests/e2e.smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

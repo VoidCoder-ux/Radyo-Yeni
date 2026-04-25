@@ -1,57 +1,94 @@
-const CACHE='turkradyo-v13.0';
-const PRECACHE=['./','index.html','manifest.json','icons/icon.svg'];
-const FONT_CACHE='turkradyo-fonts-v2';
+const APP_VERSION = '13.1.0';
+const CACHE_PREFIX = 'turkradyo';
+const CACHE = `${CACHE_PREFIX}-app-${APP_VERSION}`;
+const FONT_CACHE = `${CACHE_PREFIX}-fonts-v2`;
+const PRECACHE = [
+  './',
+  'index.html',
+  'manifest.json',
+  'src/styles.css',
+  'src/app.js',
+  'src/lib/core.js',
+  'src/lib/radio-browser.js',
+  'icons/icon.svg',
+  'icons/icon-192.png',
+  'icons/icon-512.png'
+];
 
-self.addEventListener('install',e=>{
-  e.waitUntil(
-    caches.open(CACHE).then(c=>c.addAll(PRECACHE)).then(()=>self.skipWaiting())
+const OFFLINE_HTML = `<!doctype html>
+<html lang="tr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TürkRadyo çevrimdışı</title>
+<body style="margin:0;font-family:system-ui,sans-serif;background:#06060b;color:#f0eeff;display:grid;min-height:100vh;place-items:center;text-align:center;padding:24px">
+  <main>
+    <h1>Çevrimdışı</h1>
+    <p>İnternet bağlantınızı kontrol edin ve tekrar deneyin.</p>
+  </main>
+</body>
+</html>`;
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate',e=>{
-  e.waitUntil(
-    caches.keys().then(keys=>Promise.all(
-      keys.filter(k=>k!==CACHE&&k!==FONT_CACHE).map(k=>caches.delete(k))
-    )).then(()=>self.clients.claim())
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys
+          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE && key !== FONT_CACHE)
+          .map(key => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch',e=>{
-  const url=new URL(e.request.url);
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
 
-  // Never cache audio streams or API calls
-  if(url.hostname.includes('radio-browser.info')||
-     e.request.url.match(/\.(mp3|aac|m3u8|ogg|opus|flac|wav)(\?|$)/i)||
-     e.request.headers.get('range')){
+  if (
+    url.hostname.includes('radio-browser.info') ||
+    event.request.url.match(/\.(mp3|aac|m3u8|ogg|opus|flac|wav)(\?|$)/i) ||
+    event.request.headers.get('range')
+  ) {
     return;
   }
 
-  // Cache Google Fonts separately with long TTL
-  if(url.hostname.includes('fonts.googleapis.com')||url.hostname.includes('fonts.gstatic.com')){
-    e.respondWith(
-      caches.open(FONT_CACHE).then(c=>
-        c.match(e.request).then(r=>{
-          if(r)return r;
-          return fetch(e.request).then(res=>{
-            if(res.ok)c.put(e.request,res.clone());
-            return res;
-          }).catch(()=>new Response('',{status:408}));
+  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
+    event.respondWith(
+      caches.open(FONT_CACHE).then(cache =>
+        cache.match(event.request).then(cached => {
+          if (cached) return cached;
+          return fetch(event.request).then(response => {
+            if (response.ok) cache.put(event.request, response.clone());
+            return response;
+          }).catch(() => new Response('', { status: 408 }))
         })
       )
     );
     return;
   }
 
-  // App shell: network-first, fallback to cache
-  if(url.origin===location.origin){
-    e.respondWith(
-      fetch(e.request).then(res=>{
-        if(res.ok){
-          const clone=res.clone();
-          caches.open(CACHE).then(c=>c.put(e.request,clone));
+  if (url.origin === location.origin) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE).then(cache => cache.put(event.request, clone));
         }
-        return res;
-      }).catch(()=>caches.match(e.request).then(r=>r||new Response('<h1>Çevrimdışı</h1><p>İnternet bağlantınızı kontrol edin.</p>',{headers:{'Content-Type':'text/html;charset=utf-8'}})))
+        return response;
+      }).catch(() =>
+        caches.match(event.request)
+          .then(cached => cached || caches.match('index.html'))
+          .then(cached => cached || new Response(OFFLINE_HTML, {
+            headers: { 'Content-Type': 'text/html;charset=utf-8' }
+          }))
+      )
     );
   }
 });
