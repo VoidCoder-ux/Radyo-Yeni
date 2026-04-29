@@ -1,5 +1,5 @@
-const CACHE='turkradyo-v13.0';
-const PRECACHE=['./','index.html','manifest.json','icons/icon.svg'];
+const CACHE='turkradyo-v13.1';
+const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','manifest.json','icons/icon.svg','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 const FONT_CACHE='turkradyo-fonts-v2';
 
 self.addEventListener('install',e=>{
@@ -18,11 +18,16 @@ self.addEventListener('activate',e=>{
 
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
+  const accept=e.request.headers.get('accept')||'';
+  const isAudioRequest=e.request.destination==='audio'||
+     accept.includes('audio')||
+     e.request.headers.get('icy-metadata')||
+     e.request.url.match(/\.(mp3|aac|m3u8|ogg|opus|flac|wav)(\?|$)/i)||
+     e.request.headers.get('range');
 
   // Never cache audio streams or API calls
   if(url.hostname.includes('radio-browser.info')||
-     e.request.url.match(/\.(mp3|aac|m3u8|ogg|opus|flac|wav)(\?|$)/i)||
-     e.request.headers.get('range')){
+     isAudioRequest){
     return;
   }
 
