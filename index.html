@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TürkRadyo">
-<meta name="theme-color" content="#06060b">
-<meta name="theme-color" content="#06060b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#050506" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -21,12 +21,12 @@
 </head>
 <body>
 
-<div class="ambient" id="ambient">
+<div class="ambient" id="ambient" aria-hidden="true">
   <div class="ambient-orb"></div>
   <div class="ambient-orb"></div>
   <div class="ambient-orb"></div>
 </div>
-<div class="noise"></div>
+<div class="noise" aria-hidden="true"></div>
 
 <div class="offline-bar" id="offlineBar" role="status" aria-live="polite">Bağlantı yok - Çevrimdışı mod</div>
 <div class="itr" id="itr" role="status" aria-live="polite"><div class="itr-dot"></div><span id="itrTxt"></span><span class="itr-vol" id="itrVol"></span></div>
@@ -101,7 +101,7 @@
     <div class="search-bar" id="searchBar" style="display:none">
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input id="searchInput" placeholder="Kanal ara..." autocomplete="off">
+        <input id="searchInput" placeholder="Kanal ara..." autocomplete="off" aria-label="Kanal ara">
         <button class="search-clear" id="searchClear" aria-label="Aramayı temizle">✕</button>
       </div>
     </div>
@@ -158,7 +158,7 @@
   </div>
 </div>
 
-<div class="mplay" id="mplay">
+<div class="mplay" id="mplay" role="button" tabindex="0" aria-label="Şimdi çalınıyor ekranını aç">
   <div class="mp-progress"><div class="mp-progress-bar" id="mpBar"></div></div>
   <div class="mplay-r">
     <div class="mplay-i" id="mIco">📻</div>
@@ -171,12 +171,12 @@
   </div>
   <div class="mp-vol" id="mpVol">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></svg>
-    <input type="range" class="rng" id="volM" min="0" max="100" value="80" aria-label="Ses">
+    <input type="range" class="rng" id="volM" min="0" max="100" value="80" aria-label="Mini oynatıcı ses seviyesi">
     <svg viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M10.5 4.5a5 5 0 010 7m2-9a8 8 0 010 11"/></svg>
   </div>
 </div>
 
-<div class="fplayer" id="fplay">
+<div class="fplayer" id="fplay" role="dialog" aria-modal="true" aria-labelledby="fpName">
   <div class="fp-bg">
     <div class="fp-bg-orb" id="fpOrb1"></div>
     <div class="fp-bg-orb" id="fpOrb2"></div>
@@ -202,7 +202,7 @@
     </div>
     <div class="fp-vol">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></svg>
-      <input type="range" class="rng-lg" id="volF" min="0" max="100" value="80" aria-label="Ses">
+      <input type="range" class="rng-lg" id="volF" min="0" max="100" value="80" aria-label="Şimdi çalınıyor ses seviyesi">
       <svg viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M10.5 4.5a5 5 0 010 7m2-9a8 8 0 010 11"/></svg>
     </div>
     <div class="fp-timer">
@@ -229,7 +229,7 @@
   </div>
 </div>
 
-<div class="car-mode" id="carMode">
+<div class="car-mode" id="carMode" role="dialog" aria-modal="true" aria-labelledby="carNm">
   <div class="car-bg"><div class="car-bg-orb"></div><div class="car-bg-orb"></div></div>
   <div class="car-hdr">
     <div class="car-ttl">Araba Modu</div>
@@ -280,8 +280,8 @@
   </div>
 </div>
 
-<nav class="bnav">
-  <button data-pg="f" id="navF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>Favoriler<span class="nav-badge" id="favBadge" style="display:none">0</span></button>
+<nav class="bnav" aria-label="Alt gezinme">
+  <button data-pg="f" id="navF" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>Favoriler<span class="nav-badge" id="favBadge" style="display:none">0</span></button>
   <button data-pg="a" id="navA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0110 10M12 2a10 10 0 00-10 10M2 12a10 10 0 0010 10M22 12a10 10 0 01-10 10"/></svg>Kanallarım</button>
   <button data-pg="r" id="navR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Son</button>
   <button data-pg="s" id="navS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Ayarlar</button>
