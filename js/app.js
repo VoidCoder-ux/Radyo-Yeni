@@ -2,8 +2,8 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='13.7';
-const COLORS=['#7c6cf0','#ff6b9d','#3dd68c','#ffc857','#4834d4','#1abc9c','#ff5c6c','#00bcd4','#e91e63','#ff9a76','#6c5ce7','#00b894'];
+const APP_VERSION='13.8';
+const COLORS=['#e11d2f','#f4c66f','#27d39b','#5ab8ff','#8f1422','#d98f38','#21a985','#3d6fb6','#ff5a6d','#a67c52','#9f3847','#468a7a'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
 const MAX_N=120,MAX_G=60,MAX_H=30;
@@ -657,7 +657,11 @@ function setPlaying(v){
   if(v)DU.startTick();else DU.stopTick();
   updateCarNow();
 }
-function updatePlayUI(){const ic=S.playing?'⏸':'▶';g('btnPP').textContent=ic;g('btnFpPlay').textContent=ic;g('fpVis').classList.toggle('paused',!S.playing);}
+function updatePlayUI(){
+  const ic=S.playing?'⏸':'▶';
+  g('btnPP').textContent=ic;g('btnFpPlay').textContent=ic;g('fpVis').classList.toggle('paused',!S.playing);
+  ['btnPP','btnFpPlay','carPlay'].forEach(id=>g(id)?.setAttribute('aria-pressed',String(S.playing)));
+}
 function syncMediaSessionState(){
   if(!('mediaSession' in navigator))return;
   try{
@@ -879,6 +883,7 @@ function shufflePlay(){
 function toggleShuffle(){
   _shuffle=!_shuffle;
   g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);
+  g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
   toast(_shuffle?'🔀 Karışık mod açık':'🔀 Karışık mod kapalı');
 }
 function setVol(v){const vol=v/100;if(!S.softPaused){aud.muted=false;aud.volume=vol;}IM.setBaseVol(vol);g('volM').value=v;g('volF').value=v;}
@@ -899,7 +904,12 @@ function syncIntUI(){g('swCall').checked=IM.opts.call;g('swNotif').checked=IM.op
 
 /* ── FAV & HIST ── */
 function toggleFav(id){const i=fv.indexOf(id);if(i>=0){fv.splice(i,1);toast('Favoriden çıkarıldı');}else{fv.push(id);toast('Favorilere eklendi','ok');}dataSave();renderCards();updateFavBtn();updateNavBadge();if(_carOpen)renderCarFavs();}
-function updateFavBtn(){if(S.cur)g('btnFpFav').textContent=fv.includes(S.cur.id)?'❤️':'🤍';}
+function updateFavBtn(){
+  if(!S.cur)return;
+  const on=fv.includes(S.cur.id);
+  g('btnFpFav').textContent=on?'❤️':'🤍';
+  g('btnFpFav').setAttribute('aria-pressed',String(on));
+}
 function addHist(s){rc=rc.filter(r=>r.id!==s.id);rc.unshift({id:s.id,t:Date.now()});if(rc.length>MAX_H)rc=rc.slice(0,MAX_H);dataSave();}
 function updateNavBadge(){const badge=g('favBadge');if(fv.length>0){badge.textContent=fv.length;badge.style.display='';}else{badge.style.display='none';}}
 
@@ -918,6 +928,8 @@ const _imgObserver=('IntersectionObserver' in window)?new IntersectionObserver((
 function makeCard(s,idx,showDrag){
   const isOn=S.cur?.id===s.id,isFav=fv.includes(s.id);
   const div=document.createElement('div');div.className='card'+(isOn?' on':'');div.dataset.action='play';div.dataset.id=s.id;
+  div.tabIndex=0;div.setAttribute('role','button');div.setAttribute('aria-label',`${s.n} kanalını çal`);
+  if(isOn)div.setAttribute('aria-current','true');
   if(showDrag){
     const dh=document.createElement('div');dh.className='drag-handle';dh.textContent='⠿';dh.dataset.action='drag';
     div.draggable=true;div.appendChild(dh);
@@ -946,7 +958,7 @@ function makeCard(s,idx,showDrag){
   if(isHttpUrl(s.u)){const http=document.createElement('span');http.className='cbits http';http.textContent='HTTP';http.title='HTTPS altında engellenebilir';gn.appendChild(http);}
   inf.appendChild(nm);inf.appendChild(gn);
   const acts=document.createElement('div');acts.className='cacts';
-  const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.textContent=isFav?'❤️':'🤍';fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');
+  const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.textContent=isFav?'❤️':'🤍';fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
   acts.appendChild(fb);
   div.appendChild(ico);div.appendChild(inf);div.appendChild(acts);return div;
 }
@@ -957,6 +969,12 @@ function attachDel(container){
   container.addEventListener('click',e=>{
     const fb=e.target.closest('[data-action="fav"]'),pb=e.target.closest('[data-action="play"]');
     if(fb){e.stopPropagation();toggleFav(fb.dataset.id);return;}if(pb){addRipple(e,pb);play(pb.dataset.id);}
+  });
+  container.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    const target=e.target.closest('[data-action="fav"],[data-action="play"]');
+    if(!target||!container.contains(target))return;
+    e.preventDefault();target.click();
   });
 }
 
@@ -1106,9 +1124,14 @@ function renderChips(){
   GENRES.forEach(genre=>{
     const chip=document.createElement('div');chip.className='chip'+(genre===_filterGenre?' a':'');chip.textContent=genre;
     chip.dataset.genre=genre;
+    chip.tabIndex=0;chip.setAttribute('role','button');chip.setAttribute('aria-pressed',String(genre===_filterGenre));
     c.appendChild(chip);
   });
-  if(!_delegated.has(c)){_delegated.add(c);c.addEventListener('click',e=>{const chip=e.target.closest('.chip');if(!chip||!chip.dataset.genre)return;_filterGenre=chip.dataset.genre;renderChips();renderCards();});}
+  if(!_delegated.has(c)){
+    _delegated.add(c);
+    c.addEventListener('click',e=>{const chip=e.target.closest('.chip');if(!chip||!chip.dataset.genre)return;_filterGenre=chip.dataset.genre;renderChips();renderCards();});
+    c.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const chip=e.target.closest('.chip');if(!chip||!chip.dataset.genre)return;e.preventDefault();chip.click();});
+  }
 }
 
 /* ── NAV ── */
@@ -1116,9 +1139,9 @@ let _curPage='f';
 function goPage(p){
   _curPage=p;
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('a'));
-  document.querySelectorAll('.bnav button').forEach(x=>x.classList.remove('a'));
+  document.querySelectorAll('.bnav button').forEach(x=>{x.classList.remove('a');x.removeAttribute('aria-current');});
   g({f:'pF',a:'pA',r:'pR',s:'pS'}[p]).classList.add('a');
-  g({f:'navF',a:'navA',r:'navR',s:'navS'}[p]).classList.add('a');
+  const nav=g({f:'navF',a:'navA',r:'navR',s:'navS'}[p]);nav.classList.add('a');nav.setAttribute('aria-current','page');
   const showSearch=(p==='f'||p==='a')&&ch.length>0;
   g('searchBar').style.display=showSearch?'block':'none';
   g('chips').style.display=showSearch?'flex':'none';
@@ -1127,8 +1150,13 @@ function goPage(p){
 }
 
 /* ── FULL PLAYER ── */
-function openFP(){g('fplay').classList.add('s');syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);}
-function closeFP(){g('fplay').classList.remove('s');}
+let _fpPrevFocus=null,_carPrevFocus=null;
+function openFP(){
+  _fpPrevFocus=document.activeElement;
+  g('fplay').classList.add('s');syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
+  setTimeout(()=>g('btnFpClose').focus?.(),30);
+}
+function closeFP(){g('fplay').classList.remove('s');setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
 
 /* ── CAR MODE ── */
 let _carOpen=false,_wakeLock=null;
@@ -1145,16 +1173,19 @@ async function releaseCarWakeLock(){
 }
 function openCar(){
   _carOpen=true;
+  _carPrevFocus=document.activeElement;
   g('carMode').classList.add('s');
   renderCarFavs();updateCarNow();
   try{if(screen.orientation?.lock)screen.orientation.lock('landscape').catch(()=>{});}catch{}
   requestCarWakeLock();
+  setTimeout(()=>g('carClose').focus?.(),30);
 }
 function closeCar(){
   _carOpen=false;
   g('carMode').classList.remove('s');
   releaseCarWakeLock();
   try{if(screen.orientation?.unlock)screen.orientation.unlock();}catch{}
+  setTimeout(()=>_carPrevFocus?.focus?.(),0);
 }
 function updateCarNow(){
   if(!_carOpen)return;
@@ -1162,6 +1193,7 @@ function updateCarNow(){
   if(S.cur){nm.textContent=S.cur.n;gn.textContent=S.cur.g||'Radyo';np.textContent=NP._curTitle||'';}
   else{nm.textContent='Radyo seç';gn.textContent='';np.textContent='';}
   pb.textContent=S.playing?'⏸':'▶';
+  pb.setAttribute('aria-pressed',String(S.playing));
   renderCarFavs();
 }
 function renderCarFavs(){
@@ -1555,6 +1587,7 @@ function init(){
 
   /* mini player */
   g('mplay').addEventListener('click',openFP);
+  g('mplay').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openFP();}});
   g('btnPP').addEventListener('click',e=>{e.stopPropagation();togglePlay();});
   g('mpVol').addEventListener('click',e=>e.stopPropagation());
   g('volM').addEventListener('input',e=>{e.stopPropagation();setVol(e.target.value);});
