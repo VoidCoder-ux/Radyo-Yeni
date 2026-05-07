@@ -64,7 +64,8 @@ function setDialogOpen(id,open){
   }else{
     ov.classList.remove('s');
     if(_activeDialog===ov)_activeDialog=null;
-    if(_prevFocus&&document.contains(_prevFocus))setTimeout(()=>_prevFocus.focus?.(),30);
+    const focusTarget=_prevFocus;
+    if(focusTarget&&document.contains(focusTarget))setTimeout(()=>focusTarget.focus?.(),30);
     _prevFocus=null;
   }
 }
@@ -925,42 +926,68 @@ const _imgObserver=('IntersectionObserver' in window)?new IntersectionObserver((
 },{rootMargin:'100px'}):null;
 
 /* ── CARD ── */
-function makeCard(s,idx,showDrag){
-  const isOn=S.cur?.id===s.id,isFav=fv.includes(s.id);
-  const div=document.createElement('div');div.className='card'+(isOn?' on':'');div.dataset.action='play';div.dataset.id=s.id;
-  div.tabIndex=0;div.setAttribute('role','button');div.setAttribute('aria-label',`${s.n} kanalını çal`);
-  if(isOn)div.setAttribute('aria-current','true');
-  if(showDrag){
-    const dh=document.createElement('div');dh.className='drag-handle';dh.textContent='⠿';dh.dataset.action='drag';
-    div.draggable=true;div.appendChild(dh);
-  }
-  const ico=document.createElement('div');ico.className='cico';ico.style.background=s.c||'var(--ac)';
-  if(isOn&&S.playing){ico.innerHTML='<div class="ceq"><i></i><i></i><i></i><i></i></div>';}
-  else if(s.img){
+function setStationTone(el,s){
+  const color=s.c||COLORS[0];
+  el.style.setProperty('--station-color',color);
+  el.style.setProperty('--station-color-dark',darken(color));
+}
+function createCardLogo(s,isOn){
+  const ico=document.createElement('div');ico.className='cico';setStationTone(ico,s);
+  if(s.img){
     const img=document.createElement('img');img.alt='';
     if(_imgObserver){img.dataset.src=s.img;img.style.cssText='opacity:0;transition:opacity .3s';img.onload=function(){this.style.opacity='1';};_imgObserver.observe(img);}
     else{img.src=s.img;}
     img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ico.appendChild(img);
+  }else{ico.textContent=s.e;}
+  if(isOn&&S.playing){
+    const status=document.createElement('div');status.className='cico-status';status.innerHTML='<div class="ceq"><i></i><i></i><i></i><i></i></div>';ico.appendChild(status);
   }
-  else{ico.textContent=s.e;}
-  const inf=document.createElement('div');inf.className='cinf';
+  return ico;
+}
+function createCardName(s){
   const nm=document.createElement('div');nm.className='cnam';
-  // Highlight search match
   if(_searchQ){
     const q=_searchQ.toLowerCase(),n=s.n,li=n.toLowerCase().indexOf(q);
     if(li>=0){nm.innerHTML=esc(n.slice(0,li))+'<b style="color:var(--ac2)">'+esc(n.slice(li,li+q.length))+'</b>'+esc(n.slice(li+q.length));}
     else{nm.textContent=n;}
   }else{nm.textContent=s.n;}
+  return nm;
+}
+function createCardChip(text,cls,title){
+  const chip=document.createElement('span');chip.className='cbits'+(cls?' '+cls:'');chip.textContent=text;
+  if(title)chip.title=title;
+  return chip;
+}
+function createCardMeta(s,isOn,extraText){
   const gn=document.createElement('div');gn.className='cgen';
-  if(isOn){const dot=document.createElement('span');dot.className='cdot';gn.appendChild(dot);}
-  gn.appendChild(document.createTextNode(s.g||'Radyo'));
-  if(s.br>0){const br=document.createElement('span');br.className='cbits';br.textContent=s.br+'kbps';gn.appendChild(br);}
-  if(isHttpUrl(s.u)){const http=document.createElement('span');http.className='cbits http';http.textContent='HTTP';http.title='HTTPS altında engellenebilir';gn.appendChild(http);}
+  if(isOn)gn.appendChild(createCardChip(S.playing?'CANLI':'SEÇİLİ','live'));
+  const main=document.createElement('span');main.className='cgen-main';
+  if(isOn){const dot=document.createElement('span');dot.className='cdot';main.appendChild(dot);}
+  main.appendChild(document.createTextNode(extraText||s.g||'Radyo'));gn.appendChild(main);
+  if(!extraText&&s.br>0)gn.appendChild(createCardChip(s.br+'kbps'));
+  if(isHttpUrl(s.u))gn.appendChild(createCardChip('HTTP','http','HTTPS altında engellenebilir'));
+  return gn;
+}
+function makeCard(s,idx,showDrag){
+  const isOn=S.cur?.id===s.id,isFav=fv.includes(s.id);
+  const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'')+(isFav?' fav-on':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
+  div.tabIndex=0;div.setAttribute('role','button');div.setAttribute('aria-label',`${s.n} kanalını çal`);
+  if(isOn)div.setAttribute('aria-current','true');
+  const shell=document.createElement('div');shell.className='card-shell'+(showDrag?' has-drag':'');
+  if(showDrag){
+    const dh=document.createElement('div');dh.className='drag-handle';dh.textContent='⠿';dh.dataset.action='drag';
+    div.draggable=true;shell.appendChild(dh);
+  }
+  const ico=createCardLogo(s,isOn);
+  const inf=document.createElement('div');inf.className='cinf';
+  const nm=createCardName(s);
+  const gn=createCardMeta(s,isOn);
   inf.appendChild(nm);inf.appendChild(gn);
   const acts=document.createElement('div');acts.className='cacts';
   const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.textContent=isFav?'❤️':'🤍';fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
-  acts.appendChild(fb);
-  div.appendChild(ico);div.appendChild(inf);div.appendChild(acts);return div;
+  const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.textContent=isOn&&S.playing?'⏸':'▶';pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
+  acts.appendChild(fb);acts.appendChild(pb);
+  shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);return div;
 }
 const _delegated=new WeakSet();
 function attachDel(container){
@@ -993,6 +1020,7 @@ function renderCards(){
 }
 function renderAll(){
   const w=g('allList');w.innerHTML='';
+  w.classList.add('card-grid');
   const filtered=getFiltered(ch);
   if(!ch.length){w.innerHTML=`<div class="empty"><span class="empty-ic">📡</span><h3>Henüz kanal yok</h3><p>Radyo arayıp ekleyin veya Türk radyolarını keşfedin</p><button class="empty-btn" id="eaA">📻 Radyo Ekle</button></div>`;g('eaA')?.addEventListener('click',openMod);return;}
   if(!filtered.length){w.innerHTML=`<div class="empty"><span class="empty-ic">🔍</span><h3>Sonuç bulunamadı</h3><p>Farklı bir filtre veya arama deneyin</p></div>`;return;}
@@ -1010,6 +1038,7 @@ function renderAll(){
 }
 function renderFavs(){
   const w=g('favList');w.innerHTML='';
+  w.classList.add('card-grid');
   const favStations=ch.filter(x=>fv.includes(x.id));
   favStations.sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id));
   const list=getFiltered(favStations);
@@ -1080,21 +1109,24 @@ function initFavDrag(container){
 }
 function renderRecent(){
   const w=g('recList');w.innerHTML='';const chMap=new Map(ch.map(x=>[x.id,x]));const valid=rc.filter(r=>chMap.has(r.id));
+  w.classList.add('card-grid');
   if(!valid.length){w.innerHTML=`<div class="empty"><span class="empty-ic">🕐</span><h3>Geçmiş yok</h3><p>Dinlediğiniz radyolar burada görünür</p></div>`;return;}
   const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Son Dinlenenler <span class="count-badge">${valid.length}</span>`;w.appendChild(ttl);
   const f=document.createDocumentFragment();
   valid.forEach((r,i)=>{
     const s=chMap.get(r.id);
-    const div=document.createElement('div');div.className='card'+(S.cur?.id===s.id?' on':'');div.dataset.action='play';div.dataset.id=s.id;
-    const ico=document.createElement('div');ico.className='cico';ico.style.background=s.c||'var(--ac)';
-    if(s.img){const img=document.createElement('img');img.alt='';img.loading='lazy';img.src=s.img;img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ico.appendChild(img);}
-    else{ico.textContent=s.e;}
+    const isOn=S.cur?.id===s.id;
+    const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
+    div.tabIndex=0;div.setAttribute('role','button');div.setAttribute('aria-label',`${s.n} kanalını çal`);
+    if(isOn)div.setAttribute('aria-current','true');
+    const shell=document.createElement('div');shell.className='card-shell';
+    const ico=createCardLogo(s,isOn);
     const inf=document.createElement('div');inf.className='cinf';
     const nm=document.createElement('div');nm.className='cnam';nm.textContent=s.n;
-    const gn=document.createElement('div');gn.className='cgen';
-    if(S.cur?.id===s.id){const dot=document.createElement('span');dot.className='cdot';gn.appendChild(dot);}
-    gn.appendChild(document.createTextNode(relTime(r.t)));
-    inf.appendChild(nm);inf.appendChild(gn);div.appendChild(ico);div.appendChild(inf);f.appendChild(div);
+    const gn=createCardMeta(s,isOn,relTime(r.t));
+    const acts=document.createElement('div');acts.className='cacts';
+    const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.textContent=isOn&&S.playing?'⏸':'▶';pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
+    acts.appendChild(pb);inf.appendChild(nm);inf.appendChild(gn);shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);f.appendChild(div);
   });
   w.appendChild(f);attachDel(w);
 }
