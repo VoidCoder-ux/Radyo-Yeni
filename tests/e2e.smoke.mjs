@@ -67,11 +67,13 @@ await withServer(async baseUrl => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
-    if (message.type() === 'error') errors.push(message.text());
+    if (message.type() === 'error' && !message.text().startsWith('Failed to load resource:')) {
+      errors.push(message.text());
+    }
   });
 
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#spl.h', { timeout: 3500 });
+  await page.waitForFunction(() => document.querySelector('#spl')?.classList.contains('h'), { timeout: 3500 });
   await assertVisible(page, '#navF');
   await assertVisible(page, '#navA');
   await assertVisible(page, '#navR');

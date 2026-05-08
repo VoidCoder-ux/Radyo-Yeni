@@ -6,43 +6,44 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TürkRadyo">
-<meta name="theme-color" content="#06060b">
+<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#050506" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" id="atiAny" href="icons/icon.svg" sizes="any">
-<link rel="apple-touch-icon" id="ati180" href="icons/icon.svg" sizes="180x180">
+<link rel="apple-touch-icon" id="atiAny" href="icons/icon-192.png">
+<link rel="apple-touch-icon" id="ati180" href="icons/icon-192.png" sizes="192x192">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://de1.api.radio-browser.info">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="src/styles.css">
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<div class="ambient" id="ambient">
+<div class="ambient" id="ambient" aria-hidden="true">
   <div class="ambient-orb"></div>
   <div class="ambient-orb"></div>
   <div class="ambient-orb"></div>
 </div>
-<div class="noise"></div>
+<div class="noise" aria-hidden="true"></div>
 
-<div class="offline-bar" id="offlineBar">Bağlantı yok - Çevrimdışı mod</div>
-<div class="itr" id="itr"><div class="itr-dot"></div><span id="itrTxt"></span><span class="itr-vol" id="itrVol"></span></div>
-<div class="tst" id="tst" role="status" aria-live="polite"></div>
+<div class="offline-bar" id="offlineBar" role="status" aria-live="polite">Bağlantı yok - Çevrimdışı mod</div>
+<div class="itr" id="itr" role="status" aria-live="polite"><div class="itr-dot"></div><span id="itrTxt"></span><span class="itr-vol" id="itrVol"></span></div>
+<div class="tst" id="tst" role="status" aria-live="polite" aria-atomic="true"></div>
 <div class="splash" id="spl"><div class="spl-ic">📻</div><h1>TürkRadyo</h1><p>Canlı Radyo Deneyimi</p><div class="spl-bar"></div></div>
 
 <div class="install-bar" id="installBar">
   <div class="ib-icon">📲</div>
   <div class="ib-text"><h4>Uygulamayı Yükle</h4><p>Ana ekrana ekle, daha hızlı aç</p></div>
   <button class="ib-btn" id="installBtn">Yükle</button>
-  <button class="ib-close" id="installClose">✕</button>
+  <button class="ib-close" id="installClose" aria-label="Kapat">✕</button>
 </div>
 
-<div class="ios-ov" id="iosInstallOv">
-  <div class="ios-box">
+<div class="ios-ov" id="iosInstallOv" role="dialog" aria-modal="true" aria-labelledby="iosInstallTitle">
+  <div class="ios-box" tabindex="-1">
     <div class="ios-drag"></div>
-    <h3>Ana Ekrana Ekle</h3>
+    <h3 id="iosInstallTitle">Ana Ekrana Ekle</h3>
     <p class="ios-sub">TürkRadyo'yu ana ekranına ekle, uygulama gibi aç!</p>
     <div class="ios-steps">
       <div class="ios-step">
@@ -77,7 +78,7 @@
 </div>
 
 <div class="cfm-ov" id="cfmOv" role="dialog" aria-modal="true" aria-labelledby="cfmTitle" aria-describedby="cfmMsg">
-  <div class="cfm-box">
+  <div class="cfm-box" tabindex="-1">
     <h3 id="cfmTitle"></h3>
     <p id="cfmMsg"></p>
     <div class="cfm-btns">
@@ -93,7 +94,7 @@
       <div class="logo"><div class="logo-ic">📻</div><span>TürkRadyo</span></div>
       <div class="hdr-acts">
         <button class="abtn" id="btnCarMode" aria-label="Araba Modu" title="Araba Modu">🚗</button>
-        <button class="abtn" id="btnShuffle" aria-label="Karışık Çal" title="Karışık Çal">🔀</button>
+        <button class="abtn" id="btnShuffle" aria-label="Rastgele Çal" title="Rastgele Çal">🔀</button>
         <button class="abtn" id="btnAdd" aria-label="Radyo Ekle">➕</button>
       </div>
     </div>
@@ -101,7 +102,7 @@
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         <input id="searchInput" placeholder="Kanal ara..." autocomplete="off" aria-label="Kanal ara">
-        <button class="search-clear" id="searchClear">✕</button>
+        <button class="search-clear" id="searchClear" aria-label="Aramayı temizle">✕</button>
       </div>
     </div>
     <div class="chips" id="chips" style="display:none"></div>
@@ -121,7 +122,7 @@
         <div class="set-t">Dinleme</div>
         <div class="set-row" id="btnOpenCar"><div class="set-ic" style="background:rgba(255,200,87,.08);color:#ffc857">🚗</div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
         <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">📊</div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill" id="dsPill" style="display:none">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
-        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">📶</div><div class="set-lb"><h4>Bu Ay Harcanan Veri</h4><p id="dataUsageTxt">—</p></div><button class="del-b" id="btnResetData" title="Sıfırla" style="background:var(--cd2);color:var(--tx3);padding:6px 10px;border-radius:10px;font-size:10px">Sıfırla</button></div>
+        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">📶</div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla" style="background:var(--cd2);color:var(--tx3);padding:6px 10px;border-radius:10px;font-size:10px">Sıfırla</button></div>
         <div class="set-t">Uygulama</div>
         <div class="set-row" id="btnInstallApp" style="display:none"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📲</div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
         <div class="set-row" id="btnAlreadyInstalled" style="display:none;cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">✅</div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
@@ -129,6 +130,12 @@
         <div class="set-row" id="btnExport"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">💾</div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div></div>
         <div class="set-row" id="btnImport"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📂</div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div></div>
         <input type="file" id="fileIn" accept=".json" style="display:none">
+        <div class="set-t">Bulut Yedek</div>
+        <div class="set-row" id="btnCloudBackup"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">🔗</div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div></div>
+        <div class="set-row" id="btnCloudRestore"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">↩</div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div></div>
+        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">☁️</div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div></div>
+        <div class="set-row" id="btnSyncPush"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">⬆</div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div></div>
+        <div class="set-row" id="btnSyncPull"><div class="set-ic" style="background:rgba(255,200,87,.08);color:#ffc857">⬇</div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div></div>
         <div class="set-row" id="btnFetchLogos"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">🖼️</div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div></div>
         <div class="set-row" id="btnReset"><div class="set-ic" style="background:rgba(255,92,108,.08);color:#ff5c6c">🗑️</div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div></div>
         <div class="set-t">Kanallarım (<span id="chCount">0</span>)</div>
@@ -145,31 +152,31 @@
           </div>
         </div>
         <div class="set-t">Hakkında</div>
-        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(180,169,255,.08);color:#b4a9ff">📻</div><div class="set-lb"><h4>TürkRadyo v13.0</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
+        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(180,169,255,.08);color:#b4a9ff">📻</div><div class="set-lb"><h4 id="appVersionLabel">TürkRadyo</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="mplay" id="mplay">
+<div class="mplay" id="mplay" role="button" tabindex="0" aria-label="Şimdi çalınıyor ekranını aç">
   <div class="mp-progress"><div class="mp-progress-bar" id="mpBar"></div></div>
   <div class="mplay-r">
     <div class="mplay-i" id="mIco">📻</div>
     <div class="mplay-f">
       <div class="mplay-n" id="mName">—</div>
       <div class="mplay-np" id="mNow"></div>
-      <div class="mplay-s" id="mStat" role="status" aria-live="polite"><span class="cdot"></span>Hazır</div>
+      <div class="mplay-s" id="mStat"><span class="cdot"></span>Hazır</div>
     </div>
     <button class="ppb" id="btnPP" aria-label="Oynat/Durdur">▶</button>
   </div>
   <div class="mp-vol" id="mpVol">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></svg>
-    <input type="range" class="rng" id="volM" min="0" max="100" value="80" aria-label="Ses">
+    <input type="range" class="rng" id="volM" min="0" max="100" value="80" aria-label="Mini oynatıcı ses seviyesi">
     <svg viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M10.5 4.5a5 5 0 010 7m2-9a8 8 0 010 11"/></svg>
   </div>
 </div>
 
-<div class="fplayer" id="fplay">
+<div class="fplayer" id="fplay" role="dialog" aria-modal="true" aria-labelledby="fpName">
   <div class="fp-bg">
     <div class="fp-bg-orb" id="fpOrb1"></div>
     <div class="fp-bg-orb" id="fpOrb2"></div>
@@ -195,7 +202,7 @@
     </div>
     <div class="fp-vol">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></svg>
-      <input type="range" class="rng-lg" id="volF" min="0" max="100" value="80" aria-label="Ses">
+      <input type="range" class="rng-lg" id="volF" min="0" max="100" value="80" aria-label="Şimdi çalınıyor ses seviyesi">
       <svg viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M10.5 4.5a5 5 0 010 7m2-9a8 8 0 010 11"/></svg>
     </div>
     <div class="fp-timer">
@@ -222,7 +229,7 @@
   </div>
 </div>
 
-<div class="car-mode" id="carMode">
+<div class="car-mode" id="carMode" role="dialog" aria-modal="true" aria-labelledby="carNm">
   <div class="car-bg"><div class="car-bg-orb"></div><div class="car-bg-orb"></div></div>
   <div class="car-hdr">
     <div class="car-ttl">Araba Modu</div>
@@ -242,10 +249,10 @@
   <div class="car-favs" id="carFavs"></div>
 </div>
 
-<div class="modal" id="addMod" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="addTitle">
-  <div class="modal-c">
+<div class="modal" id="addMod" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+  <div class="modal-c" tabindex="-1">
     <div class="modal-bar"></div>
-    <h2>📻 Radyo Ekle</h2>
+    <h2 id="addModalTitle">📻 Radyo Ekle</h2>
     <div class="srch-sec">
       <h3>🇹🇷 Türk Radyoları</h3>
       <div class="srch-row"><input id="qTR" placeholder="Radyo adı yazın..." autocomplete="off"><button id="bTR">Ara</button></div>
@@ -273,7 +280,7 @@
   </div>
 </div>
 
-<nav class="bnav" aria-label="Ana gezinme">
+<nav class="bnav" aria-label="Alt gezinme">
   <button data-pg="f" id="navF" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>Favoriler<span class="nav-badge" id="favBadge" style="display:none">0</span></button>
   <button data-pg="a" id="navA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0110 10M12 2a10 10 0 00-10 10M2 12a10 10 0 0010 10M22 12a10 10 0 01-10 10"/></svg>Kanallarım</button>
   <button data-pg="r" id="navR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Son</button>
@@ -284,6 +291,7 @@
 
 <audio id="aud" preload="none" webkit-playsinline playsinline></audio>
 
-<script type="module" src="src/app.js"></script>
+<script src="js/storage.js" defer></script>
+<script src="js/app.js" defer></script>
 </body>
 </html>

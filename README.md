@@ -41,14 +41,15 @@ Uygulama statik dosyalarla çalışır. GitHub Pages veya herhangi bir statik ho
 - `index.html`
 - `manifest.json`
 - `sw.js`
-- `src/`
+- `css/`
+- `js/`
 - `icons/`
 
 Build adımı zorunlu değildir.
 
 ## PWA Notları
 
-Service worker uygulama kabuğunu ve ikonları önbelleğe alır; radyo streamleri, range istekleri ve Radio Browser API çağrıları cache'lenmez. Cache sürümü `sw.js` içindeki `APP_VERSION` ile yönetilir.
+Service worker uygulama kabuğunu ve ikonları önbelleğe alır; radyo streamleri, range istekleri ve Radio Browser API çağrıları cache'lenmez. Cache sürümü `sw.js` içindeki `CACHE` sabitiyle yönetilir.
 
 ## Bilinen Sınırlar
 
