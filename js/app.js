@@ -2,7 +2,7 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0';
+const APP_VERSION='15.0.1';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -31,6 +31,17 @@ function firstFulfilled(promises){
       if(--left===0)reject(new Error('All promises rejected'));
     }));
   });
+}
+function initialRoute(){
+  try{
+    const page=new URLSearchParams(location.search).get('page');
+    if(page==='fav'||page==='favorites'||page==='f')return{page:'f'};
+    if(page==='add')return{page:'a',openAdd:true};
+    if(page==='all'||page==='channels'||page==='a')return{page:'a'};
+    if(page==='recent'||page==='history'||page==='r')return{page:'r'};
+    if(page==='settings'||page==='s')return{page:'s'};
+  }catch{}
+  return{page:'h'};
 }
 function lsSave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){if(e?.name==='QuotaExceededError')toast('Depolama dolu!','warn');else toast('Kayıt hatası','err');}}
 function lsLoad(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
@@ -1826,7 +1837,9 @@ function init(){
   syncIntUI();
   updateSearchVisibility();
 
-  goPage('h');
+  const route=initialRoute();
+  goPage(route.page);
+  if(route.openAdd)setTimeout(openMod,0);
 }
 
 window.TurkRadyo={version:APP_VERSION,exportData:backupData,importData,syncPush,syncPull};
