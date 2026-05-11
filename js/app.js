@@ -36,6 +36,8 @@ function lsSave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){if(
 function lsLoad(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
 function g(id){return document.getElementById(id);}
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+/* SVG icon helper — references symbols defined in the index.html sprite */
+function _ic(name,opts){const o=opts||{};const cls='svg-i'+(o.fill?' fill':'')+(o.cls?' '+o.cls:'');return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
 /* Türkçe toleranslı arama: şapkalı harf, ı/i, büyük/küçük, boşluk/noktalama normalize */
 function trNormalize(s){
   if(s==null)return'';
@@ -659,8 +661,8 @@ function setPlaying(v){
   updateCarNow();
 }
 function updatePlayUI(){
-  const ic=S.playing?'⏸':'▶';
-  g('btnPP').textContent=ic;g('btnFpPlay').textContent=ic;g('fpVis').classList.toggle('paused',!S.playing);
+  const ic=_ic(S.playing?'pause':'play',{fill:true});
+  g('btnPP').innerHTML=ic;g('btnFpPlay').innerHTML=ic;g('fpVis').classList.toggle('paused',!S.playing);
   ['btnPP','btnFpPlay','carPlay'].forEach(id=>g(id)?.setAttribute('aria-pressed',String(S.playing)));
 }
 function syncMediaSessionState(){
@@ -697,16 +699,16 @@ function play(id){
   S.cur=s;S.retries=0;S.should=true;S.resumable=true;IM.setUStop(false);
   g('mplay').classList.add('s');g('scr').classList.add('mp-on');
   // Mini player icon
-  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=s.c||'var(--ac)';
+  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
   if(s.img){const mi=document.createElement('img');mi.src=s.img;mi.alt='';mi.loading='lazy';mi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};mIco.appendChild(mi);}
   else{mIco.textContent=s.e;}
   g('mName').textContent=s.n;
   // Full player art
-  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'var(--ac)'},${darken(s.c||'#7c6cf0')})`;
+  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
   if(s.img){const fi=document.createElement('img');fi.src=s.img;fi.alt='';fi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};fpArt.appendChild(fi);}
   else{fpArt.textContent=s.e;}
-  g('fpOrb1').style.background=s.c||'var(--ac)';
-  g('fpOrb2').style.background=darken(s.c||'#7c6cf0');
+  g('fpOrb1').style.background=s.c||'#7c5cff';
+  g('fpOrb2').style.background=darken(s.c||'#7c5cff');
   g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
   // Bitrate
   if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;g('fpBitrate').style.display='';}else{g('fpBitrate').style.display='none';}
@@ -918,8 +920,10 @@ function toggleFav(id){const i=fv.indexOf(id);if(i>=0){fv.splice(i,1);toast('Fav
 function updateFavBtn(){
   if(!S.cur)return;
   const on=fv.includes(S.cur.id);
-  g('btnFpFav').textContent=on?'❤️':'🤍';
-  g('btnFpFav').setAttribute('aria-pressed',String(on));
+  const btn=g('btnFpFav');
+  btn.innerHTML=_ic('heart',{fill:on});
+  btn.setAttribute('aria-pressed',String(on));
+  if(on)btn.setAttribute('data-fav','on');else btn.removeAttribute('data-fav');
 }
 function addHist(s){rc=rc.filter(r=>r.id!==s.id);rc.unshift({id:s.id,t:Date.now()});if(rc.length>MAX_H)rc=rc.slice(0,MAX_H);dataSave();}
 function updateNavBadge(){const badge=g('favBadge');if(fv.length>0){badge.textContent=fv.length;badge.style.display='';}else{badge.style.display='none';}}
@@ -985,7 +989,7 @@ function makeCard(s,idx,showDrag){
   if(isOn)div.setAttribute('aria-current','true');
   const shell=document.createElement('div');shell.className='card-shell'+(showDrag?' has-drag':'');
   if(showDrag){
-    const dh=document.createElement('div');dh.className='drag-handle';dh.textContent='⠿';dh.dataset.action='drag';
+    const dh=document.createElement('div');dh.className='drag-handle';dh.innerHTML=_ic('grip',{fill:true});dh.dataset.action='drag';dh.setAttribute('aria-label','Sıralamak için sürükle');
     div.draggable=true;shell.appendChild(dh);
   }
   const ico=createCardLogo(s,isOn);
@@ -994,8 +998,8 @@ function makeCard(s,idx,showDrag){
   const gn=createCardMeta(s,isOn);
   inf.appendChild(nm);inf.appendChild(gn);
   const acts=document.createElement('div');acts.className='cacts';
-  const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.textContent=isFav?'❤️':'🤍';fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
-  const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.textContent=isOn&&S.playing?'⏸':'▶';pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
+  const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.innerHTML=_ic('heart',{fill:isFav});fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
+  const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.innerHTML=_ic(isOn&&S.playing?'pause':'play',{fill:true});pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
   acts.appendChild(fb);acts.appendChild(pb);
   shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);return div;
 }
@@ -1032,8 +1036,8 @@ function renderAll(){
   const w=g('allList');w.innerHTML='';
   w.classList.add('card-grid');
   const filtered=getFiltered(ch);
-  if(!ch.length){w.innerHTML=`<div class="empty"><span class="empty-ic">📡</span><h3>Henüz kanal yok</h3><p>Radyo arayıp ekleyin veya Türk radyolarını keşfedin</p><button class="empty-btn" id="eaA">📻 Radyo Ekle</button></div>`;g('eaA')?.addEventListener('click',openMod);return;}
-  if(!filtered.length){w.innerHTML=`<div class="empty"><span class="empty-ic">🔍</span><h3>Sonuç bulunamadı</h3><p>Farklı bir filtre veya arama deneyin</p></div>`;return;}
+  if(!ch.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('broadcast')}</span><h3>Henüz kanal yok</h3><p>Radyo arayıp ekleyin veya Türk radyolarını keşfedin</p><button class="empty-btn" id="eaA">${_ic('plus')}<span>Radyo Ekle</span></button></div>`;g('eaA')?.addEventListener('click',openMod);return;}
+  if(!filtered.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('search')}</span><h3>Sonuç bulunamadı</h3><p>Farklı bir filtre veya arama deneyin</p></div>`;return;}
   // Sort bar
   const sortBar=document.createElement('div');sortBar.className='sort-bar';
   ['default','az','za'].forEach(mode=>{
@@ -1052,8 +1056,8 @@ function renderFavs(){
   const favStations=ch.filter(x=>fv.includes(x.id));
   favStations.sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id));
   const list=getFiltered(favStations);
-  if(!favStations.length){w.innerHTML=`<div class="empty"><span class="empty-ic">💜</span><h3>Favori yok</h3><p>Kanallarım'dan ❤️ ile ekleyin<br>veya yeni radyo arayın</p><button class="empty-btn" id="eaF">📻 Radyo Ekle</button></div>`;g('eaF')?.addEventListener('click',openMod);return;}
-  if(!list.length){w.innerHTML=`<div class="empty"><span class="empty-ic">🔍</span><h3>Filtre sonucu boş</h3><p>Farklı bir kategori deneyin</p></div>`;return;}
+  if(!favStations.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('heart')}</span><h3>Favori yok</h3><p>Kanallarım sekmesinden kalp simgesi ile ekleyin<br>veya yeni radyo arayın</p><button class="empty-btn" id="eaF">${_ic('plus')}<span>Radyo Ekle</span></button></div>`;g('eaF')?.addEventListener('click',openMod);return;}
+  if(!list.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('search')}</span><h3>Filtre sonucu boş</h3><p>Farklı bir kategori deneyin</p></div>`;return;}
   w.classList.add('fav-mode');
   const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Favorilerim <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
   const f=document.createDocumentFragment();list.forEach((s,i)=>f.appendChild(makeCard(s,i,true)));w.appendChild(f);attachDel(w);initFavDrag(w);
@@ -1120,7 +1124,7 @@ function initFavDrag(container){
 function renderRecent(){
   const w=g('recList');w.innerHTML='';const chMap=new Map(ch.map(x=>[x.id,x]));const valid=rc.filter(r=>chMap.has(r.id));
   w.classList.add('card-grid');
-  if(!valid.length){w.innerHTML=`<div class="empty"><span class="empty-ic">🕐</span><h3>Geçmiş yok</h3><p>Dinlediğiniz radyolar burada görünür</p></div>`;return;}
+  if(!valid.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('history')}</span><h3>Geçmiş yok</h3><p>Dinlediğiniz radyolar burada görünür</p></div>`;return;}
   const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Son Dinlenenler <span class="count-badge">${valid.length}</span>`;w.appendChild(ttl);
   const f=document.createDocumentFragment();
   valid.forEach((r,i)=>{
@@ -1135,7 +1139,7 @@ function renderRecent(){
     const nm=document.createElement('div');nm.className='cnam';nm.textContent=s.n;
     const gn=createCardMeta(s,isOn,relTime(r.t));
     const acts=document.createElement('div');acts.className='cacts';
-    const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.textContent=isOn&&S.playing?'⏸':'▶';pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
+    const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.innerHTML=_ic(isOn&&S.playing?'pause':'play',{fill:true});pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
     acts.appendChild(pb);inf.appendChild(nm);inf.appendChild(gn);shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);f.appendChild(div);
   });
   w.appendChild(f);attachDel(w);
@@ -1143,17 +1147,17 @@ function renderRecent(){
 function renderSettings(){
   const w=g('chList');g('chCount').textContent=ch.length;w.innerHTML='';
   g('statCh').textContent=ch.length;g('statFav').textContent=fv.length;g('statRec').textContent=rc.length;
-  if(!ch.length){const r=document.createElement('div');r.className='set-row';r.style.cursor='default';r.innerHTML=`<div class="set-ic" style="background:rgba(255,255,255,.02)">📡</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
+  if(!ch.length){const r=document.createElement('div');r.className='set-row';r.style.cursor='default';r.innerHTML=`<div class="set-ic" style="background:rgba(255,255,255,.04);color:var(--tx3)">${_ic('broadcast')}</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
   const f=document.createDocumentFragment();
   ch.forEach(s=>{
     const r=document.createElement('div');r.className='set-row';r.style.cursor='default';
-    const ic=document.createElement('div');ic.className='set-ic';ic.style.background=s.c;
+    const ic=document.createElement('div');ic.className='set-ic';ic.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;ic.style.color='#fff';
     if(s.img){const img=document.createElement('img');img.src=s.img;img.alt='';img.loading='lazy';img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;';img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(img);}
     else{ic.textContent=s.e;}
     const lb=document.createElement('div');lb.className='set-lb';
     const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=(s.g||'Radyo')+(s.br?' · '+s.br+'kbps':'');
     lb.appendChild(h4);lb.appendChild(p);
-    const btn=document.createElement('button');btn.className='del-b';btn.dataset.action='del';btn.dataset.id=s.id;btn.textContent='🗑️';btn.setAttribute('aria-label',`${s.n} kanalını sil`);
+    const btn=document.createElement('button');btn.className='del-b';btn.dataset.action='del';btn.dataset.id=s.id;btn.innerHTML=_ic('trash');btn.setAttribute('aria-label',`${s.n} kanalını sil`);
     r.appendChild(ic);r.appendChild(lb);r.appendChild(btn);f.appendChild(r);
   });
   w.appendChild(f);
@@ -1234,7 +1238,7 @@ function updateCarNow(){
   const nm=g('carNm'),np=g('carNp'),gn=g('carGn'),pb=g('carPlay');
   if(S.cur){nm.textContent=S.cur.n;gn.textContent=S.cur.g||'Radyo';np.textContent=NP._curTitle||'';}
   else{nm.textContent='Radyo seç';gn.textContent='';np.textContent='';}
-  pb.textContent=S.playing?'⏸':'▶';
+  pb.innerHTML=_ic(S.playing?'pause':'play',{fill:true});
   pb.setAttribute('aria-pressed',String(S.playing));
   renderCarFavs();
 }
@@ -1243,11 +1247,11 @@ function renderCarFavs(){
   w.innerHTML='';
   const list=ch.filter(x=>fv.includes(x.id));
   list.sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id));
-  if(!list.length){w.innerHTML='<div class="car-fav-empty">Henüz favori yok.<br>Favoriler ana ekrandan ❤️ ile eklenir.</div>';return;}
+  if(!list.length){w.innerHTML='<div class="car-fav-empty">Henüz favori yok.<br>Favorileri ana ekrandan ekleyin.</div>';return;}
   const f=document.createDocumentFragment();
   list.slice(0,12).forEach(s=>{
     const d=document.createElement('button');d.type='button';d.className='car-fav'+(S.cur?.id===s.id?' on':'');d.dataset.id=s.id;
-    const ic=document.createElement('div');ic.className='car-fav-ic';ic.style.background=s.c||'var(--ac)';
+    const ic=document.createElement('div');ic.className='car-fav-ic';ic.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
     if(s.img){const im=document.createElement('img');im.src=s.img;im.alt='';im.loading='lazy';im.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(im);}
     else{ic.textContent=s.e;}
     const nm=document.createElement('div');nm.className='car-fav-nm';nm.textContent=s.n;
@@ -1401,10 +1405,10 @@ async function autoFetchLogos(limit=20){
 function updatePlayerArt(){
   if(!S.cur)return;
   const s=S.cur;
-  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=s.c||'var(--ac)';
+  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
   if(s.img){const mi=document.createElement('img');mi.src=s.img;mi.alt='';mi.loading='lazy';mi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};mIco.appendChild(mi);}
   else{mIco.textContent=s.e;}
-  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'var(--ac)'},${darken(s.c||'#7c6cf0')})`;
+  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
   if(s.img){const fi=document.createElement('img');fi.src=s.img;fi.alt='';fi.loading='lazy';fi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};fpArt.appendChild(fi);}
   else{fpArt.textContent=s.e;}
   updateMeta(s);

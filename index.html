@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TürkRadyo">
-<meta name="theme-color" content="#050506">
-<meta name="theme-color" content="#050506" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#06070f">
+<meta name="theme-color" content="#06070f" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -21,6 +21,55 @@
 </head>
 <body>
 
+<!-- ===================== SVG icon sprite ===================== -->
+<svg class="i-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4.5v15a.7.7 0 0 0 1.06.6l13-7.5a.7.7 0 0 0 0-1.2l-13-7.5A.7.7 0 0 0 6 4.5z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="4.5" width="4" height="15" rx="1.4"/><rect x="13.5" y="4.5" width="4" height="15" rx="1.4"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M19 5.2v13.6a.7.7 0 0 1-1.06.6L8 13.6V19a.6.6 0 0 1-1.2 0V5a.6.6 0 0 1 1.2 0v5.4l9.94-5.8A.7.7 0 0 1 19 5.2z"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 5.2v13.6a.7.7 0 0 0 1.06.6L16 13.6V19a.6.6 0 0 0 1.2 0V5a.6.6 0 0 0-1.2 0v5.4L6.06 4.6A.7.7 0 0 0 5 5.2z"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16V11l2.4-5.2a2 2 0 0 1 1.8-1.2h5.6a2 2 0 0 1 1.8 1.2L19 11v5"/><path d="M3 16h18"/><circle cx="7.5" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/></symbol>
+    <symbol id="i-radio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 6.5L18 3.4"/><rect x="3" y="8" width="18" height="13" rx="2.4"/><circle cx="15.8" cy="14.5" r="3.2"/><line x1="7" y1="12" x2="7" y2="17"/><line x1="10" y1="12" x2="10" y2="17"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M20.5 3.6a1 1 0 0 0-1.2-.97L9.4 4.93A1 1 0 0 0 8.6 5.9v9.6a3.6 3.6 0 1 0 1.6 3v-9l9-1.8v6.4a3.6 3.6 0 1 0 1.6 3V3.6z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.4"/><polyline points="12 7 12 12 15 14"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0 1 10 10M12 2a10 10 0 0 0-10 10M2 12a10 10 0 0 0 10 10M22 12a10 10 0 0 1-10 10"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/><polyline points="12 7 12 12 15 14"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></symbol>
+    <symbol id="i-volume-hi" viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M10.5 4.5a5 5 0 0 1 0 7m2-9a8 8 0 0 1 0 11"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="3" x2="12" y2="16"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><polyline points="8 8 12 4 16 8"/><line x1="12" y1="4" x2="12" y2="17"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 18z"/></symbol>
+    <symbol id="i-cloud-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 18"/><polyline points="9 14 12 11 15 14"/><line x1="12" y1="11" x2="12" y2="20"/></symbol>
+    <symbol id="i-cloud-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 16a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 16"/><polyline points="9 17 12 20 15 17"/><line x1="12" y1="20" x2="12" y2="11"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.6" cy="9" r="1.6"/><polyline points="20 16 15 11 5 21"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-2 12-8 16-14 16 0-8 4-14 14-16z"/><path d="M6 20c2-6 6-10 12-12"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="18"/><line x1="9" y1="20" x2="9" y2="14"/><line x1="14" y1="20" x2="14" y2="10"/><line x1="19" y1="20" x2="19" y2="4"/></symbol>
+    <symbol id="i-broadcast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14M7.76 7.76a6 6 0 0 0 0 8.49M4.93 4.93a10 10 0 0 0 0 14.14"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="7" y1="14" x2="17" y2="14"/></symbol>
+    <symbol id="i-flag-tr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="12" r="5"/><circle cx="12.6" cy="12" r="4" fill="currentColor" stroke="none" opacity=".2"/><path d="M15.5 10l1.2 1.5-1.2.5.7 1.5-1.5-.7-.5 1.2-.5-1.2L12.2 13l.7-1.5-1.2-.5L13 10l-.3-1.4 1.3.7.5-1.3.5 1.3 1.3-.7z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 11.8V3h8.8l9.8 9.8a2 2 0 0 1 0 2.6z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></symbol>
+  </defs>
+</svg>
+
 <div class="ambient" id="ambient" aria-hidden="true">
   <div class="ambient-orb"></div>
   <div class="ambient-orb"></div>
@@ -28,23 +77,29 @@
 </div>
 <div class="noise" aria-hidden="true"></div>
 
-<div class="offline-bar" id="offlineBar" role="status" aria-live="polite">Bağlantı yok - Çevrimdışı mod</div>
+<div class="offline-bar" id="offlineBar" role="status" aria-live="polite">Bağlantı yok · Çevrimdışı mod</div>
 <div class="itr" id="itr" role="status" aria-live="polite"><div class="itr-dot"></div><span id="itrTxt"></span><span class="itr-vol" id="itrVol"></span></div>
 <div class="tst" id="tst" role="status" aria-live="polite" aria-atomic="true"></div>
-<div class="splash" id="spl"><div class="spl-ic">📻</div><h1>TürkRadyo</h1><p>Canlı Radyo Deneyimi</p><div class="spl-bar"></div></div>
+
+<div class="splash" id="spl">
+  <div class="spl-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div>
+  <h1>TürkRadyo</h1>
+  <p>Pulse · Canlı Radyo</p>
+  <div class="spl-bar"></div>
+</div>
 
 <div class="install-bar" id="installBar">
-  <div class="ib-icon">📲</div>
+  <div class="ib-icon"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div>
   <div class="ib-text"><h4>Uygulamayı Yükle</h4><p>Ana ekrana ekle, daha hızlı aç</p></div>
   <button class="ib-btn" id="installBtn">Yükle</button>
-  <button class="ib-close" id="installClose" aria-label="Kapat">✕</button>
+  <button class="ib-close" id="installClose" aria-label="Kapat"><svg class="svg-i" aria-hidden="true"><use href="#i-x"/></svg></button>
 </div>
 
 <div class="ios-ov" id="iosInstallOv" role="dialog" aria-modal="true" aria-labelledby="iosInstallTitle">
   <div class="ios-box" tabindex="-1">
     <div class="ios-drag"></div>
     <h3 id="iosInstallTitle">Ana Ekrana Ekle</h3>
-    <p class="ios-sub">TürkRadyo'yu ana ekranına ekle, uygulama gibi aç!</p>
+    <p class="ios-sub">TürkRadyo'yu ana ekranına ekle, uygulama gibi aç.</p>
     <div class="ios-steps">
       <div class="ios-step">
         <div class="ios-step-num">1</div>
@@ -52,9 +107,7 @@
           <strong>Safari'de Paylaş'a dokun</strong>
           <span>Ekranın altındaki paylaş simgesine bas</span>
         </div>
-        <div class="ios-step-icon">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-        </div>
+        <div class="ios-step-icon"><svg class="svg-i" aria-hidden="true"><use href="#i-share"/></svg></div>
       </div>
       <div class="ios-step">
         <div class="ios-step-num">2</div>
@@ -62,7 +115,7 @@
           <strong>"Ana Ekrana Ekle" seçeneğini seç</strong>
           <span>Menüde aşağı kaydırarak bul ve dokun</span>
         </div>
-        <div class="ios-step-icon">➕</div>
+        <div class="ios-step-icon"><svg class="svg-i" aria-hidden="true"><use href="#i-plus"/></svg></div>
       </div>
       <div class="ios-step">
         <div class="ios-step-num">3</div>
@@ -70,7 +123,7 @@
           <strong>"Ekle" butonuna bas</strong>
           <span>TürkRadyo ana ekranına uygulama olarak eklenir</span>
         </div>
-        <div class="ios-step-icon">✅</div>
+        <div class="ios-step-icon"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div>
       </div>
     </div>
     <button class="ios-close-btn" id="iosInstallClose">Anladım</button>
@@ -91,18 +144,18 @@
 <div class="wrap">
   <header class="hdr">
     <div class="hdr-r">
-      <div class="logo"><div class="logo-ic">📻</div><span>TürkRadyo</span></div>
+      <div class="logo"><div class="logo-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div><span>TürkRadyo</span></div>
       <div class="hdr-acts">
-        <button class="abtn" id="btnCarMode" aria-label="Araba Modu" title="Araba Modu">🚗</button>
-        <button class="abtn" id="btnShuffle" aria-label="Rastgele Çal" title="Rastgele Çal">🔀</button>
-        <button class="abtn" id="btnAdd" aria-label="Radyo Ekle">➕</button>
+        <button class="abtn" id="btnCarMode" aria-label="Araba Modu" title="Araba Modu"><svg class="svg-i" aria-hidden="true"><use href="#i-car"/></svg></button>
+        <button class="abtn" id="btnShuffle" aria-label="Rastgele Çal" title="Rastgele Çal"><svg class="svg-i" aria-hidden="true"><use href="#i-shuffle"/></svg></button>
+        <button class="abtn accent" id="btnAdd" aria-label="Radyo Ekle"><svg class="svg-i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
     </div>
     <div class="search-bar" id="searchBar" style="display:none">
       <div class="search-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <svg class="svg-i" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="searchInput" placeholder="Kanal ara..." autocomplete="off" aria-label="Kanal ara">
-        <button class="search-clear" id="searchClear" aria-label="Aramayı temizle">✕</button>
+        <button class="search-clear" id="searchClear" aria-label="Aramayı temizle"><svg class="svg-i" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
     </div>
     <div class="chips" id="chips" style="display:none"></div>
@@ -120,39 +173,39 @@
           <div class="stat-card"><div class="stat-val" id="statRec">0</div><div class="stat-lbl">Dinlenen</div></div>
         </div>
         <div class="set-t">Dinleme</div>
-        <div class="set-row" id="btnOpenCar"><div class="set-ic" style="background:rgba(255,200,87,.08);color:#ffc857">🚗</div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
-        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">📊</div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill" id="dsPill" style="display:none">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
-        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">📶</div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla" style="background:var(--cd2);color:var(--tx3);padding:6px 10px;border-radius:10px;font-size:10px">Sıfırla</button></div>
+        <div class="set-row" id="btnOpenCar"><div class="set-ic" style="background:rgba(96,165,250,.12);color:#60a5fa"><svg class="svg-i" aria-hidden="true"><use href="#i-car"/></svg></div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-leaf"/></svg></div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill" id="dsPill" style="display:none">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
+        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px"><div class="set-ic" style="background:rgba(34,211,238,.12);color:#22d3ee"><svg class="svg-i" aria-hidden="true"><use href="#i-signal"/></svg></div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla" style="background:rgba(255,255,255,.08);color:var(--tx3);padding:0 12px;border-radius:11px;font-size:11px;min-height:32px">Sıfırla</button></div>
         <div class="set-t">Uygulama</div>
-        <div class="set-row" id="btnInstallApp" style="display:none"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📲</div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><svg style="flex-shrink:0;color:var(--tx3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"><polyline points="9 18 15 12 9 6"/></svg></div>
-        <div class="set-row" id="btnAlreadyInstalled" style="display:none;cursor:default"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">✅</div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
+        <div class="set-row" id="btnInstallApp" style="display:none"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnAlreadyInstalled" style="display:none;cursor:default"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
         <div class="set-t">Veriler</div>
-        <div class="set-row" id="btnExport"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">💾</div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div></div>
-        <div class="set-row" id="btnImport"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">📂</div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div></div>
+        <div class="set-row" id="btnExport"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnImport"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-upload"/></svg></div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <input type="file" id="fileIn" accept=".json" style="display:none">
         <div class="set-t">Bulut Yedek</div>
-        <div class="set-row" id="btnCloudBackup"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">🔗</div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div></div>
-        <div class="set-row" id="btnCloudRestore"><div class="set-ic" style="background:rgba(124,108,240,.08);color:#7c6cf0">↩</div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div></div>
-        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">☁️</div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div></div>
-        <div class="set-row" id="btnSyncPush"><div class="set-ic" style="background:rgba(61,214,140,.08);color:#3dd68c">⬆</div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div></div>
-        <div class="set-row" id="btnSyncPull"><div class="set-ic" style="background:rgba(255,200,87,.08);color:#ffc857">⬇</div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div></div>
-        <div class="set-row" id="btnFetchLogos"><div class="set-ic" style="background:rgba(0,188,212,.08);color:#00bcd4">🖼️</div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div></div>
-        <div class="set-row" id="btnReset"><div class="set-ic" style="background:rgba(255,92,108,.08);color:#ff5c6c">🗑️</div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div></div>
+        <div class="set-row" id="btnCloudBackup"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-link"/></svg></div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnCloudRestore"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-undo"/></svg></div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic" style="background:rgba(96,165,250,.12);color:#60a5fa"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud"/></svg></div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnSyncPush"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-up"/></svg></div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnSyncPull"><div class="set-ic" style="background:rgba(251,191,36,.12);color:#fbbf24"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-down"/></svg></div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnFetchLogos"><div class="set-ic" style="background:rgba(34,211,238,.12);color:#22d3ee"><svg class="svg-i" aria-hidden="true"><use href="#i-image"/></svg></div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnReset"><div class="set-ic" style="background:rgba(251,113,133,.12);color:#fb7185"><svg class="svg-i" aria-hidden="true"><use href="#i-trash"/></svg></div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-t">Kanallarım (<span id="chCount">0</span>)</div>
         <div id="chList"></div>
         <div class="set-t">Kısayollar</div>
         <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px">
-          <div class="set-ic" style="background:rgba(180,169,255,.08);color:#b4a9ff">⌨️</div>
+          <div class="set-ic" style="background:rgba(168,85,247,.12);color:#a855f7"><svg class="svg-i" aria-hidden="true"><use href="#i-keyboard"/></svg></div>
           <div class="set-lb">
             <h4>Klavye Kısayolları</h4>
-            <p><kbd style="display:inline-block;background:var(--cd2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:9px;margin:1px 2px">Space</kbd> Oynat/Durdur &nbsp;
-            <kbd style="display:inline-block;background:var(--cd2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:9px;margin:1px 2px">←</kbd><kbd style="display:inline-block;background:var(--cd2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:9px;margin:1px 2px">→</kbd> Önceki/Sonraki &nbsp;
-            <kbd style="display:inline-block;background:var(--cd2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:9px;margin:1px 2px">M</kbd> Sessiz &nbsp;
-            <kbd style="display:inline-block;background:var(--cd2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:9px;margin:1px 2px">F</kbd> Favori</p>
+            <p><kbd>Space</kbd> Oynat/Durdur &nbsp;
+            <kbd>←</kbd><kbd>→</kbd> Önceki/Sonraki &nbsp;
+            <kbd>M</kbd> Sessiz &nbsp;
+            <kbd>F</kbd> Favori</p>
           </div>
         </div>
         <div class="set-t">Hakkında</div>
-        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(180,169,255,.08);color:#b4a9ff">📻</div><div class="set-lb"><h4 id="appVersionLabel">TürkRadyo</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
+        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div><div class="set-lb"><h4 id="appVersionLabel">TürkRadyo</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
       </div>
     </div>
   </div>
@@ -161,18 +214,18 @@
 <div class="mplay" id="mplay" role="button" tabindex="0" aria-label="Şimdi çalınıyor ekranını aç">
   <div class="mp-progress"><div class="mp-progress-bar" id="mpBar"></div></div>
   <div class="mplay-r">
-    <div class="mplay-i" id="mIco">📻</div>
+    <div class="mplay-i" id="mIco"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div>
     <div class="mplay-f">
       <div class="mplay-n" id="mName">—</div>
       <div class="mplay-np" id="mNow"></div>
       <div class="mplay-s" id="mStat"><span class="cdot"></span>Hazır</div>
     </div>
-    <button class="ppb" id="btnPP" aria-label="Oynat/Durdur">▶</button>
+    <button class="ppb" id="btnPP" aria-label="Oynat/Durdur"><svg class="svg-i fill" aria-hidden="true"><use href="#i-play"/></svg></button>
   </div>
   <div class="mp-vol" id="mpVol">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></svg>
+    <svg class="svg-i" aria-hidden="true"><use href="#i-volume"/></svg>
     <input type="range" class="rng" id="volM" min="0" max="100" value="80" aria-label="Mini oynatıcı ses seviyesi">
-    <svg viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M10.5 4.5a5 5 0 010 7m2-9a8 8 0 010 11"/></svg>
+    <svg class="svg-i" aria-hidden="true"><use href="#i-volume-hi"/></svg>
   </div>
 </div>
 
@@ -182,31 +235,31 @@
     <div class="fp-bg-orb" id="fpOrb2"></div>
   </div>
   <div class="fp-hdr">
-    <button class="fp-x" id="btnFpClose" aria-label="Kapat">▼</button>
+    <button class="fp-x" id="btnFpClose" aria-label="Kapat"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <span class="fp-t">Şimdi Çalınıyor</span>
-    <button class="fp-x" id="btnFpFav" aria-label="Favori">🤍</button>
+    <button class="fp-x" id="btnFpFav" aria-label="Favori"><svg class="svg-i" aria-hidden="true"><use href="#i-heart"/></svg></button>
   </div>
   <div class="fp-body">
-    <div class="fp-art" id="fpArt">📻</div>
+    <div class="fp-art" id="fpArt"><svg class="svg-i" aria-hidden="true" style="width:96px;height:96px;stroke-width:1.4"><use href="#i-radio"/></svg></div>
     <div class="fp-name" id="fpName">—</div>
     <div class="fp-genre" id="fpGenre">—</div>
     <div class="fp-bitrate" id="fpBitrate" style="display:none"></div>
-    <div class="np-pill" id="npPill"><span class="np-ic">🎵</span><span class="np-txt" id="npTxt">—</span></div>
-    <div class="fp-vis paused" id="fpVis"></div>
+    <div class="np-pill" id="npPill"><span class="np-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-music"/></svg></span><span class="np-txt" id="npTxt">—</span></div>
+    <div class="fp-vis paused" id="fpVis"><i></i><i></i><i></i><i></i><i></i></div>
     <div class="fp-ctrls">
-      <button class="fp-sb" id="btnFpShuffle" aria-label="Karışık" title="Karışık Çal">🔀</button>
-      <button class="fp-sb" id="btnFpPrev" aria-label="Önceki">⏮</button>
-      <button class="fp-pb" id="btnFpPlay" aria-label="Oynat/Durdur">▶</button>
-      <button class="fp-sb" id="btnFpNext" aria-label="Sonraki">⏭</button>
-      <button class="fp-sb" id="btnFpShare" aria-label="Paylaş">↗</button>
+      <button class="fp-sb" id="btnFpShuffle" aria-label="Karışık" title="Karışık Çal"><svg class="svg-i" aria-hidden="true"><use href="#i-shuffle"/></svg></button>
+      <button class="fp-sb" id="btnFpPrev" aria-label="Önceki"><svg class="svg-i fill" aria-hidden="true"><use href="#i-prev"/></svg></button>
+      <button class="fp-pb" id="btnFpPlay" aria-label="Oynat/Durdur"><svg class="svg-i fill" aria-hidden="true"><use href="#i-play"/></svg></button>
+      <button class="fp-sb" id="btnFpNext" aria-label="Sonraki"><svg class="svg-i fill" aria-hidden="true"><use href="#i-next"/></svg></button>
+      <button class="fp-sb" id="btnFpShare" aria-label="Paylaş"><svg class="svg-i" aria-hidden="true"><use href="#i-share"/></svg></button>
     </div>
     <div class="fp-vol">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 3L3.5 6H1v4h2.5L7 13V3z"/></svg>
+      <svg class="svg-i" aria-hidden="true"><use href="#i-volume"/></svg>
       <input type="range" class="rng-lg" id="volF" min="0" max="100" value="80" aria-label="Şimdi çalınıyor ses seviyesi">
-      <svg viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M10.5 4.5a5 5 0 010 7m2-9a8 8 0 010 11"/></svg>
+      <svg class="svg-i" aria-hidden="true"><use href="#i-volume-hi"/></svg>
     </div>
     <div class="fp-timer">
-      <span>⏰ Uyku Zamanlayıcısı</span>
+      <span class="fp-timer-lbl"><svg class="svg-i" aria-hidden="true"><use href="#i-clock"/></svg>Uyku Zamanlayıcısı</span>
       <select id="sleepSel">
         <option value="0">Kapalı</option><option value="15">15 dk</option>
         <option value="30">30 dk</option><option value="60">60 dk</option>
@@ -216,8 +269,8 @@
     <div class="fp-slr" id="sleepLbl"></div>
     <div class="fp-int" id="fpIntPanel">
       <div class="fp-int-hdr" id="fpIntHdr">
-        <span>🔔 Kesinti Ayarları</span>
-        <span class="arr">▼</span>
+        <span class="fp-int-hdr-lbl"><svg class="svg-i" aria-hidden="true"><use href="#i-bell"/></svg>Kesinti Ayarları</span>
+        <span class="arr"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-down"/></svg></span>
       </div>
       <div class="fp-int-body" id="fpIntBody">
         <div class="int-row"><div class="int-lbl">Telefon aramasında durdur<small>Arama bitince otomatik devam eder</small></div><label class="sw"><input type="checkbox" id="swCall" checked><span class="sw-sl"></span></label></div>
@@ -233,7 +286,7 @@
   <div class="car-bg"><div class="car-bg-orb"></div><div class="car-bg-orb"></div></div>
   <div class="car-hdr">
     <div class="car-ttl">Araba Modu</div>
-    <button class="car-close" id="carClose" aria-label="Çıkış">✕</button>
+    <button class="car-close" id="carClose" aria-label="Çıkış"><svg class="svg-i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="car-now">
     <div class="car-nm" id="carNm">Radyo seç</div>
@@ -241,50 +294,50 @@
     <div class="car-gn" id="carGn"></div>
   </div>
   <div class="car-ctrls">
-    <button class="car-sb" id="carPrev" aria-label="Önceki">⏮</button>
-    <button class="car-pb" id="carPlay" aria-label="Oynat/Durdur">▶</button>
-    <button class="car-sb" id="carNext" aria-label="Sonraki">⏭</button>
+    <button class="car-sb" id="carPrev" aria-label="Önceki"><svg class="svg-i fill" aria-hidden="true"><use href="#i-prev"/></svg></button>
+    <button class="car-pb" id="carPlay" aria-label="Oynat/Durdur"><svg class="svg-i fill" aria-hidden="true"><use href="#i-play"/></svg></button>
+    <button class="car-sb" id="carNext" aria-label="Sonraki"><svg class="svg-i fill" aria-hidden="true"><use href="#i-next"/></svg></button>
   </div>
-  <div class="car-favs-ttl">Favoriler — Büyük Butonlar</div>
+  <div class="car-favs-ttl">Favoriler · Büyük Butonlar</div>
   <div class="car-favs" id="carFavs"></div>
 </div>
 
 <div class="modal" id="addMod" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
   <div class="modal-c" tabindex="-1">
     <div class="modal-bar"></div>
-    <h2 id="addModalTitle">📻 Radyo Ekle</h2>
+    <h2 id="addModalTitle"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg>Radyo Ekle</h2>
     <div class="srch-sec">
-      <h3>🇹🇷 Türk Radyoları</h3>
+      <h3><svg class="svg-i" aria-hidden="true"><use href="#i-flag-tr"/></svg>Türk Radyoları</h3>
       <div class="srch-row"><input id="qTR" placeholder="Radyo adı yazın..." autocomplete="off"><button id="bTR">Ara</button></div>
       <div id="rTR"></div>
     </div>
     <div class="srch-sec">
-      <h3>🌍 Tüm Dünya</h3>
+      <h3><svg class="svg-i" aria-hidden="true"><use href="#i-globe"/></svg>Tüm Dünya</h3>
       <div class="srch-row"><input id="qGL" placeholder="Herhangi bir radyo..." autocomplete="off"><button id="bGL">Ara</button></div>
       <div id="rGL"></div>
     </div>
     <div class="srch-sec">
-      <h3>🏷️ Tür ile Ara</h3>
+      <h3><svg class="svg-i" aria-hidden="true"><use href="#i-tag"/></svg>Tür ile Ara</h3>
       <div class="srch-row"><input id="qTG" placeholder="pop, rock, jazz, haber..." autocomplete="off"><button id="bTG">Ara</button></div>
       <div id="rTG"></div>
     </div>
-    <h3 style="font-size:11px;color:var(--tx2);margin:14px 0 10px;font-weight:700">✏️ Manuel Ekle</h3>
+    <h3 style="font-size:11px;color:var(--tx2);margin:18px 0 12px;font-weight:700;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.1em"><svg class="svg-i" aria-hidden="true" style="width:14px;height:14px;color:var(--ac2)"><use href="#i-edit"/></svg>Manuel Ekle</h3>
     <div class="fg" id="fgN"><label>Ad</label><input id="inN" placeholder="Radyo adı" autocomplete="off"><span class="ferr">Ad zorunludur</span></div>
     <div class="fg" id="fgU"><label>URL</label><input id="inU" placeholder="https://..." autocomplete="off" inputmode="url"><small>MP3 / AAC / M3U8 stream adresi</small><span class="ferr">Geçerli bir http:// veya https:// adresi girin</span></div>
     <div class="fg"><label>Kategori</label>
       <select id="inC"><option>Pop</option><option>Rock</option><option>Haber</option><option>THM</option><option>TSM</option><option>Arabesk</option><option>Caz</option><option>Elektronik</option><option>Karma</option><option>Dini</option><option>Çocuk</option><option>Spor</option><option>Diğer</option></select>
     </div>
-    <div class="fg"><label>Emoji</label><input id="inE" maxlength="2" value="📻" style="width:70px"></div>
+    <div class="fg"><label>Emoji</label><input id="inE" maxlength="2" value="📻" style="width:90px"></div>
     <div class="fg"><label>Logo URL (opsiyonel)</label><input id="inImg" placeholder="https://...logo.png" autocomplete="off" inputmode="url"><small>Radyo logosu (PNG/JPG)</small></div>
     <div class="fbtn-r"><button class="fbtn fc" id="btnMCancel">İptal</button><button class="fbtn fk" id="btnMAdd">Ekle</button></div>
   </div>
 </div>
 
 <nav class="bnav" aria-label="Alt gezinme">
-  <button data-pg="f" id="navF" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>Favoriler<span class="nav-badge" id="favBadge" style="display:none">0</span></button>
-  <button data-pg="a" id="navA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0110 10M12 2a10 10 0 00-10 10M2 12a10 10 0 0010 10M22 12a10 10 0 01-10 10"/></svg>Kanallarım</button>
-  <button data-pg="r" id="navR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Son</button>
-  <button data-pg="s" id="navS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Ayarlar</button>
+  <button data-pg="f" id="navF" aria-current="page"><svg class="svg-i" aria-hidden="true"><use href="#i-heart"/></svg>Favoriler<span class="nav-badge" id="favBadge" style="display:none">0</span></button>
+  <button data-pg="a" id="navA"><svg class="svg-i" aria-hidden="true"><use href="#i-broadcast"/></svg>Kanallarım</button>
+  <button data-pg="r" id="navR"><svg class="svg-i" aria-hidden="true"><use href="#i-history"/></svg>Son</button>
+  <button data-pg="s" id="navS"><svg class="svg-i" aria-hidden="true"><use href="#i-settings"/></svg>Ayarlar</button>
 </nav>
 
 <div class="kbd-hint" id="kbdHint"></div>
