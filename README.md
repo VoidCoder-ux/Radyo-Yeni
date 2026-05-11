@@ -1,6 +1,6 @@
-# TürkRadyo
+# Pulse Radio
 
-TürkRadyo, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır. Kanal ekleme, Radio Browser üzerinden arama, favoriler, son dinlenenler, tam ekran oynatıcı, araba modu, uyku zamanlayıcısı, veri kullanımı takibi ve JSON yedek içe/dışa aktarma özelliklerini içerir.
+Pulse Radio, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır. Kanal ekleme, Radio Browser üzerinden arama, favoriler, son dinlenenler, ana sayfa, tam ekran oynatıcı, araba modu, uyku zamanlayıcısı, veri kullanımı takibi ve JSON yedek içe/dışa aktarma özelliklerini içerir.
 
 ## Özellikler
 

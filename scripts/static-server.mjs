@@ -37,5 +37,5 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, () => {
-  console.log(`TürkRadyo dev server: http://localhost:${port}`);
+  console.log(`Pulse Radio dev server: http://localhost:${port}`);
 });

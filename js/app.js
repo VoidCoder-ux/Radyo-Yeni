@@ -2,8 +2,8 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='13.9';
-const COLORS=['#e11d2f','#f4c66f','#27d39b','#5ab8ff','#8f1422','#d98f38','#21a985','#3d6fb6','#ff5a6d','#a67c52','#9f3847','#468a7a'];
+const APP_VERSION='15.0';
+const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
 const MAX_N=120,MAX_G=60,MAX_H=30;
@@ -35,6 +35,7 @@ function firstFulfilled(promises){
 function lsSave(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){if(e?.name==='QuotaExceededError')toast('Depolama dolu!','warn');else toast('Kayıt hatası','err');}}
 function lsLoad(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
 function g(id){return document.getElementById(id);}
+function setVisible(target,on,display='block'){const el=typeof target==='string'?g(target):target;if(!el)return;if(on){el.classList.remove('is-hidden');el.style.display=display;}else{el.classList.add('is-hidden');el.style.display='none';}}
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 /* SVG icon helper — references symbols defined in the index.html sprite */
 function _ic(name,opts){const o=opts||{};const cls='svg-i'+(o.fill?' fill':'')+(o.cls?' '+o.cls:'');return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
@@ -183,8 +184,8 @@ function dsWarnMaybe(station){
     DS.warnedThisSession=true;
   }
 }
-function loadDS(){DS.enabled=!!lsLoad(LS.DS,false);g('dsPill').style.display=DS.enabled?'inline-flex':'none';g('swDataSaver').checked=DS.enabled;}
-function saveDS(){lsSave(LS.DS,DS.enabled);g('dsPill').style.display=DS.enabled?'inline-flex':'none';}
+function loadDS(){DS.enabled=!!lsLoad(LS.DS,false);setVisible('dsPill',DS.enabled,'inline-flex');g('swDataSaver').checked=DS.enabled;}
+function saveDS(){lsSave(LS.DS,DS.enabled);setVisible('dsPill',DS.enabled,'inline-flex');}
 
 /* ═══ CLOUD / ANONYMOUS BACKUP ═══ */
 function loadSyncCfg(){
@@ -221,7 +222,7 @@ async function doCloudBackup(){
   const link=location.origin+location.pathname+'#backup='+encodeURIComponent(token);
   if(link.length>60000){toast('Yedek link için büyük; JSON dosyası indiriliyor','warn');doExport();return;}
   if(navigator.share){
-    try{await navigator.share({title:'TürkRadyo yedeği',text:'TürkRadyo anonim yedek linki',url:link});toast('Yedek linki paylaşıldı','ok');return;}catch{}
+    try{await navigator.share({title:'Pulse Radio yedeği',text:'Pulse Radio anonim yedek linki',url:link});toast('Yedek linki paylaşıldı','ok');return;}catch{}
   }
   try{
     const copied=await storage.copyText(link);
@@ -344,7 +345,7 @@ const NP={
         try{navigator.mediaSession.metadata=new MediaMetadata({
           title:clean,
           artist:S.cur.n,
-          album:'TürkRadyo',
+          album:'Pulse Radio',
           artwork:navigator.mediaSession.metadata.artwork||[]
         });}catch{}
       }
@@ -628,7 +629,7 @@ function updateMeta(s){
     navigator.mediaSession.metadata=new MediaMetadata({
       title:s.n,
       artist:(s.g&&s.g!=='Diğer')?s.g:'Canlı Radyo',
-      album:'TürkRadyo',
+      album:'Pulse Radio',
       artwork
     });
   }catch{}
@@ -686,9 +687,9 @@ function setPausedUI(){
 function setStatus(t){
   const el=g('mStat');
   if(t==='live')el.innerHTML='<span class="cdot"></span>Canlı Yayın';
-  else if(t==='conn')el.innerHTML='<span class="cdot" style="background:orange;box-shadow:0 0 6px rgba(255,165,0,.5)"></span>Bağlanıyor...';
-  else if(t==='load')el.innerHTML='<span class="cdot" style="background:orange;box-shadow:0 0 6px rgba(255,165,0,.5)"></span>Yükleniyor...';
-  else if(t==='retry')el.innerHTML='<span class="cdot" style="background:orange;box-shadow:0 0 6px rgba(255,165,0,.5)"></span>Yeniden bağlanıyor...';
+  else if(t==='conn')el.innerHTML='<span class="cdot warn-dot"></span>Bağlanıyor...';
+  else if(t==='load')el.innerHTML='<span class="cdot warn-dot"></span>Yükleniyor...';
+  else if(t==='retry')el.innerHTML='<span class="cdot warn-dot"></span>Yeniden bağlanıyor...';
 }
 
 /* ── PLAY ── */
@@ -711,7 +712,7 @@ function play(id){
   g('fpOrb2').style.background=darken(s.c||'#7c5cff');
   g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
   // Bitrate
-  if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;g('fpBitrate').style.display='';}else{g('fpBitrate').style.display='none';}
+  if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;setVisible('fpBitrate',true,'inline-flex');}else{setVisible('fpBitrate',false);}
   setStatus('conn');updateFavBtn();addHist(s);updateMeta(s);NP.start(s);updateCarNow();dsWarnMaybe(s);
   aud.loop=false;aud.src=s.u;aud.load();aud.volume=IM._baseVol;
   resumeCurrentStation({source:'station-select'});
@@ -926,7 +927,7 @@ function updateFavBtn(){
   if(on)btn.setAttribute('data-fav','on');else btn.removeAttribute('data-fav');
 }
 function addHist(s){rc=rc.filter(r=>r.id!==s.id);rc.unshift({id:s.id,t:Date.now()});if(rc.length>MAX_H)rc=rc.slice(0,MAX_H);dataSave();}
-function updateNavBadge(){const badge=g('favBadge');if(fv.length>0){badge.textContent=fv.length;badge.style.display='';}else{badge.style.display='none';}}
+function updateNavBadge(){const badge=g('favBadge');if(fv.length>0){badge.textContent=fv.length;setVisible(badge,true,'inline-flex');}else{setVisible(badge,false);}}
 
 /* ── LAZY IMAGE LOADING ── */
 const _imgObserver=('IntersectionObserver' in window)?new IntersectionObserver((entries)=>{
@@ -949,7 +950,7 @@ function createCardLogo(s,isOn){
   const ico=document.createElement('div');ico.className='cico';setStationTone(ico,s);
   if(s.img){
     const img=document.createElement('img');img.alt='';
-    if(_imgObserver){img.dataset.src=s.img;img.style.cssText='opacity:0;transition:opacity .3s';img.onload=function(){this.style.opacity='1';};_imgObserver.observe(img);}
+    if(_imgObserver){img.dataset.src=s.img;img.className='lazy-logo';img.onload=function(){this.classList.add('loaded');};_imgObserver.observe(img);}
     else{img.src=s.img;}
     img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ico.appendChild(img);
   }else{ico.textContent=s.e;}
@@ -962,7 +963,7 @@ function createCardName(s){
   const nm=document.createElement('div');nm.className='cnam';
   if(_searchQ){
     const q=_searchQ.toLowerCase(),n=s.n,li=n.toLowerCase().indexOf(q);
-    if(li>=0){nm.innerHTML=esc(n.slice(0,li))+'<b style="color:var(--ac2)">'+esc(n.slice(li,li+q.length))+'</b>'+esc(n.slice(li+q.length));}
+    if(li>=0){nm.innerHTML=esc(n.slice(0,li))+'<b class="mark">'+esc(n.slice(li,li+q.length))+'</b>'+esc(n.slice(li+q.length));}
     else{nm.textContent=n;}
   }else{nm.textContent=s.n;}
   return nm;
@@ -1019,6 +1020,39 @@ function attachDel(container){
   });
 }
 
+function renderMiniLogo(parent,s,cls){
+  const box=document.createElement('div');box.className=cls;setStationTone(box,s);
+  if(s?.img){
+    const img=document.createElement('img');img.src=s.img;img.alt='';img.loading='lazy';
+    img.onerror=function(){this.replaceWith(document.createTextNode(s.e||'📻'));};
+    box.appendChild(img);
+  }else{
+    box.textContent=s?.e||'📻';
+  }
+  parent.appendChild(box);
+  return box;
+}
+function makeHomePill(s,label){
+  const btn=document.createElement('button');btn.className='home-pill';btn.type='button';
+  btn.setAttribute('aria-label',`${s.n} kanalını çal`);
+  const top=document.createElement('div');top.className='home-pill-top';
+  renderMiniLogo(top,s,'home-pill-ic');
+  const txt=document.createElement('div');txt.className='home-pill-text';
+  const nm=document.createElement('div');nm.className='home-pill-name';nm.textContent=s.n;
+  const meta=document.createElement('div');meta.className='home-pill-meta';meta.textContent=label||s.g||'Canlı Radyo';
+  txt.appendChild(nm);txt.appendChild(meta);top.appendChild(txt);
+  const chip=createCardChip(S.cur?.id===s.id&&S.playing?'CANLI':(s.br?`${s.br}kbps`:'Dinle'),S.cur?.id===s.id&&S.playing?'live':'');
+  btn.appendChild(top);btn.appendChild(chip);
+  btn.addEventListener('click',()=>play(s.id));
+  return btn;
+}
+function quickButton(icon,title,sub,handler){
+  const btn=document.createElement('button');btn.className='quick-btn';btn.type='button';
+  btn.innerHTML=`<span class="quick-ic">${_ic(icon)}</span><span class="quick-txt"><strong>${esc(title)}</strong><span>${esc(sub)}</span></span>`;
+  btn.addEventListener('click',handler);
+  return btn;
+}
+
 /* ── RENDER ── */
 let _renderPending=false;
 function renderCards(){
@@ -1026,11 +1060,60 @@ function renderCards(){
   _renderPending=true;
   requestAnimationFrame(()=>{
     _renderPending=false;
-    if(_curPage==='f')renderFavs();
+    if(_curPage==='h')renderHome();
+    else if(_curPage==='f')renderFavs();
     else if(_curPage==='a')renderAll();
     else if(_curPage==='r')renderRecent();
     else if(_curPage==='s')renderSettings();
   });
+}
+function renderHome(){
+  const w=g('homeList');if(!w)return;
+  w.innerHTML='';w.className='pad home-pad';
+  const hero=document.createElement('section');hero.className='home-hero';
+  const current=S.cur||ch.find(x=>rc[0]?.id===x.id)||ch.find(x=>fv.includes(x.id))||ch[0]||null;
+  hero.innerHTML=`<div class="home-kicker">Canlı yayın</div><h1 class="home-title">Pulse Radio</h1><p class="home-sub">Favorilerini, son dinlediklerini ve radyolarını tek elle kontrol et.</p>`;
+  const now=document.createElement('div');now.className='home-now';
+  if(current){
+    renderMiniLogo(now,current,'home-now-ic');
+    const copy=document.createElement('div');
+    copy.innerHTML=`<div class="home-now-title">${esc(current.n)}</div><div class="home-now-sub">${S.cur?.id===current.id?(S.playing?'Canlı yayın':'Seçili istasyon'):'Hızlı başlat'} · ${esc(current.g||'Radyo')}</div>`;
+    const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label',`${current.n} kanalını çal`);btn.innerHTML=_ic(S.cur?.id===current.id&&S.playing?'pause':'play',{fill:true});btn.addEventListener('click',()=>play(current.id));
+    now.appendChild(copy);now.appendChild(btn);
+  }else{
+    now.innerHTML=`<div class="home-now-ic">${_ic('radio')}</div><div><div class="home-now-title">Başlamak için radyo ekle</div><div class="home-now-sub">Türkiye, dünya veya manuel yayın adresi</div></div>`;
+    const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label','Radyo ekle');btn.innerHTML=_ic('plus');btn.addEventListener('click',openMod);now.appendChild(btn);
+  }
+  hero.appendChild(now);w.appendChild(hero);
+
+  const quick=document.createElement('div');quick.className='quick-grid';
+  quick.appendChild(quickButton('heart','Favoriler',`${fv.length} kayıt`,()=>goPage('f')));
+  quick.appendChild(quickButton('shuffle','Karıştır',ch.length>1?'Rastgele çal':'Kanal ekle',()=>{if(ch.length<2){openMod();return;}shufflePlay();}));
+  quick.appendChild(quickButton('car','Araba Modu','Büyük kontroller',openCar));
+  quick.appendChild(quickButton('plus','Radyo Ekle','Yeni yayın bul',openMod));
+  w.appendChild(quick);
+
+  const favStations=ch.filter(x=>fv.includes(x.id)).sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id)).slice(0,6);
+  const recentStations=rc.map(r=>ch.find(x=>x.id===r.id)).filter(Boolean).slice(0,6);
+  const suggested=getFiltered(ch).filter(x=>!fv.includes(x.id)).slice(0,6);
+
+  const sections=[
+    ['Hızlı Favoriler',favStations,'Favori'],
+    ['Son Dinlenenler',recentStations,'Son'],
+    ['Önerilen',suggested,'Keşfet']
+  ];
+  sections.forEach(([title,list,label])=>{
+    const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`${title} <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
+    if(list.length){
+      const strip=document.createElement('div');strip.className='home-strip';
+      list.forEach(s=>strip.appendChild(makeHomePill(s,label)));
+      w.appendChild(strip);
+    }else{
+      const note=document.createElement('div');note.className='home-empty-note';note.textContent=title==='Önerilen'?'Henüz önerilecek kanal yok. Radyo ekleyerek başla.':'Bu bölüm dinleme alışkanlığına göre dolacak.';
+      w.appendChild(note);
+    }
+  });
+  attachDel(w);
 }
 function renderAll(){
   const w=g('allList');w.innerHTML='';
@@ -1147,12 +1230,12 @@ function renderRecent(){
 function renderSettings(){
   const w=g('chList');g('chCount').textContent=ch.length;w.innerHTML='';
   g('statCh').textContent=ch.length;g('statFav').textContent=fv.length;g('statRec').textContent=rc.length;
-  if(!ch.length){const r=document.createElement('div');r.className='set-row';r.style.cursor='default';r.innerHTML=`<div class="set-ic" style="background:rgba(255,255,255,.04);color:var(--tx3)">${_ic('broadcast')}</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
+  if(!ch.length){const r=document.createElement('div');r.className='set-row is-static';r.innerHTML=`<div class="set-ic ic-muted">${_ic('broadcast')}</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
   const f=document.createDocumentFragment();
   ch.forEach(s=>{
-    const r=document.createElement('div');r.className='set-row';r.style.cursor='default';
+    const r=document.createElement('div');r.className='set-row is-static';
     const ic=document.createElement('div');ic.className='set-ic';ic.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;ic.style.color='#fff';
-    if(s.img){const img=document.createElement('img');img.src=s.img;img.alt='';img.loading='lazy';img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;';img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(img);}
+    if(s.img){const img=document.createElement('img');img.src=s.img;img.alt='';img.loading='lazy';img.className='set-logo-img';img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(img);}
     else{ic.textContent=s.e;}
     const lb=document.createElement('div');lb.className='set-lb';
     const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=(s.g||'Radyo')+(s.br?' · '+s.br+'kbps':'');
@@ -1181,17 +1264,17 @@ function renderChips(){
 }
 
 /* ── NAV ── */
-let _curPage='f';
+let _curPage='h';
 function goPage(p){
   _curPage=p;
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('a'));
   document.querySelectorAll('.bnav button').forEach(x=>{x.classList.remove('a');x.removeAttribute('aria-current');});
-  g({f:'pF',a:'pA',r:'pR',s:'pS'}[p]).classList.add('a');
-  const nav=g({f:'navF',a:'navA',r:'navR',s:'navS'}[p]);nav.classList.add('a');nav.setAttribute('aria-current','page');
-  const showSearch=(p==='f'||p==='a')&&ch.length>0;
-  g('searchBar').style.display=showSearch?'block':'none';
-  g('chips').style.display=showSearch?'flex':'none';
-  if(p==='f')renderFavs();if(p==='a')renderAll();if(p==='r')renderRecent();if(p==='s')renderSettings();
+  g({h:'pH',f:'pF',a:'pA',r:'pR',s:'pS'}[p]).classList.add('a');
+  const nav=g({h:'navH',f:'navF',a:'navA',r:'navR',s:'navS'}[p]);nav.classList.add('a');nav.setAttribute('aria-current','page');
+  const showSearch=(p==='h'||p==='f'||p==='a')&&ch.length>0;
+  setVisible('searchBar',showSearch,'block');
+  setVisible('chips',showSearch,'flex');
+  if(p==='h')renderHome();if(p==='f')renderFavs();if(p==='a')renderAll();if(p==='r')renderRecent();if(p==='s')renderSettings();
   g('scr').scrollTop=0;
 }
 
@@ -1199,10 +1282,10 @@ function goPage(p){
 let _fpPrevFocus=null,_carPrevFocus=null;
 function openFP(){
   _fpPrevFocus=document.activeElement;
-  g('fplay').classList.add('s');syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
+  setDialogOpen('fplay',true);syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
   setTimeout(()=>g('btnFpClose').focus?.(),30);
 }
-function closeFP(){g('fplay').classList.remove('s');setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
+function closeFP(){setDialogOpen('fplay',false);setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
 
 /* ── CAR MODE ── */
 let _carOpen=false,_wakeLock=null;
@@ -1220,7 +1303,7 @@ async function releaseCarWakeLock(){
 function openCar(){
   _carOpen=true;
   _carPrevFocus=document.activeElement;
-  g('carMode').classList.add('s');
+  setDialogOpen('carMode',true);
   renderCarFavs();updateCarNow();
   try{if(screen.orientation?.lock)screen.orientation.lock('landscape').catch(()=>{});}catch{}
   requestCarWakeLock();
@@ -1228,7 +1311,7 @@ function openCar(){
 }
 function closeCar(){
   _carOpen=false;
-  g('carMode').classList.remove('s');
+  setDialogOpen('carMode',false);
   releaseCarWakeLock();
   try{if(screen.orientation?.unlock)screen.orientation.unlock();}catch{}
   setTimeout(()=>_carPrevFocus?.focus?.(),0);
@@ -1290,14 +1373,29 @@ async function delCh(id){
 }
 
 function updateSearchVisibility(){
-  const show=(_curPage==='f'||_curPage==='a')&&ch.length>0;
-  g('searchBar').style.display=show?'block':'none';
-  g('chips').style.display=show?'flex':'none';
+  const show=(_curPage==='h'||_curPage==='f'||_curPage==='a')&&ch.length>0;
+  setVisible('searchBar',show,'block');
+  setVisible('chips',show,'flex');
 }
 
 /* ── MODAL ── */
 function openMod(){setDialogOpen('addMod',true);}
 function closeMod(){setDialogOpen('addMod',false);['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');}
+function setupAddSheetKeyboard(){
+  const modal=g('addMod');
+  const sheet=modal?.querySelector('.modal-c');
+  if(!modal||!sheet)return;
+  modal.addEventListener('focusin',e=>{
+    if(!e.target.matches('input,select,textarea'))return;
+    setTimeout(()=>e.target.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'}),80);
+  });
+  if(window.visualViewport){
+    const sync=()=>sheet.style.setProperty('--vvh',`${Math.round(window.visualViewport.height)}px`);
+    window.visualViewport.addEventListener('resize',sync);
+    window.visualViewport.addEventListener('scroll',sync);
+    sync();
+  }
+}
 function doManualAdd(){
   const name=g('inN').value.trim(),url=g('inU').value.trim();let ok=true;
   if(!name){g('fgN').classList.add('bad');ok=false;}else g('fgN').classList.remove('bad');
@@ -1315,7 +1413,7 @@ async function apiCall(ep){
 async function doSearch(q,extra,targetId,key){
   const el=g(targetId);
   try{
-    el.innerHTML='<div class="sr-msg"><div class="skeleton" style="width:60%;height:12px;margin:0 auto 6px"></div><div class="skeleton" style="width:40%;height:10px;margin:0 auto"></div></div>';
+    el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
     const seen=new Set(),all=[];
     const d1=await apiCall(`stations/search?name=${encodeURIComponent(q)}${extra}&limit=35&hidebroken=true&order=clickcount&reverse=true`);
     if(d1)d1.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});
@@ -1327,7 +1425,7 @@ async function doSearch(q,extra,targetId,key){
 async function doTagSearch(q){
   const el=g('rTG');
   try{
-    el.innerHTML='<div class="sr-msg"><div class="skeleton" style="width:60%;height:12px;margin:0 auto 6px"></div><div class="skeleton" style="width:40%;height:10px;margin:0 auto"></div></div>';
+    el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
     let d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&countrycode=TR&limit=30&hidebroken=true&order=clickcount&reverse=true`);
     if(!d?.length)d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&limit=30&hidebroken=true&order=clickcount&reverse=true`);
     if(!d?.length){el.innerHTML='<div class="sr-msg">Bulunamadı.</div>';return;}
@@ -1339,7 +1437,7 @@ function renderSR(data,container,key){
   data.forEach((x,i)=>{
     const url=x.url_resolved||x.url,added=ch.some(a=>a.u===url);
     const item=document.createElement('div');item.className='sr-item';
-    if(x.favicon&&isUrl(x.favicon)){const sImg=document.createElement('img');sImg.src=x.favicon;sImg.alt='';sImg.style.cssText='width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg3);';sImg.loading='lazy';sImg.onerror=function(){this.style.display='none';};item.appendChild(sImg);}
+    if(x.favicon&&isUrl(x.favicon)){const sImg=document.createElement('img');sImg.src=x.favicon;sImg.alt='';sImg.className='sr-logo';sImg.loading='lazy';sImg.onerror=function(){this.style.display='none';};item.appendChild(sImg);}
     const inf=document.createElement('div');inf.className='sr-inf';
     const nm=document.createElement('div');nm.className='sr-nm';nm.textContent=x.name;
     const tg=document.createElement('div');tg.className='sr-tg';tg.textContent=`${x.country||''} · ${x.tags?x.tags.split(',').slice(0,2).join(', '):'—'} · ${x.bitrate||'?'} kbps`;
@@ -1417,7 +1515,7 @@ function updatePlayerArt(){
 /* ── EXPORT/IMPORT/RESET ── */
 function doExport(){
   const blob=new Blob([JSON.stringify(backupData(),null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='turkradyo_yedek.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Yedek indirildi','ok');
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='pulse_radio_yedek.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Yedek indirildi','ok');
 }
 function importData(d){
   if(!d||typeof d!=='object'||!Array.isArray(d.ch))throw new Error('format');
@@ -1492,11 +1590,11 @@ function openIOSInstall(){setDialogOpen('iosInstallOv',true);}
 function closeIOSInstall(){setDialogOpen('iosInstallOv',false);lsSave('pwa_dismissed',true);}
 function _updateInstallSettingRow(){
   if(_isStandalone()){
-    g('btnInstallApp').style.display='none';
-    g('btnAlreadyInstalled').style.display='flex';
+    setVisible('btnInstallApp',false);
+    setVisible('btnAlreadyInstalled',true,'flex');
   } else {
-    g('btnAlreadyInstalled').style.display='none';
-    g('btnInstallApp').style.display='flex';
+    setVisible('btnAlreadyInstalled',false);
+    setVisible('btnInstallApp',true,'flex');
   }
 }
 function setupInstallPrompt(){
@@ -1508,12 +1606,12 @@ function setupInstallPrompt(){
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();_deferredPrompt=e;
     if(!_isStandalone()&&!lsLoad('pwa_dismissed',false)){
-      setTimeout(()=>{g('installBar').style.display='flex';},3000);
+      setTimeout(()=>setVisible('installBar',true,'flex'),3000);
     }
     _updateInstallSettingRow();
   });
   window.addEventListener('appinstalled',()=>{
-    _deferredPrompt=null;g('installBar').style.display='none';
+    _deferredPrompt=null;setVisible('installBar',false);
     _updateInstallSettingRow();toast('Uygulama yüklendi!','ok');
   });
 
@@ -1522,10 +1620,10 @@ function setupInstallPrompt(){
     _deferredPrompt.prompt();
     const{outcome}=await _deferredPrompt.userChoice;
     if(outcome==='accepted')toast('Uygulama yükleniyor!','ok');
-    _deferredPrompt=null;g('installBar').style.display='none';
+    _deferredPrompt=null;setVisible('installBar',false);
   });
   g('installClose').addEventListener('click',()=>{
-    g('installBar').style.display='none';lsSave('pwa_dismissed',true);
+    setVisible('installBar',false);lsSave('pwa_dismissed',true);
   });
 
   // Settings install button
@@ -1568,7 +1666,7 @@ function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
-  g('appVersionLabel').textContent=`TürkRadyo v${APP_VERSION}`;
+  g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
   renderSyncStatus();maybeRestoreHashBackup();
   // Auto-fetch missing logos after a short delay
   setTimeout(autoFetchLogos,2500);
@@ -1663,6 +1761,7 @@ function init(){
   g('btnMCancel').addEventListener('click',closeMod);
   g('btnMAdd').addEventListener('click',doManualAdd);
   g('addMod').addEventListener('click',e=>{if(e.target===g('addMod'))closeMod();});
+  setupAddSheetKeyboard();
 
   /* shuffle button (header) */
   g('btnShuffle').addEventListener('click',()=>{if(ch.length<2){toast('En az 2 kanal gerekli','warn');return;}shufflePlay();toast('Rastgele kanal açıldı','ok');});
@@ -1727,7 +1826,7 @@ function init(){
   syncIntUI();
   updateSearchVisibility();
 
-  goPage('f');
+  goPage('h');
 }
 
 window.TurkRadyo={version:APP_VERSION,exportData:backupData,importData,syncPush,syncPull};
