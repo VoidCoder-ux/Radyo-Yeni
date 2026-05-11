@@ -1,4 +1,4 @@
-export const APP_VERSION = '15.0.0';
+export const APP_VERSION = '15.0.1';
 export const EXPORT_VERSION = APP_VERSION;
 export const RADIO_BROWSER_HOSTS = ['de1', 'nl1', 'at1', 'de2'];
 

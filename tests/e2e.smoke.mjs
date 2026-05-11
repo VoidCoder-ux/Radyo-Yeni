@@ -73,6 +73,7 @@ await withServer(async baseUrl => {
   });
 
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+  assert.equal(await page.title(), 'Pulse Radio - Canlı Radyo');
   await page.waitForFunction(() => document.querySelector('#spl')?.classList.contains('h'), { timeout: 3500 });
   await assertVisible(page, '#navF');
   await assertVisible(page, '#navA');
@@ -99,6 +100,16 @@ await withServer(async baseUrl => {
   await assertVisible(page, '#btnImport');
 
   await page.click('#btnAdd');
+  await page.waitForSelector('#addMod.s');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('#addMod')?.classList.contains('s'));
+
+  await page.goto(`${baseUrl}/?page=fav`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#navF[aria-current="page"]');
+  await assertVisible(page, '#pF.a');
+
+  await page.goto(`${baseUrl}/?page=add`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#navA[aria-current="page"]');
   await page.waitForSelector('#addMod.s');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#addMod')?.classList.contains('s'));
