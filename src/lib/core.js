@@ -1,4 +1,4 @@
-export const APP_VERSION = '13.9.0';
+export const APP_VERSION = '15.0.0';
 export const EXPORT_VERSION = APP_VERSION;
 export const RADIO_BROWSER_HOSTS = ['de1', 'nl1', 'at1', 'de2'];
 
@@ -16,7 +16,7 @@ const DEFAULT_EMOJI = '📻';
 
 export function reportError(scope, error) {
   if (typeof console !== 'undefined' && console.warn) {
-    console.warn(`[TurkRadyo] ${scope}`, error);
+    console.warn(`[PulseRadio] ${scope}`, error);
   }
 }
 

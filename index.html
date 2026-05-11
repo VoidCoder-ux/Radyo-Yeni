@@ -2,10 +2,10 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="TürkRadyo">
+<meta name="apple-mobile-web-app-title" content="Pulse Radio">
 <meta name="theme-color" content="#06070f">
 <meta name="theme-color" content="#06070f" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
@@ -83,8 +83,8 @@
 
 <div class="splash" id="spl">
   <div class="spl-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div>
-  <h1>TürkRadyo</h1>
-  <p>Pulse · Canlı Radyo</p>
+  <h1>Pulse Radio</h1>
+  <p>Canlı Radyo · iPhone için</p>
   <div class="spl-bar"></div>
 </div>
 
@@ -99,7 +99,7 @@
   <div class="ios-box" tabindex="-1">
     <div class="ios-drag"></div>
     <h3 id="iosInstallTitle">Ana Ekrana Ekle</h3>
-    <p class="ios-sub">TürkRadyo'yu ana ekranına ekle, uygulama gibi aç.</p>
+    <p class="ios-sub">Pulse Radio'yu ana ekranına ekle, uygulama gibi aç.</p>
     <div class="ios-steps">
       <div class="ios-step">
         <div class="ios-step-num">1</div>
@@ -121,7 +121,7 @@
         <div class="ios-step-num">3</div>
         <div class="ios-step-body">
           <strong>"Ekle" butonuna bas</strong>
-          <span>TürkRadyo ana ekranına uygulama olarak eklenir</span>
+          <span>Pulse Radio ana ekranına uygulama olarak eklenir</span>
         </div>
         <div class="ios-step-icon"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div>
       </div>
@@ -144,24 +144,25 @@
 <div class="wrap">
   <header class="hdr">
     <div class="hdr-r">
-      <div class="logo"><div class="logo-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div><span>TürkRadyo</span></div>
+      <div class="logo"><div class="logo-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div><span>Pulse Radio</span></div>
       <div class="hdr-acts">
         <button class="abtn" id="btnCarMode" aria-label="Araba Modu" title="Araba Modu"><svg class="svg-i" aria-hidden="true"><use href="#i-car"/></svg></button>
         <button class="abtn" id="btnShuffle" aria-label="Rastgele Çal" title="Rastgele Çal"><svg class="svg-i" aria-hidden="true"><use href="#i-shuffle"/></svg></button>
         <button class="abtn accent" id="btnAdd" aria-label="Radyo Ekle"><svg class="svg-i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
     </div>
-    <div class="search-bar" id="searchBar" style="display:none">
+    <div class="search-bar is-hidden" id="searchBar">
       <div class="search-wrap">
         <svg class="svg-i" aria-hidden="true"><use href="#i-search"/></svg>
         <input id="searchInput" placeholder="Kanal ara..." autocomplete="off" aria-label="Kanal ara">
         <button class="search-clear" id="searchClear" aria-label="Aramayı temizle"><svg class="svg-i" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
     </div>
-    <div class="chips" id="chips" style="display:none"></div>
+    <div class="chips is-hidden" id="chips"></div>
   </header>
   <div class="scroll" id="scr">
-    <div class="pg a" id="pF"><div class="pad" id="favList"></div></div>
+    <div class="pg a" id="pH"><div class="pad home-pad" id="homeList"></div></div>
+    <div class="pg" id="pF"><div class="pad" id="favList"></div></div>
     <div class="pg"    id="pA"><div class="pad" id="allList"></div></div>
     <div class="pg"    id="pR"><div class="pad" id="recList"></div></div>
     <div class="pg"    id="pS">
@@ -173,29 +174,29 @@
           <div class="stat-card"><div class="stat-val" id="statRec">0</div><div class="stat-lbl">Dinlenen</div></div>
         </div>
         <div class="set-t">Dinleme</div>
-        <div class="set-row" id="btnOpenCar"><div class="set-ic" style="background:rgba(96,165,250,.12);color:#60a5fa"><svg class="svg-i" aria-hidden="true"><use href="#i-car"/></svg></div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-leaf"/></svg></div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill" id="dsPill" style="display:none">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
-        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px"><div class="set-ic" style="background:rgba(34,211,238,.12);color:#22d3ee"><svg class="svg-i" aria-hidden="true"><use href="#i-signal"/></svg></div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla" style="background:rgba(255,255,255,.08);color:var(--tx3);padding:0 12px;border-radius:11px;font-size:11px;min-height:32px">Sıfırla</button></div>
+        <div class="set-row" id="btnOpenCar"><div class="set-ic ic-blue"><svg class="svg-i" aria-hidden="true"><use href="#i-car"/></svg></div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row is-static"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-leaf"/></svg></div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill is-hidden" id="dsPill">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
+        <div class="set-row is-static is-wrap"><div class="set-ic ic-cyan"><svg class="svg-i" aria-hidden="true"><use href="#i-signal"/></svg></div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b quiet" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla">Sıfırla</button></div>
         <div class="set-t">Uygulama</div>
-        <div class="set-row" id="btnInstallApp" style="display:none"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnAlreadyInstalled" style="display:none;cursor:default"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
+        <div class="set-row is-hidden" id="btnInstallApp"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row is-static is-hidden" id="btnAlreadyInstalled"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
         <div class="set-t">Veriler</div>
-        <div class="set-row" id="btnExport"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnImport"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-upload"/></svg></div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <input type="file" id="fileIn" accept=".json" style="display:none">
+        <div class="set-row" id="btnExport"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Yedekle</h4><p>Kanalları ve favorileri dışa aktar</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnImport"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-upload"/></svg></div><div class="set-lb"><h4>Geri Yükle</h4><p>Yedek dosyasından içe aktar</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <input type="file" id="fileIn" accept=".json" hidden>
         <div class="set-t">Bulut Yedek</div>
-        <div class="set-row" id="btnCloudBackup"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-link"/></svg></div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnCloudRestore"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-undo"/></svg></div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic" style="background:rgba(96,165,250,.12);color:#60a5fa"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud"/></svg></div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncPush"><div class="set-ic" style="background:rgba(52,211,153,.12);color:#34d399"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-up"/></svg></div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncPull"><div class="set-ic" style="background:rgba(251,191,36,.12);color:#fbbf24"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-down"/></svg></div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnFetchLogos"><div class="set-ic" style="background:rgba(34,211,238,.12);color:#22d3ee"><svg class="svg-i" aria-hidden="true"><use href="#i-image"/></svg></div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnReset"><div class="set-ic" style="background:rgba(251,113,133,.12);color:#fb7185"><svg class="svg-i" aria-hidden="true"><use href="#i-trash"/></svg></div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnCloudBackup"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-link"/></svg></div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnCloudRestore"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-undo"/></svg></div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic ic-blue"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud"/></svg></div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnSyncPush"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-up"/></svg></div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnSyncPull"><div class="set-ic ic-warn"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-down"/></svg></div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnFetchLogos"><div class="set-ic ic-cyan"><svg class="svg-i" aria-hidden="true"><use href="#i-image"/></svg></div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
+        <div class="set-row" id="btnReset"><div class="set-ic ic-danger"><svg class="svg-i" aria-hidden="true"><use href="#i-trash"/></svg></div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-t">Kanallarım (<span id="chCount">0</span>)</div>
         <div id="chList"></div>
         <div class="set-t">Kısayollar</div>
-        <div class="set-row" style="cursor:default;flex-wrap:wrap;gap:8px">
-          <div class="set-ic" style="background:rgba(168,85,247,.12);color:#a855f7"><svg class="svg-i" aria-hidden="true"><use href="#i-keyboard"/></svg></div>
+        <div class="set-row is-static is-wrap">
+          <div class="set-ic ic-purple"><svg class="svg-i" aria-hidden="true"><use href="#i-keyboard"/></svg></div>
           <div class="set-lb">
             <h4>Klavye Kısayolları</h4>
             <p><kbd>Space</kbd> Oynat/Durdur &nbsp;
@@ -205,7 +206,7 @@
           </div>
         </div>
         <div class="set-t">Hakkında</div>
-        <div class="set-row" style="cursor:default"><div class="set-ic" style="background:rgba(124,92,255,.12);color:#7c5cff"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div><div class="set-lb"><h4 id="appVersionLabel">TürkRadyo</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
+        <div class="set-row is-static"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div><div class="set-lb"><h4 id="appVersionLabel">Pulse Radio</h4><p>Araba Modu · Now Playing · Ekonomi Modu · Akıllı Reconnect · Türkçe Arama</p></div></div>
       </div>
     </div>
   </div>
@@ -240,10 +241,10 @@
     <button class="fp-x" id="btnFpFav" aria-label="Favori"><svg class="svg-i" aria-hidden="true"><use href="#i-heart"/></svg></button>
   </div>
   <div class="fp-body">
-    <div class="fp-art" id="fpArt"><svg class="svg-i" aria-hidden="true" style="width:96px;height:96px;stroke-width:1.4"><use href="#i-radio"/></svg></div>
+    <div class="fp-art" id="fpArt"><svg class="svg-i fp-art-placeholder" aria-hidden="true"><use href="#i-radio"/></svg></div>
     <div class="fp-name" id="fpName">—</div>
     <div class="fp-genre" id="fpGenre">—</div>
-    <div class="fp-bitrate" id="fpBitrate" style="display:none"></div>
+    <div class="fp-bitrate is-hidden" id="fpBitrate"></div>
     <div class="np-pill" id="npPill"><span class="np-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-music"/></svg></span><span class="np-txt" id="npTxt">—</span></div>
     <div class="fp-vis paused" id="fpVis"><i></i><i></i><i></i><i></i><i></i></div>
     <div class="fp-ctrls">
@@ -275,8 +276,8 @@
       <div class="fp-int-body" id="fpIntBody">
         <div class="int-row"><div class="int-lbl">Telefon aramasında durdur<small>Arama bitince otomatik devam eder</small></div><label class="sw"><input type="checkbox" id="swCall" checked><span class="sw-sl"></span></label></div>
         <div class="int-row"><div class="int-lbl">Bildirimde sesi kıs<small>Bildirim gelince ses düşer, bitince geri gelir</small></div><label class="sw"><input type="checkbox" id="swNotif" checked><span class="sw-sl"></span></label></div>
-        <div class="int-row"><div class="int-lbl">Devam gecikme süresi<small>Kesinti sonrası bekleme</small></div><input type="range" class="rng" id="resumeDelay" min="0" max="3000" step="250" value="800" style="width:90px;flex-shrink:0"><span class="int-val" id="resumeDelayVal">0.8s</span></div>
-        <div class="int-row"><div class="int-lbl">Bildirim ses seviyesi<small>Kesinti anındaki ses (0–50%)</small></div><input type="range" class="rng" id="notifVol" min="0" max="50" step="5" value="20" style="width:90px;flex-shrink:0"><span class="int-val" id="notifVolVal">20%</span></div>
+        <div class="int-row"><div class="int-lbl">Devam gecikme süresi<small>Kesinti sonrası bekleme</small></div><input type="range" class="rng compact-range" id="resumeDelay" min="0" max="3000" step="250" value="800"><span class="int-val" id="resumeDelayVal">0.8s</span></div>
+        <div class="int-row"><div class="int-lbl">Bildirim ses seviyesi<small>Kesinti anındaki ses (0–50%)</small></div><input type="range" class="rng compact-range" id="notifVol" min="0" max="50" step="5" value="20"><span class="int-val" id="notifVolVal">20%</span></div>
       </div>
     </div>
   </div>
@@ -321,20 +322,21 @@
       <div class="srch-row"><input id="qTG" placeholder="pop, rock, jazz, haber..." autocomplete="off"><button id="bTG">Ara</button></div>
       <div id="rTG"></div>
     </div>
-    <h3 style="font-size:11px;color:var(--tx2);margin:18px 0 12px;font-weight:700;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.1em"><svg class="svg-i" aria-hidden="true" style="width:14px;height:14px;color:var(--ac2)"><use href="#i-edit"/></svg>Manuel Ekle</h3>
+    <h3 class="manual-title"><svg class="svg-i" aria-hidden="true"><use href="#i-edit"/></svg>Manuel Ekle</h3>
     <div class="fg" id="fgN"><label>Ad</label><input id="inN" placeholder="Radyo adı" autocomplete="off"><span class="ferr">Ad zorunludur</span></div>
     <div class="fg" id="fgU"><label>URL</label><input id="inU" placeholder="https://..." autocomplete="off" inputmode="url"><small>MP3 / AAC / M3U8 stream adresi</small><span class="ferr">Geçerli bir http:// veya https:// adresi girin</span></div>
     <div class="fg"><label>Kategori</label>
       <select id="inC"><option>Pop</option><option>Rock</option><option>Haber</option><option>THM</option><option>TSM</option><option>Arabesk</option><option>Caz</option><option>Elektronik</option><option>Karma</option><option>Dini</option><option>Çocuk</option><option>Spor</option><option>Diğer</option></select>
     </div>
-    <div class="fg"><label>Emoji</label><input id="inE" maxlength="2" value="📻" style="width:90px"></div>
+    <div class="fg"><label>Emoji</label><input id="inE" class="emoji-input" maxlength="2" value="📻"></div>
     <div class="fg"><label>Logo URL (opsiyonel)</label><input id="inImg" placeholder="https://...logo.png" autocomplete="off" inputmode="url"><small>Radyo logosu (PNG/JPG)</small></div>
     <div class="fbtn-r"><button class="fbtn fc" id="btnMCancel">İptal</button><button class="fbtn fk" id="btnMAdd">Ekle</button></div>
   </div>
 </div>
 
 <nav class="bnav" aria-label="Alt gezinme">
-  <button data-pg="f" id="navF" aria-current="page"><svg class="svg-i" aria-hidden="true"><use href="#i-heart"/></svg>Favoriler<span class="nav-badge" id="favBadge" style="display:none">0</span></button>
+  <button data-pg="h" id="navH" aria-current="page"><svg class="svg-i" aria-hidden="true"><use href="#i-grid"/></svg>Ana Sayfa</button>
+  <button data-pg="f" id="navF"><svg class="svg-i" aria-hidden="true"><use href="#i-heart"/></svg>Favoriler<span class="nav-badge is-hidden" id="favBadge">0</span></button>
   <button data-pg="a" id="navA"><svg class="svg-i" aria-hidden="true"><use href="#i-broadcast"/></svg>Kanallarım</button>
   <button data-pg="r" id="navR"><svg class="svg-i" aria-hidden="true"><use href="#i-history"/></svg>Son</button>
   <button data-pg="s" id="navS"><svg class="svg-i" aria-hidden="true"><use href="#i-settings"/></svg>Ayarlar</button>
