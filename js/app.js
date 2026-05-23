@@ -2,11 +2,12 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.2';
+const APP_VERSION='15.0.4';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
 const MAX_N=120,MAX_G=60,MAX_H=30,MAX_IMPORT_BYTES=1024*1024,MAX_IMPORT_STATIONS=1000,MAX_BACKUP_TOKEN=1400000;
+const IOS_RECOVERY_INTERVAL_MS=30000,NP_POLL_MS=45000,NP_IOS_POLL_MS=90000,DATA_USAGE_TICK_MS=15000;
 const _corruptStorage=new Map();
 
 function esc(s){const d=document.createElement('div');d.textContent=(s==null)?'':String(s);return d.innerHTML;}
@@ -40,7 +41,20 @@ function timeoutSignal(ms){
   setTimeout(()=>ctrl.abort(),ms);
   return ctrl.signal;
 }
-function fetchWithTimeout(url,opts={},ms=6000){return fetch(url,{...opts,signal:opts.signal||timeoutSignal(ms)});}
+function fetchWithTimeout(url,opts={},ms=6000){
+  if(typeof AbortController==='undefined')return fetch(url,{...opts,signal:opts.signal||timeoutSignal(ms)});
+  const ctrl=new AbortController();
+  const onAbort=()=>ctrl.abort();
+  const t=setTimeout(()=>ctrl.abort(),ms);
+  if(opts.signal){
+    if(opts.signal.aborted)ctrl.abort();
+    else opts.signal.addEventListener('abort',onAbort,{once:true});
+  }
+  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>{
+    clearTimeout(t);
+    if(opts.signal)opts.signal.removeEventListener('abort',onAbort);
+  });
+}
 function firstFulfilled(promises){
   if(Promise.any)return Promise.any(promises);
   return new Promise((resolve,reject)=>{
@@ -194,10 +208,23 @@ function getFiltered(list){
 /* ═══ DATA SAVER + DATA USAGE ═══ */
 const DS={enabled:false,warnedThisSession:false};
 const DU={
-  _tickT:null,_lastTick:0,_monthKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');},
+  _tickT:null,_lastTick:0,_pendingBytes:0,_lastFlush:0,_monthKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');},
   load(){const raw=lsLoad(LS.DU,null);if(!raw||typeof raw!=='object'||raw.month!==this._monthKey())return{month:this._monthKey(),bytes:0};return{month:raw.month,bytes:typeof raw.bytes==='number'?raw.bytes:0};},
   save(o){lsSave(LS.DU,o);},
-  add(bytes){const o=this.load();o.bytes+=bytes;this.save(o);this.render();},
+  add(bytes){
+    this._pendingBytes+=bytes;
+    if(!document.hidden)this.render();
+    if(Date.now()-this._lastFlush>60000)this.flush();
+  },
+  flush(){
+    if(!this._pendingBytes)return;
+    const o=this.load();
+    o.bytes+=this._pendingBytes;
+    this._pendingBytes=0;
+    this._lastFlush=Date.now();
+    this.save(o);
+    if(!document.hidden)this.render();
+  },
   startTick(){
     if(this._tickT)return;
     this._lastTick=Date.now();
@@ -207,10 +234,10 @@ const DU={
       const br=(S.cur.br&&S.cur.br>0)?S.cur.br:96; // varsayılan 96 kbps tahmin
       const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
       this.add(bytes);
-    },5000);
+    },DATA_USAGE_TICK_MS);
   },
-  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}},
-  reset(){this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
+  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();},
+  reset(){this._pendingBytes=0;this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
   format(bytes){
     if(bytes<1024)return bytes+' B';
     if(bytes<1024*1024)return(bytes/1024).toFixed(1)+' KB';
@@ -220,9 +247,10 @@ const DU={
   render(){
     const el=g('dataUsageTxt');if(!el)return;
     const o=this.load();
+    const bytes=o.bytes+this._pendingBytes;
     const [y,m]=o.month.split('-');
     const names=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
-    el.textContent=`${names[parseInt(m,10)-1]} ${y}: ${this.format(o.bytes)} (tahmini)`;
+    el.textContent=`${names[parseInt(m,10)-1]} ${y}: ${this.format(bytes)} (tahmini)`;
   }
 };
 function isCellular(){
@@ -430,7 +458,8 @@ const NP={
       if(S.cur&&S.cur.id===this._curId&&t&&t!==this._curTitle)this._setTitle(t);
     };
     run();
-    this._timer=setInterval(run,20000);
+    const delay=_isIOS()||DS.enabled||isCellular()?NP_IOS_POLL_MS:NP_POLL_MS;
+    this._timer=setInterval(()=>{if(document.hidden&&(_isIOS()||DS.enabled))return;run();},delay);
   }
 };
 
@@ -597,7 +626,10 @@ const IOS={
     });
     if(navigator.mediaDevices?.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(S.cur&&S.should&&a.paused&&!IM._uStop&&!IM._interrupted)this.resume(1200);});
   },
-  _startRecovery(){if(this._recoveryTimer)return;this._recoveryTimer=setInterval(()=>{if(S.cur&&S.should&&this.a.paused&&!IM._uStop&&!IM._interrupted&&!this._rel)this.resume(0);},12000);},
+  _startRecovery(){
+    if(!_isIOS()||document.hidden||this._recoveryTimer)return;
+    this._recoveryTimer=setInterval(()=>{if(S.cur&&S.should&&this.a.paused&&!IM._uStop&&!IM._interrupted&&!this._rel)this.resume(0);},IOS_RECOVERY_INTERVAL_MS);
+  },
   _stopRecovery(){if(this._recoveryTimer){clearInterval(this._recoveryTimer);this._recoveryTimer=null;}},
   resume(delay){clearTimeout(this._rt);this._rt=setTimeout(()=>{if(!S.cur||IM._uStop||!S.should||IM._interrupted)return;resumeCurrentStation({source:'ios-recovery'}).finally(()=>IM._hideBanner());},Math.max(0,delay));},
   reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;try{aud.removeAttribute('src');aud.load();}catch{}resumeCurrentStation({source:'ios-reload'}).finally(()=>{this._rel=false;});}
@@ -634,6 +666,7 @@ function setupMS(){
   set('seekto',null);set('seekbackward',null);set('seekforward',null);
 }
 let _metaArtCache=new Map();
+let _lastMetaKey='';
 function _makeArtwork(s){
   const cacheKey=s.id+'_'+s.c+'_'+s.e+'_'+s.n;
   if(_metaArtCache.has(cacheKey))return _metaArtCache.get(cacheKey);
@@ -681,16 +714,18 @@ function updateMeta(s){
   if(!('mediaSession' in navigator))return;
   const artwork=[];
   const artSrc=cleanImageUrl(s.img);
+  const metaKey=`${s.id}|${s.n}|${s.g||''}|${artSrc}`;
+  if(_lastMetaKey===metaKey&&navigator.mediaSession.metadata){syncMediaSessionState();return;}
+  _lastMetaKey=metaKey;
   if(artSrc){
     // Station logo - primary artwork for lock screen
     const type=_artMime(artSrc);
-    artwork.push({src:artSrc,sizes:'96x96',type});
-    artwork.push({src:artSrc,sizes:'192x192',type});
     artwork.push({src:artSrc,sizes:'512x512',type});
+  }else{
+    // Canvas fallback with station branding
+    const fallback=_makeArtwork(s);
+    if(fallback)artwork.push({src:fallback,sizes:'512x512',type:'image/png'});
   }
-  // Canvas fallback with station branding
-  const fallback=_makeArtwork(s);
-  if(fallback)artwork.push({src:fallback,sizes:'512x512',type:'image/png'});
   try{
     navigator.mediaSession.metadata=new MediaMetadata({
       title:s.n,
@@ -709,7 +744,7 @@ const S={cur:null,playing:false,should:false,resumable:false,softPaused:false,re
 const aud=g('aud');
 const _httpWarned=new Set();
 let _resumePromise=null,_resumeToken=0;
-let _iosPauseHoldPromise=null,_lastSoftPauseAt=0,_iosHoldSrc='',_iosHoldSwitching=false;
+let _iosPauseHoldPromise=null,_lastSoftPauseAt=0,_iosHoldSrc='',_iosHoldSwitching=false,_iosHoldReleaseTimer=null,_suppressIOSPauseHold=false;
 function warnHttpStream(s){
   if(!s||!isHttpUrl(s.u)||_httpWarned.has(s.id))return;
   _httpWarned.add(s.id);
@@ -787,7 +822,7 @@ function play(id){
 }
 function togglePlay(){if(!S.cur)return;S.playing?pauseForUser({source:'app'}):userResume();}
 function shouldSoftPauseForIOS(source){
-  return _isIOS()&&S.cur&&!aud.paused&&(source==='app'||source==='media-session'||source==='media-session-stop');
+  return _isIOS()&&S.cur&&!aud.paused&&(source==='media-session'||source==='media-session-stop');
 }
 function getIOSHoldSrc(){
   if(_iosHoldSrc)return _iosHoldSrc;
@@ -803,6 +838,18 @@ function getIOSHoldSrc(){
 }
 function isIOSHoldAudioActive(){
   return !!(_iosHoldSrc&&(aud.currentSrc===_iosHoldSrc||aud.src===_iosHoldSrc));
+}
+function clearIOSHoldReleaseTimer(){clearTimeout(_iosHoldReleaseTimer);_iosHoldReleaseTimer=null;}
+function releaseIOSHoldAudio(){
+  clearIOSHoldReleaseTimer();
+  if(!isIOSHoldAudioActive())return;
+  _suppressIOSPauseHold=true;
+  try{aud.pause();aud.loop=false;aud.removeAttribute('src');aud.load();}catch{}
+  finally{setTimeout(()=>{_suppressIOSPauseHold=false;},0);}
+}
+function pauseAudioWithoutIOSHold(){
+  _suppressIOSPauseHold=true;
+  try{aud.pause();}finally{setTimeout(()=>{_suppressIOSPauseHold=false;},0);}
 }
 function handleMediaSessionPlay(){
   if(S.cur)return resumeFromMediaSession();
@@ -830,9 +877,11 @@ async function startIOSHoldAudio(){
     setTimeout(()=>{_iosHoldSwitching=false;},600);
   }
 }
-function enterIOSSoftPause(){
+function enterIOSSoftPause(holdMs=25000){
   S.should=false;S.resumable=true;S.softPaused=true;_lastSoftPauseAt=Date.now();
   IOS._stopRecovery();NP.stop();
+  clearIOSHoldReleaseTimer();
+  if(holdMs>0)_iosHoldReleaseTimer=setTimeout(()=>{if(S.softPaused)releaseIOSHoldAudio();},holdMs);
 }
 function softPauseForIOS(){
   // iOS ignores programmatic volume changes for live audio. Swap the live stream
@@ -865,7 +914,7 @@ function pauseForUser(opts={}){
   S.should=false;S.resumable=opts.resumable!==false;IM.setUStop(false);
   IOS._stopRecovery();NP.stop();
   if(shouldSoftPauseForIOS(source))softPauseForIOS();
-  else{S.softPaused=false;aud.pause();setPausedUI();}
+  else{S.softPaused=false;releaseIOSHoldAudio();pauseAudioWithoutIOSHold();setPausedUI();}
   // Keep station metadata alive so iOS lock screen / Control Center can resume.
   updateMeta(S.cur);syncMediaSessionState();
 }
@@ -873,8 +922,8 @@ function stopSession(reason,opts={}){
   const clearCurrent=opts.clearCurrent!==false;
   _resumeToken++;_resumePromise=null;
   IM.setUStop(true);S.should=false;S.resumable=false;S.playing=false;S.softPaused=false;
-  IOS._stopRecovery();DU.stopTick();NP.stop();
-  try{aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;aud.pause();}catch{}
+  IOS._stopRecovery();DU.stopTick();NP.stop();releaseIOSHoldAudio();
+  try{aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;pauseAudioWithoutIOSHold();}catch{}
   if(clearCurrent){try{aud.removeAttribute('src');aud.load();}catch{}S.cur=null;}
   setPausedUI();
   if(clearCurrent){g('mplay').classList.remove('s');g('scr').classList.remove('mp-on');}
@@ -914,6 +963,7 @@ async function resumeCurrentStation(opts={}){
   _resumePromise=(async()=>{
     IM.setUStop(false);IM._clearTimers();IM._interrupted=false;IM._type=null;IM._hideBanner();
     S.should=true;S.resumable=true;
+    releaseIOSHoldAudio();
     updateMeta(S.cur);setStatus('conn');
     await _resumeAudioContext();
     if(token!==_resumeToken||!S.cur)return false;
@@ -1365,20 +1415,26 @@ function openFP(){
 function closeFP(){setDialogOpen('fplay',false);setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
 
 /* ── CAR MODE ── */
-let _carOpen=false,_wakeLock=null,_wakeRetryT=null;
+let _carOpen=false,_wakeLock=null,_wakeRetryT=null,_wakeRetryMs=1000;
 async function requestCarWakeLock(){
   if(!_carOpen||!navigator.wakeLock||_wakeLock)return;
   try{
     _wakeLock=await navigator.wakeLock.request('screen');
+    _wakeRetryMs=1000;
     _wakeLock.addEventListener('release',()=>{
       _wakeLock=null;
       clearTimeout(_wakeRetryT);
-      if(_carOpen&&!document.hidden)_wakeRetryT=setTimeout(requestCarWakeLock,400);
+      if(_carOpen&&!document.hidden){
+        const delay=_wakeRetryMs;
+        _wakeRetryMs=Math.min(_wakeRetryMs*3,10000);
+        _wakeRetryT=setTimeout(requestCarWakeLock,delay);
+      }
     });
   }catch{}
 }
 async function releaseCarWakeLock(){
   clearTimeout(_wakeRetryT);
+  _wakeRetryMs=1000;
   const lock=_wakeLock;_wakeLock=null;
   try{await lock?.release();}catch{}
 }
@@ -1445,7 +1501,7 @@ function addCh(name,url,genre,emoji,imgUrl,bitrate){
   if(!dataSave()){ch=ch.filter(x=>x.id!==station.id);toast('Kanal kaydedilemedi','err');return false;}
   renderCards();renderSettings();updateSearchVisibility();updateNavBadge();
   toast(isHttpUrl(url)?'Kanal eklendi; HTTP yayın HTTPS altında engellenebilir':name+' eklendi',isHttpUrl(url)?'warn':'ok');
-  if(!station.img)setTimeout(autoFetchLogos,500);
+  if(!station.img)scheduleAutoFetchLogos(500,3);
   return true;
 }
 async function delCh(id){
@@ -1503,8 +1559,10 @@ const _sr=new Map();
 const _searchSeq={};
 function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.delete(first);}_sr.set(k,v);}
 async function apiCall(ep){
-  const reqs=APIS.map(h=>fetchWithTimeout(`https://${h}.api.radio-browser.info/json/${ep}`,{cache:'no-store'},6000).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}));
+  const ctrls=typeof AbortController!=='undefined'?APIS.map(()=>new AbortController()):[];
+  const reqs=APIS.map((h,i)=>fetchWithTimeout(`https://${h}.api.radio-browser.info/json/${ep}`,{cache:'no-store',signal:ctrls[i]?.signal},6000).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}));
   try{return await firstFulfilled(reqs);}catch{return null;}
+  finally{ctrls.forEach(c=>{try{c.abort();}catch{}});}
 }
 async function doSearch(q,extra,targetId,key){
   const el=g(targetId);
@@ -1560,6 +1618,10 @@ function pickSR(cacheKey,i,container,origKey){
 
 /* ── AUTO FETCH LOGOS ── */
 let _logoFetching=false;
+function shouldAutoFetchLogos(){return !document.hidden&&!_isIOS()&&!DS.enabled&&!isCellular();}
+function scheduleAutoFetchLogos(delay=2500,limit=5){
+  setTimeout(()=>{if(shouldAutoFetchLogos())autoFetchLogos(limit);},delay);
+}
 async function autoFetchLogos(limit=20){
   if(_logoFetching)return;
   const allMissing=ch.filter(s=>!s.img);
@@ -1766,7 +1828,7 @@ function setupInstallPrompt(){
 function setupOfflineDetection(){
   const bar=g('offlineBar');
   const update=()=>{bar.classList.toggle('s',!navigator.onLine);};
-  window.addEventListener('online',()=>{update();toast('Bağlantı kuruldu','ok');if(S.cur&&S.should&&aud.paused&&!IM._uStop)resumeCurrentStation({source:'online'});});
+  window.addEventListener('online',()=>{update();toast('Bağlantı kuruldu','ok');if(S.cur&&S.should&&aud.paused&&!IM._uStop&&!IM._interrupted){S.retries=0;resumeCurrentStation({source:'online'});}});
   window.addEventListener('offline',()=>{update();toast('Bağlantı kesildi','warn');});
   update();
 }
@@ -1784,12 +1846,13 @@ function setupAccessibleRows(){
 /* ═══ INIT ═══ */
 function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();releaseIOSHoldAudio();releaseCarWakeLock();});
 
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
   renderSyncStatus();maybeRestoreHashBackup();
   // Auto-fetch missing logos after a short delay
-  setTimeout(autoFetchLogos,2500);
+  scheduleAutoFetchLogos(2500,5);
 
   // Visualizer bars
   const vis=g('fpVis');
@@ -1810,6 +1873,7 @@ function init(){
   aud.addEventListener('playing',()=>{if(S.softPaused)return;setPlaying(true);S.retries=0;IM.setUStop(false);setStatus('live');renderCards();IOS._startRecovery();});
   aud.addEventListener('pause',()=>{
     if(_iosHoldSwitching)return;
+    if(_suppressIOSPauseHold){_suppressIOSPauseHold=false;return;}
     if(holdIOSMediaSessionAfterSystemPause())return;
     S.softPaused=false;
     setPausedUI();
@@ -1835,6 +1899,7 @@ function init(){
   /* Stalled/waiting — 8sn yanıtsızsa tetikle */
   let _stallT=null;
   aud.addEventListener('stalled',()=>{
+    if(_isIOS())return;
     clearTimeout(_stallT);
     _stallT=setTimeout(()=>{
       if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
@@ -1899,9 +1964,6 @@ function init(){
   loadDS();DU.render();
   g('swDataSaver').addEventListener('change',e=>{DS.enabled=e.target.checked;DS.warnedThisSession=false;saveDS();toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');});
   g('btnResetData').addEventListener('click',()=>DU.reset());
-  /* Online geri gelince anında reconnect dene */
-  window.addEventListener('online',()=>{if(S.cur&&S.should&&aud.paused&&!IM._uStop&&!IM._interrupted){S.retries=0;resumeCurrentStation({source:'online-fast'});}});
-
   /* search API */
   g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'&countrycode=TR','rTR','tr');});
   g('bGL').addEventListener('click',()=>{const q=g('qGL').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'','rGL','gl');});
