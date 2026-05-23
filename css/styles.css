@@ -383,8 +383,8 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .fp-bg-orb{position:absolute;border-radius:999px;filter:blur(100px);opacity:.28;transition:background var(--slow),opacity var(--med);will-change:transform}
 .fp-bg-orb:nth-child(1){width:400px;height:400px;top:-110px;right:-110px;background:#7c5cff}
 .fp-bg-orb:nth-child(2){width:340px;height:340px;bottom:4%;left:-140px;background:#22d3ee}
-.fplayer.playing .fp-bg-orb{opacity:.42;animation:orbDrift 22s ease-in-out infinite}
-.fplayer.playing .fp-bg-orb:nth-child(2){animation-delay:-10s}
+.fplayer.s.playing .fp-bg-orb{opacity:.42;animation:orbDrift 22s ease-in-out infinite}
+.fplayer.s.playing .fp-bg-orb:nth-child(2){animation-delay:-10s}
 
 .fp-hdr{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:calc(var(--st) + 14px) max(22px,var(--sr)) 10px max(22px,var(--sl))}
 .fp-t{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--tx3)}
@@ -398,7 +398,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 
 .fp-art{position:relative;width:min(70vw,280px);aspect-ratio:1;border-radius:36px;display:grid;place-items:center;margin:14px auto 26px;overflow:hidden;font-size:96px;color:#fff;box-shadow:0 36px 110px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.12),inset 0 1px 0 rgba(255,255,255,.22),0 0 70px rgba(124,92,255,.32)}
 .fp-art-placeholder{width:96px;height:96px;stroke-width:1.4}
-.fplayer.playing .fp-art{animation:fpArtFloat 6s ease-in-out infinite}
+.fplayer.s.playing .fp-art{animation:fpArtFloat 6s ease-in-out infinite}
 .fp-art::before{content:'';position:absolute;inset:16px;border-radius:24px;border:1px solid rgba(255,255,255,.14);pointer-events:none;z-index:3}
 @keyframes fpArtFloat{50%{transform:translateY(-8px)}}
 
@@ -416,6 +416,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .fp-vis i:nth-child(2n){animation-delay:.14s}
 .fp-vis i:nth-child(3n){animation-delay:.28s}
 .fp-vis i:nth-child(5n){animation-delay:.42s}
+.fplayer:not(.s) .fp-vis i{animation-play-state:paused}
 .fp-vis.paused i{animation-play-state:paused;opacity:.32;transform:scaleY(.45)}
 @keyframes signalMeter{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(2.2);opacity:.9}}
 
@@ -707,6 +708,9 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+@media (pointer:coarse){
+  .ambient.playing .ambient-orb{animation-play-state:paused;opacity:.3}
 }
 @media (max-width:380px),(prefers-reduced-motion:reduce){
   .ambient-orb,.fp-bg-orb,.car-bg-orb{filter:blur(60px)}
