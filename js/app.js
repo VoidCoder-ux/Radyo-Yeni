@@ -2,7 +2,7 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.4';
+const APP_VERSION='15.0.5';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -714,10 +714,10 @@ function updateMeta(s){
   if(!('mediaSession' in navigator))return;
   const artwork=[];
   const artSrc=cleanImageUrl(s.img);
-  const metaKey=`${s.id}|${s.n}|${s.g||''}|${artSrc}`;
+  const metaKey=`${s.id}|${s.n}|${s.g||''}|${artSrc}|${DS.enabled?'ds':'full'}`;
   if(_lastMetaKey===metaKey&&navigator.mediaSession.metadata){syncMediaSessionState();return;}
   _lastMetaKey=metaKey;
-  if(artSrc){
+  if(artSrc&&!DS.enabled){
     // Station logo - primary artwork for lock screen
     const type=_artMime(artSrc);
     artwork.push({src:artSrc,sizes:'512x512',type});
@@ -1962,7 +1962,12 @@ function init(){
 
   /* data saver + data usage */
   loadDS();DU.render();
-  g('swDataSaver').addEventListener('change',e=>{DS.enabled=e.target.checked;DS.warnedThisSession=false;saveDS();toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');});
+  g('swDataSaver').addEventListener('change',e=>{
+    DS.enabled=e.target.checked;DS.warnedThisSession=false;saveDS();
+    _lastMetaKey='';
+    if(S.cur){NP.start(S.cur);updateMeta(S.cur);}
+    toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');
+  });
   g('btnResetData').addEventListener('click',()=>DU.reset());
   /* search API */
   g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'&countrycode=TR','rTR','tr');});
