@@ -1,5 +1,5 @@
-const CACHE='pulse-radio-v15.0.1';
-const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','manifest.json','icons/icon.svg','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
+const CACHE='pulse-radio-v15.0.2';
+const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 const FONT_CACHE='pulse-radio-fonts-v3';
 
 self.addEventListener('install',e=>{
@@ -19,19 +19,20 @@ self.addEventListener('activate',e=>{
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
   const accept=e.request.headers.get('accept')||'';
+  const isNavigation=e.request.mode==='navigate'||accept.includes('text/html');
   const isAudioRequest=e.request.destination==='audio'||
      accept.includes('audio')||
      e.request.headers.get('icy-metadata')||
      e.request.url.match(/\.(mp3|aac|m3u8|ogg|opus|flac|wav)(\?|$)/i)||
      e.request.headers.get('range');
 
-  // Never cache audio streams or API calls
+  // Never cache audio streams or API calls.
   if(url.hostname.includes('radio-browser.info')||
      isAudioRequest){
     return;
   }
 
-  // Cache Google Fonts separately with long TTL
+  // Cache Google Fonts separately with long TTL.
   if(url.hostname.includes('fonts.googleapis.com')||url.hostname.includes('fonts.gstatic.com')){
     e.respondWith(
       caches.open(FONT_CACHE).then(c=>
@@ -47,7 +48,7 @@ self.addEventListener('fetch',e=>{
     return;
   }
 
-  // App shell: network-first, fallback to cache
+  // App shell: network-first, query-safe fallback for PWA shortcuts.
   if(url.origin===location.origin){
     e.respondWith(
       fetch(e.request).then(res=>{
@@ -56,7 +57,16 @@ self.addEventListener('fetch',e=>{
           caches.open(CACHE).then(c=>c.put(e.request,clone));
         }
         return res;
-      }).catch(()=>caches.match(e.request).then(r=>r||new Response('<h1>Çevrimdışı</h1><p>İnternet bağlantınızı kontrol edin.</p>',{headers:{'Content-Type':'text/html;charset=utf-8'}})))
+      }).catch(async()=>{
+        const cached=await caches.match(e.request);
+        if(cached)return cached;
+        if(isNavigation){
+          return (await caches.match('index.html'))||
+            (await caches.match('./'))||
+            new Response('<h1>Çevrimdışı</h1><p>İnternet bağlantınızı kontrol edin.</p>',{headers:{'Content-Type':'text/html;charset=utf-8'}});
+        }
+        return new Response('',{status:504,statusText:'Offline'});
+      })
     );
   }
 });

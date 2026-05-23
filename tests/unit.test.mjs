@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
+  APP_VERSION,
+  cleanImageUrl,
   createBackup,
   isUrl,
   mergeImportedBackup,
@@ -45,6 +48,24 @@ test('normalizeStation validates and trims station data', () => {
   });
   assert.equal(normalizeStation({ n: '', u: 'https://x.test' }), null);
   assert.equal(normalizeStation({ n: 'Bad', u: 'javascript:alert(1)' }), null);
+});
+
+test('cleanImageUrl rejects unsafe image origins', () => {
+  assert.equal(cleanImageUrl('https://example.com/logo.png'), 'https://example.com/logo.png');
+  assert.equal(cleanImageUrl('http://example.com/logo.png'), '');
+  assert.equal(cleanImageUrl('https://user:pass@example.com/logo.png'), '');
+  assert.equal(cleanImageUrl('https://127.0.0.1/logo.png'), '');
+});
+
+test('version markers and service worker navigation fallback stay aligned', () => {
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+  const app = readFileSync('js/app.js', 'utf8');
+  const sw = readFileSync('sw.js', 'utf8');
+  assert.equal(APP_VERSION, pkg.version);
+  assert.match(app, new RegExp(`APP_VERSION='${pkg.version}'`));
+  assert.match(sw, new RegExp(`pulse-radio-v${pkg.version}`));
+  assert.match(sw, /isNavigation/);
+  assert.match(sw, /caches\.match\('index\.html'\)/);
 });
 
 test('mergeImportedBackup adds unique stations and keeps related ids valid', () => {
