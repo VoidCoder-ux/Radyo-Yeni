@@ -711,6 +711,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 }
 @media (pointer:coarse){
   .ambient.playing .ambient-orb{animation-play-state:paused;opacity:.3}
+  .fp-vis i{animation-play-state:paused;opacity:.32;transform:scaleY(.45)}
 }
 @media (max-width:380px),(prefers-reduced-motion:reduce){
   .ambient-orb,.fp-bg-orb,.car-bg-orb{filter:blur(60px)}

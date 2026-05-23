@@ -2,12 +2,12 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.5';
+const APP_VERSION='15.0.6';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
 const MAX_N=120,MAX_G=60,MAX_H=30,MAX_IMPORT_BYTES=1024*1024,MAX_IMPORT_STATIONS=1000,MAX_BACKUP_TOKEN=1400000;
-const IOS_RECOVERY_INTERVAL_MS=30000,NP_POLL_MS=45000,NP_IOS_POLL_MS=90000,DATA_USAGE_TICK_MS=15000;
+const IOS_RECOVERY_INTERVAL_MS=30000,NP_POLL_MS=60000,NP_IOS_POLL_MS=120000,DATA_USAGE_TICK_MS=15000,DATA_USAGE_LOW_POWER_TICK_MS=60000;
 const _corruptStorage=new Map();
 
 function esc(s){const d=document.createElement('div');d.textContent=(s==null)?'':String(s);return d.innerHTML;}
@@ -214,7 +214,8 @@ const DU={
   add(bytes){
     this._pendingBytes+=bytes;
     if(!document.hidden)this.render();
-    if(Date.now()-this._lastFlush>60000)this.flush();
+    const flushAfter=isPowerConstrained()?120000:60000;
+    if(Date.now()-this._lastFlush>flushAfter)this.flush();
   },
   flush(){
     if(!this._pendingBytes)return;
@@ -228,13 +229,14 @@ const DU={
   startTick(){
     if(this._tickT)return;
     this._lastTick=Date.now();
+    const tickMs=isPowerConstrained()?DATA_USAGE_LOW_POWER_TICK_MS:DATA_USAGE_TICK_MS;
     this._tickT=setInterval(()=>{
       if(!S.cur||!S.playing){this.stopTick();return;}
       const now=Date.now();const dt=(now-this._lastTick)/1000;this._lastTick=now;
       const br=(S.cur.br&&S.cur.br>0)?S.cur.br:96; // varsayılan 96 kbps tahmin
       const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
       this.add(bytes);
-    },DATA_USAGE_TICK_MS);
+    },tickMs);
   },
   stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();},
   reset(){this._pendingBytes=0;this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
@@ -262,6 +264,7 @@ function isCellular(){
   const et=(c.effectiveType||'').toLowerCase();
   return et==='2g'||et==='slow-2g'||et==='3g';
 }
+function isPowerConstrained(){return DS.enabled||isCellular()||_isIOS();}
 function dsWarnMaybe(station){
   if(!DS.enabled||!station)return;
   if(DS.warnedThisSession)return;
@@ -447,19 +450,22 @@ const NP={
       if(carNp)carNp.textContent='';
     }
   },
-  stop(){clearInterval(this._timer);this._timer=null;this._curId=null;this._setTitle('');},
+  stop(){clearTimeout(this._initialTimer);clearInterval(this._timer);this._initialTimer=null;this._timer=null;this._curId=null;this._setTitle('');},
   start(station){
     this.stop();
     if(!station)return;
     this._curId=station.id;
+    if(DS.enabled)return;
     const run=async()=>{
       if(!S.cur||S.cur.id!==this._curId)return;
       const t=await this._fetchFor(station.u);
       if(S.cur&&S.cur.id===this._curId&&t&&t!==this._curTitle)this._setTitle(t);
     };
-    run();
-    const delay=_isIOS()||DS.enabled||isCellular()?NP_IOS_POLL_MS:NP_POLL_MS;
-    this._timer=setInterval(()=>{if(document.hidden&&(_isIOS()||DS.enabled))return;run();},delay);
+    const conservative=isPowerConstrained();
+    if(conservative)this._initialTimer=setTimeout(run,15000);
+    else run();
+    const delay=conservative?NP_IOS_POLL_MS:NP_POLL_MS;
+    this._timer=setInterval(()=>{if(document.hidden&&conservative)return;run();},delay);
   }
 };
 
@@ -563,7 +569,10 @@ const IM={
     attempt(0);
   },
   initAudioContext(){
-    try{this._actx=new(window.AudioContext||window.webkitAudioContext)();
+    if(DS.enabled||this._actx)return;
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return;
+    try{this._actx=new Ctx();
     this._actx.addEventListener('statechange',()=>{
       const st=this._actx.state;
       if(st==='interrupted'){
@@ -585,14 +594,20 @@ const IM={
     });}catch(e){}
   },
   resumeAudioContext(){
+    if(DS.enabled||(!S.playing&&!S.should&&!this._interrupted))return;
+    if(!this._actx)this.initAudioContext();
     if(this._actx&&this._actx.state!=='running'){try{this._actx.resume().catch(()=>{});}catch(e){}}
+  },
+  releaseAudioContext(){
+    const ctx=this._actx;
+    this._actx=null;this._actxState=null;
+    try{ctx?.close?.().catch(()=>{});}catch(e){}
   },
   setUStop(v){this._uStop=v;if(v){this._clearTimers();this._interrupted=false;this._type=null;this._hideBanner();}},
   init(a){
     this.aud=a;
     a.addEventListener('webkitInterruptBegin',()=>{if(!this._uStop&&(S.playing||S.should))this.interruptCall();});
     a.addEventListener('webkitInterruptEnd',()=>{if(this._interrupted&&this._type==='call')this.resumeFromCall();});
-    this.initAudioContext();
   }
 };
 
@@ -913,6 +928,7 @@ function pauseForUser(opts={}){
   const source=opts.source||'app';
   S.should=false;S.resumable=opts.resumable!==false;IM.setUStop(false);
   IOS._stopRecovery();NP.stop();
+  IM.releaseAudioContext();
   if(shouldSoftPauseForIOS(source))softPauseForIOS();
   else{S.softPaused=false;releaseIOSHoldAudio();pauseAudioWithoutIOSHold();setPausedUI();}
   // Keep station metadata alive so iOS lock screen / Control Center can resume.
@@ -922,7 +938,7 @@ function stopSession(reason,opts={}){
   const clearCurrent=opts.clearCurrent!==false;
   _resumeToken++;_resumePromise=null;
   IM.setUStop(true);S.should=false;S.resumable=false;S.playing=false;S.softPaused=false;
-  IOS._stopRecovery();DU.stopTick();NP.stop();releaseIOSHoldAudio();
+  IOS._stopRecovery();DU.stopTick();NP.stop();IM.releaseAudioContext();releaseIOSHoldAudio();
   try{aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;pauseAudioWithoutIOSHold();}catch{}
   if(clearCurrent){try{aud.removeAttribute('src');aud.load();}catch{}S.cur=null;}
   setPausedUI();
@@ -950,9 +966,7 @@ function prepareCurrentStreamForResume(forceReload=false){
   return true;
 }
 function _resumeAudioContext(){
-  if(IM._actx&&IM._actx.state!=='running'){
-    try{return IM._actx.resume().catch(()=>{});}catch{}
-  }
+  IM.resumeAudioContext();
   return Promise.resolve();
 }
 function _delay(ms){return new Promise(r=>setTimeout(r,ms));}
@@ -1846,7 +1860,7 @@ function setupAccessibleRows(){
 /* ═══ INIT ═══ */
 function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
-  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();releaseIOSHoldAudio();releaseCarWakeLock();});
+  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();IM.releaseAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
 
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
@@ -1860,10 +1874,9 @@ function init(){
 
   IM.init(aud);IOS.init(aud);setupMS();setupInstallPrompt();setupOfflineDetection();setupAccessibleRows();
 
-  // iOS audio unlock - also unlocks AudioContext
+  // Keep iOS audio activation lazy; the user's play tap starts the stream.
   document.addEventListener('touchstart',function u(){
-    aud.play().then(()=>aud.pause()).catch(()=>{});
-    if(IM._actx&&IM._actx.state==='suspended')try{IM._actx.resume();}catch{}
+    if(IM._actx&&IM._actx.state==='suspended'&&!DS.enabled)try{IM._actx.resume();}catch{}
     document.removeEventListener('touchstart',u);
   },{once:true});
 
@@ -1964,8 +1977,10 @@ function init(){
   loadDS();DU.render();
   g('swDataSaver').addEventListener('change',e=>{
     DS.enabled=e.target.checked;DS.warnedThisSession=false;saveDS();
+    if(DS.enabled)IM.releaseAudioContext();
     _lastMetaKey='';
     if(S.cur){NP.start(S.cur);updateMeta(S.cur);}
+    if(S.playing){DU.stopTick();DU.startTick();}
     toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');
   });
   g('btnResetData').addEventListener('click',()=>DU.reset());
