@@ -82,6 +82,7 @@ await withServer(async baseUrl => {
 
   await page.click('#btnAdd');
   await page.waitForSelector('#addMod.s');
+  await page.click('[data-add-tab="manual"]');
   await page.click('#btnMAdd');
   await assertVisible(page, '#fgN.bad');
   await assertVisible(page, '#fgU.bad');
@@ -111,6 +112,7 @@ await withServer(async baseUrl => {
   await page.goto(`${baseUrl}/?page=add`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#navA[aria-current="page"]');
   await page.waitForSelector('#addMod.s');
+  await assertVisible(page, '[data-add-tab="tr"].a');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#addMod')?.classList.contains('s'));
 

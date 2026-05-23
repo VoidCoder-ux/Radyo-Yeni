@@ -11,6 +11,7 @@ const required = [
   'src/lib/core.js',
   'src/lib/radio-browser.js',
   'icons/icon.svg',
+  'icons/apple-touch-icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png'
@@ -34,6 +35,17 @@ if (!html.includes('role="dialog"')) failures.push('index.html is missing dialog
 const manifest = JSON.parse(readFileSync('manifest.json', 'utf8'));
 for (const icon of ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png']) {
   if (!manifest.icons.some(entry => entry.src === icon)) failures.push(`manifest.json is missing ${icon}`);
+}
+
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+const appJs = readFileSync('js/app.js', 'utf8');
+const sw = readFileSync('sw.js', 'utf8');
+const core = readFileSync('src/lib/core.js', 'utf8');
+const appVersion = appJs.match(/const APP_VERSION='([^']+)'/)?.[1];
+const coreVersion = core.match(/export const APP_VERSION = '([^']+)'/)?.[1];
+const cacheVersion = sw.match(/const CACHE='pulse-radio-v([^']+)'/)?.[1];
+for (const [label, version] of [['js/app.js', appVersion], ['src/lib/core.js', coreVersion], ['sw.js', cacheVersion]]) {
+  if (version !== pkg.version) failures.push(`${label} version ${version || 'missing'} does not match package.json ${pkg.version}`);
 }
 
 const css = readFileSync('css/styles.css', 'utf8');

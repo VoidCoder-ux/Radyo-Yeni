@@ -12,8 +12,8 @@
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" id="atiAny" href="icons/icon-192.png">
-<link rel="apple-touch-icon" id="ati180" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" id="atiAny" href="icons/apple-touch-icon-180.png">
+<link rel="apple-touch-icon" id="ati180" href="icons/apple-touch-icon-180.png" sizes="180x180">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://de1.api.radio-browser.info">
@@ -155,7 +155,7 @@
     <div class="search-bar is-hidden" id="searchBar">
       <div class="search-wrap">
         <svg class="svg-i" aria-hidden="true"><use href="#i-search"/></svg>
-        <input id="searchInput" placeholder="Kanal ara..." autocomplete="off" aria-label="Kanal ara">
+        <input id="searchInput" placeholder="Kanallarımda ara..." autocomplete="off" aria-label="Kanallarımda ara">
         <button class="search-clear" id="searchClear" aria-label="Aramayı temizle"><svg class="svg-i" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
     </div>
@@ -213,7 +213,7 @@
   </div>
 </div>
 
-<div class="mplay" id="mplay" role="button" tabindex="0" aria-label="Şimdi çalınıyor ekranını aç">
+<div class="mplay" id="mplay" role="group" aria-label="Şimdi çalınıyor">
   <div class="mp-progress"><div class="mp-progress-bar" id="mpBar"></div></div>
   <div class="mplay-r">
     <div class="mplay-i" id="mIco"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg></div>
@@ -308,30 +308,38 @@
   <div class="modal-c" tabindex="-1">
     <div class="modal-bar"></div>
     <h2 id="addModalTitle"><svg class="svg-i" aria-hidden="true"><use href="#i-radio"/></svg>Radyo Ekle</h2>
-    <div class="srch-sec">
+    <div class="add-tabs" role="tablist" aria-label="Radyo ekleme yöntemi">
+      <button class="add-tab a" type="button" data-add-tab="tr" role="tab" aria-selected="true">Türkiye</button>
+      <button class="add-tab" type="button" data-add-tab="gl" role="tab" aria-selected="false">Dünya</button>
+      <button class="add-tab" type="button" data-add-tab="tg" role="tab" aria-selected="false">Tür</button>
+      <button class="add-tab" type="button" data-add-tab="manual" role="tab" aria-selected="false">Manuel</button>
+    </div>
+    <div class="srch-sec add-panel a" data-add-panel="tr" role="tabpanel">
       <h3><svg class="svg-i" aria-hidden="true"><use href="#i-flag-tr"/></svg>Türk Radyoları</h3>
       <div class="srch-row"><input id="qTR" placeholder="Radyo adı yazın..." autocomplete="off"><button id="bTR">Ara</button></div>
       <div id="rTR"></div>
     </div>
-    <div class="srch-sec">
+    <div class="srch-sec add-panel" data-add-panel="gl" role="tabpanel">
       <h3><svg class="svg-i" aria-hidden="true"><use href="#i-globe"/></svg>Tüm Dünya</h3>
       <div class="srch-row"><input id="qGL" placeholder="Herhangi bir radyo..." autocomplete="off"><button id="bGL">Ara</button></div>
       <div id="rGL"></div>
     </div>
-    <div class="srch-sec">
+    <div class="srch-sec add-panel" data-add-panel="tg" role="tabpanel">
       <h3><svg class="svg-i" aria-hidden="true"><use href="#i-tag"/></svg>Tür ile Ara</h3>
       <div class="srch-row"><input id="qTG" placeholder="pop, rock, jazz, haber..." autocomplete="off"><button id="bTG">Ara</button></div>
       <div id="rTG"></div>
     </div>
-    <h3 class="manual-title"><svg class="svg-i" aria-hidden="true"><use href="#i-edit"/></svg>Manuel Ekle</h3>
-    <div class="fg" id="fgN"><label>Ad</label><input id="inN" placeholder="Radyo adı" autocomplete="off"><span class="ferr">Ad zorunludur</span></div>
-    <div class="fg" id="fgU"><label>URL</label><input id="inU" placeholder="https://..." autocomplete="off" inputmode="url"><small>MP3 / AAC / M3U8 stream adresi</small><span class="ferr">Geçerli bir http:// veya https:// adresi girin</span></div>
-    <div class="fg"><label>Kategori</label>
-      <select id="inC"><option>Pop</option><option>Rock</option><option>Haber</option><option>THM</option><option>TSM</option><option>Arabesk</option><option>Caz</option><option>Elektronik</option><option>Karma</option><option>Dini</option><option>Çocuk</option><option>Spor</option><option>Diğer</option></select>
+    <div class="add-panel" data-add-panel="manual" role="tabpanel">
+      <h3 class="manual-title"><svg class="svg-i" aria-hidden="true"><use href="#i-edit"/></svg>Manuel Ekle</h3>
+      <div class="fg" id="fgN"><label for="inN">Ad</label><input id="inN" placeholder="Radyo adı" autocomplete="off"><span class="ferr">Ad zorunludur</span></div>
+      <div class="fg" id="fgU"><label for="inU">URL</label><input id="inU" placeholder="https://..." autocomplete="off" inputmode="url" aria-describedby="inUHelp"><small id="inUHelp">MP3 / AAC / M3U8 stream adresi</small><span class="ferr">Geçerli bir http:// veya https:// adresi girin</span></div>
+      <div class="fg"><label for="inC">Kategori</label>
+        <select id="inC"><option>Pop</option><option>Rock</option><option>Haber</option><option>THM</option><option>TSM</option><option>Arabesk</option><option>Caz</option><option>Elektronik</option><option>Karma</option><option>Dini</option><option>Çocuk</option><option>Spor</option><option>Diğer</option></select>
+      </div>
+      <div class="fg"><label for="inE">Emoji</label><input id="inE" class="emoji-input" maxlength="2" value="&#x1F4FB;"></div>
+      <div class="fg"><label for="inImg">Logo URL (opsiyonel)</label><input id="inImg" placeholder="https://...logo.png" autocomplete="off" inputmode="url"><small>Radyo logosu (PNG/JPG)</small></div>
+      <div class="fbtn-r"><button class="fbtn fc" id="btnMCancel">İptal</button><button class="fbtn fk" id="btnMAdd">Ekle</button></div>
     </div>
-    <div class="fg"><label>Emoji</label><input id="inE" class="emoji-input" maxlength="2" value="📻"></div>
-    <div class="fg"><label>Logo URL (opsiyonel)</label><input id="inImg" placeholder="https://...logo.png" autocomplete="off" inputmode="url"><small>Radyo logosu (PNG/JPG)</small></div>
-    <div class="fbtn-r"><button class="fbtn fc" id="btnMCancel">İptal</button><button class="fbtn fk" id="btnMAdd">Ekle</button></div>
   </div>
 </div>
 

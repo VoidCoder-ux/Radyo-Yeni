@@ -1,4 +1,4 @@
-export const APP_VERSION = '15.0.1';
+export const APP_VERSION = '15.0.2';
 export const EXPORT_VERSION = APP_VERSION;
 export const RADIO_BROWSER_HOSTS = ['de1', 'nl1', 'at1', 'de2'];
 
@@ -26,6 +26,19 @@ export function isUrl(value) {
     return url.protocol === 'https:' || url.protocol === 'http:';
   } catch {
     return false;
+  }
+}
+
+export function cleanImageUrl(value) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const isPrivate = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' ||
+      host.startsWith('10.') || host.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+    if (url.protocol !== 'https:' || url.username || url.password || isPrivate) return '';
+    return url.href;
+  } catch {
+    return '';
   }
 }
 
@@ -85,7 +98,7 @@ export function normalizeStation(input, options = {}) {
     u: url,
     e: (typeof input.e === 'string' && input.e ? input.e : DEFAULT_EMOJI).slice(0, LIMITS.emoji),
     c: color,
-    img: typeof input.img === 'string' && isUrl(input.img) ? input.img : '',
+    img: typeof input.img === 'string' ? cleanImageUrl(input.img) : '',
     br: Number.isFinite(input.br) && input.br > 0 ? Math.round(input.br) : 0
   };
 }
@@ -157,7 +170,7 @@ export function normalizeRadioBrowserStation(input) {
   return {
     name: String(input.name || '').trim(),
     url,
-    favicon: isUrl(input.favicon) ? input.favicon : '',
+    favicon: cleanImageUrl(input.favicon),
     tags: String(input.tags || ''),
     country: String(input.country || ''),
     bitrate: Number.isFinite(input.bitrate) ? input.bitrate : 0,

@@ -1,6 +1,9 @@
 (function(){
 'use strict';
 
+const MAX_TOKEN_CHARS=1400000;
+const MAX_JSON_CHARS=1048576;
+
 function bytesToBase64(bytes){
   let bin='';
   const chunk=0x8000;
@@ -21,6 +24,7 @@ function base64ToBytes(text){
 
 function encodeBackup(data){
   const json=JSON.stringify(data);
+  if(json.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
   if(window.TextEncoder)return bytesToBase64(new TextEncoder().encode(json));
   return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
@@ -42,9 +46,12 @@ function extractBackupToken(input){
 function decodeBackup(input){
   const token=extractBackupToken(input);
   if(!token)throw new Error('empty-backup');
+  if(token.length>MAX_TOKEN_CHARS)throw new Error('backup-too-large');
   if(token.trim().startsWith('{'))return JSON.parse(token);
   const bytes=base64ToBytes(token);
+  if(bytes.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
   const json=window.TextDecoder?new TextDecoder().decode(bytes):decodeURIComponent(escape(String.fromCharCode.apply(null,bytes)));
+  if(json.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
   return JSON.parse(json);
 }
 
