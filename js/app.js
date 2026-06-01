@@ -80,7 +80,9 @@ function initialRoute(){
 }
 function backupCorruptValue(k,raw){
   if(!raw||_corruptStorage.has(k))return;
-  const bak=`${k}.corrupt.${Date.now()}`;
+  // Sabit tek yedek anahtarı kullan; aksi halde kalıcı bozuk bir değer her
+  // sayfa açılışında yeni `.corrupt.<ts>` anahtarı yazıp kotayı doldurur.
+  const bak=`${k}.corrupt`;
   _corruptStorage.set(k,{raw,bak});
   try{localStorage.setItem(bak,raw);}catch{}
 }
@@ -127,21 +129,47 @@ function toast(msg,type){
   clearTimeout(_toastT);_toastT=setTimeout(()=>el.classList.remove('s'),2600);
 }
 let _activeDialog=null,_prevFocus=null;
+/* ── Modal/overlay geri-tuşu (popstate) yönetimi ──
+   Açık bir overlay varken donanım/tarayıcı geri tuşu uygulamayı kapatmak yerine
+   en üstteki overlay'i kapatır. Her açılışta bir history state push edilir;
+   gerçek kapanış daima popstate üzerinden yapılır (kullanıcı kapatma butonuna
+   bastığında history.back() tetikleyip kapanışı popstate'e bırakırız). */
+const _dlgStack=[];let _dlgPopping=false;
+function _deferDialogClose(id){
+  if(_dlgPopping)return false;            // popstate'ten geliyoruz → gerçekten kapat
+  if(_dlgStack.lastIndexOf(id)===-1)return false; // history kaydı yok → gerçekten kapat
+  try{history.back();return true;}catch{return false;}
+}
 function setDialogOpen(id,open){
   const ov=g(id);if(!ov)return;
   const box=ov.querySelector('[tabindex="-1"],.modal-c,.cfm-box,.ios-box');
   if(open){
     _prevFocus=document.activeElement;
     ov.classList.add('s');_activeDialog=ov;
+    if(_dlgStack.lastIndexOf(id)===-1){_dlgStack.push(id);try{history.pushState({_dlg:id},'');}catch{}}
     setTimeout(()=>{const first=ov.querySelector('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');(first||box||ov).focus?.();},30);
   }else{
     ov.classList.remove('s');
     if(_activeDialog===ov)_activeDialog=null;
+    const idx=_dlgStack.lastIndexOf(id);if(idx!==-1)_dlgStack.splice(idx,1);
     const focusTarget=_prevFocus;
     if(focusTarget&&document.contains(focusTarget))setTimeout(()=>focusTarget.focus?.(),30);
     _prevFocus=null;
   }
 }
+const _dialogClosers={
+  fplay:()=>closeFP(),
+  carMode:()=>closeCar(),
+  addMod:()=>closeMod(),
+  cfmOv:()=>_cfmClose(_cfmPendingVal===undefined?false:_cfmPendingVal),
+  iosInstallOv:()=>closeIOSInstall()
+};
+window.addEventListener('popstate',()=>{
+  if(!_dlgStack.length)return;
+  _dlgPopping=true;
+  const id=_dlgStack[_dlgStack.length-1];
+  try{(_dialogClosers[id]||(()=>setDialogOpen(id,false)))();}finally{_dlgPopping=false;}
+});
 function trapDialogFocus(e){
   if(!_activeDialog||e.key!=='Tab')return false;
   const focusables=[..._activeDialog.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>!x.disabled&&x.offsetParent!==null);
@@ -170,7 +198,12 @@ function confirm2(title,msg,okLbl='Sil'){
     _cfmRes=resolve;g('cfmTitle').textContent=title;g('cfmMsg').textContent=msg;g('cfmYes').textContent=okLbl;setDialogOpen('cfmOv',true);
   });
 }
-function _cfmClose(val){setDialogOpen('cfmOv',false);if(_cfmRes){_cfmRes(val);_cfmRes=null;}}
+let _cfmPendingVal;
+function _cfmClose(val){
+  if(_deferDialogClose('cfmOv')){_cfmPendingVal=val;return;}
+  _cfmPendingVal=undefined;
+  setDialogOpen('cfmOv',false);if(_cfmRes){_cfmRes(val);_cfmRes=null;}
+}
 
 /* ── DATA ── */
 let ch=[],fv=[],rc=[];
@@ -232,7 +265,10 @@ const DU={
     const tickMs=isPowerConstrained()?DATA_USAGE_LOW_POWER_TICK_MS:DATA_USAGE_TICK_MS;
     this._tickT=setInterval(()=>{
       if(!S.cur||!S.playing){this.stopTick();return;}
-      const now=Date.now();const dt=(now-this._lastTick)/1000;this._lastTick=now;
+      const now=Date.now();
+      // Arka planda timer kısıtlaması nedeniyle tek tick'te dakikalarca dt
+      // birikebilir; aşırı tahmini önlemek için bir tick'i en fazla 2 aralıkla sınırla.
+      const dt=Math.min((now-this._lastTick)/1000,(tickMs/1000)*2);this._lastTick=now;
       const br=(S.cur.br&&S.cur.br>0)?S.cur.br:96; // varsayılan 96 kbps tahmin
       const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
       this.add(bytes);
@@ -765,7 +801,8 @@ function updateMeta(s){
 const S={cur:null,playing:false,should:false,resumable:false,softPaused:false,retries:0};
 const aud=g('aud');
 const _httpWarned=new Set();
-let _resumePromise=null,_resumeToken=0;
+let _resumePromise=null,_resumeToken=0,_lastAutoResumeAt=0;
+const AUTO_RESUME_MIN_GAP_MS=1500;
 let _iosPauseHoldPromise=null,_lastSoftPauseAt=0,_iosHoldSrc='',_iosHoldSwitching=false,_iosHoldReleaseTimer=null,_suppressIOSPauseHold=false;
 function warnHttpStream(s){
   if(!s||!isHttpUrl(s.u)||_httpWarned.has(s.id))return;
@@ -837,8 +874,9 @@ function play(id){
   g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
   // Bitrate
   if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;setVisible('fpBitrate',true,'inline-flex');}else{setVisible('fpBitrate',false);}
-  setStatus('conn');updateFavBtn();addHist(s);updateMeta(s);NP.start(s);updateCarNow();dsWarnMaybe(s);
-  aud.loop=false;aud.src=s.u;aud.load();aud.volume=IM._baseVol;
+  setStatus('conn');updateFavBtn();addHist(s);updateMeta(s);updateCarNow();dsWarnMaybe(s);
+  // Yükleme ve NP başlatma resumeCurrentStation içinde tek yerden yapılır
+  // (çift aud.load() ve çift NP poller'ı önler).
   resumeCurrentStation({source:'station-select'});
   renderCards();
 }
@@ -964,7 +1002,11 @@ function stopSession(reason,opts={}){
   IM.setUStop(true);S.should=false;S.resumable=false;S.playing=false;S.softPaused=false;
   IOS._stopRecovery();DU.stopTick();NP.stop();IM.releaseAudioContext();releaseIOSHoldAudio();
   try{aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;pauseAudioWithoutIOSHold();}catch{}
-  if(clearCurrent){try{aud.removeAttribute('src');aud.load();}catch{}S.cur=null;}
+  if(clearCurrent){
+    try{aud.removeAttribute('src');aud.load();}catch{}S.cur=null;
+    // Tam durdurmada sessiz-hold blob URL'ini serbest bırak (gerekirse tekrar üretilir).
+    if(_iosHoldSrc){try{URL.revokeObjectURL(_iosHoldSrc);}catch{}_iosHoldSrc='';}
+  }
   setPausedUI();
   if(clearCurrent){g('mplay').classList.remove('s');g('scr').classList.remove('mp-on');}
   syncMediaSessionState();updateCarNow();
@@ -997,7 +1039,17 @@ function _delay(ms){return new Promise(r=>setTimeout(r,ms));}
 async function resumeCurrentStation(opts={}){
   if(!S.cur)return false;
   if(_resumePromise)return _resumePromise;
-  const token=++_resumeToken,source=opts.source||'app';
+  const source=opts.source||'app';
+  // Otomatik tetikleyicileri (online/error/stalled/recovery/foreground) birleştir:
+  // kısa aralıkta üst üste gelen denemeleri yut. Kullanıcı/MediaSession/istasyon
+  // seçimi her zaman geçer.
+  const isAuto=source!=='app'&&source!=='media-session'&&source!=='station-select';
+  const now=Date.now();
+  if(isAuto){
+    if(now-_lastAutoResumeAt<AUTO_RESUME_MIN_GAP_MS)return false;
+    _lastAutoResumeAt=now;
+  }
+  const token=++_resumeToken;
   _resumePromise=(async()=>{
     IM.setUStop(false);IM._clearTimers();IM._interrupted=false;IM._type=null;IM._hideBanner();
     S.should=true;S.resumable=true;
@@ -1450,7 +1502,7 @@ function openFP(){
   setDialogOpen('fplay',true);syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
   setTimeout(()=>g('btnFpClose').focus?.(),30);
 }
-function closeFP(){setDialogOpen('fplay',false);setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
+function closeFP(){if(_deferDialogClose('fplay'))return;setDialogOpen('fplay',false);setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
 
 /* ── CAR MODE ── */
 let _carOpen=false,_wakeLock=null,_wakeRetryT=null,_wakeRetryMs=1000;
@@ -1486,6 +1538,7 @@ function openCar(){
   setTimeout(()=>g('carClose').focus?.(),30);
 }
 function closeCar(){
+  if(_deferDialogClose('carMode'))return;
   _carOpen=false;
   setDialogOpen('carMode',false);
   releaseCarWakeLock();
@@ -1560,7 +1613,7 @@ function updateSearchVisibility(){
 
 /* ── MODAL ── */
 function openMod(){setDialogOpen('addMod',true);}
-function closeMod(){setDialogOpen('addMod',false);['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');}
+function closeMod(){if(_deferDialogClose('addMod'))return;setDialogOpen('addMod',false);['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');}
 function setupAddSheetKeyboard(){
   const modal=g('addMod');
   const sheet=modal?.querySelector('.modal-c');
@@ -1796,7 +1849,7 @@ function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.
 function _isSafari(){return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);}
 function _isStandalone(){return window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone===true;}
 function openIOSInstall(){setDialogOpen('iosInstallOv',true);}
-function closeIOSInstall(){setDialogOpen('iosInstallOv',false);lsSave('pwa_dismissed',true);}
+function closeIOSInstall(){if(_deferDialogClose('iosInstallOv'))return;setDialogOpen('iosInstallOv',false);lsSave('pwa_dismissed',true);}
 function _updateInstallSettingRow(){
   if(_isStandalone()){
     setVisible('btnInstallApp',false);

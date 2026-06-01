@@ -50,9 +50,12 @@ self.addEventListener('fetch',e=>{
 
   // App shell: network-first, query-safe fallback for PWA shortcuts.
   if(url.origin===location.origin){
+    // Yalnızca güvenli, tam (non-range) GET yanıtlarını önbelleğe al.
+    const cacheable=e.request.method==='GET'&&!e.request.headers.get('range');
     e.respondWith(
       fetch(e.request).then(res=>{
-        if(res.ok){
+        // res.type==='basic' => aynı origin, tam yanıt (opaque/partial değil).
+        if(cacheable&&res.ok&&res.type==='basic'&&res.status===200){
           const clone=res.clone();
           caches.open(CACHE).then(c=>c.put(e.request,clone));
         }
