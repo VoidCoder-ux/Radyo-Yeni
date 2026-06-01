@@ -191,6 +191,14 @@ function addRipple(e,el){
   el.appendChild(r);setTimeout(()=>r.remove(),500);
 }
 
+/* ── HAPTİK ── kısa dokunsal geri bildirim (Android). reduce-motion'a saygı duyar;
+   iOS Safari'de Vibration API yoktur, sessizce yok sayılır. */
+let _reduceMotion=false;
+try{_reduceMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  matchMedia('(prefers-reduced-motion:reduce)').addEventListener?.('change',e=>{_reduceMotion=e.matches;});
+}catch{}
+function haptic(ms=10){if(_reduceMotion)return;try{navigator.vibrate?.(ms);}catch{}}
+
 /* ── CONFIRM ── */
 let _cfmRes=null;
 function confirm2(title,msg,okLbl='Sil'){
@@ -880,7 +888,7 @@ function play(id){
   resumeCurrentStation({source:'station-select'});
   renderCards();
 }
-function togglePlay(){if(!S.cur)return;S.playing?pauseForUser({source:'app'}):userResume();}
+function togglePlay(){if(!S.cur)return;haptic(12);S.playing?pauseForUser({source:'app'}):userResume();}
 function shouldSoftPauseForIOS(source){
   return _isIOS()&&S.cur&&!aud.paused&&(source==='media-session'||source==='media-session-stop');
 }
@@ -1129,6 +1137,7 @@ function toggleFav(id){
   const i=fv.indexOf(id);
   if(i>=0)fv.splice(i,1);else fv.push(id);
   if(!dataSave()){fv=prev;toast('Favori kaydedilemedi','err');return;}
+  haptic(i>=0?8:14);
   toast(i>=0?'Favoriden çıkarıldı':'Favorilere eklendi',i>=0?undefined:'ok');
   renderCards();updateFavBtn();updateNavBadge();if(_carOpen)renderCarFavs();
 }
@@ -1529,6 +1538,7 @@ async function releaseCarWakeLock(){
   try{await lock?.release();}catch{}
 }
 function openCar(){
+  haptic(15);
   _carOpen=true;
   _carPrevFocus=document.activeElement;
   setDialogOpen('carMode',true);
