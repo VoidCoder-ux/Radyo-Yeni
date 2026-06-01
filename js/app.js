@@ -603,6 +603,13 @@ const IM={
     this._actx=null;this._actxState=null;
     try{ctx?.close?.().catch(()=>{});}catch(e){}
   },
+  // Arka plan/duraklatmada context'i KAPATMA — sadece askıya al. Kapalı bir
+  // context bir daha 'running'e dönemez ve kesinti→devam sinyali kaybolur.
+  // Askıya alınmış context ihmal edilebilir güç/veri kullanır.
+  suspendAudioContext(){
+    const ctx=this._actx;
+    if(ctx&&ctx.state==='running'){try{ctx.suspend().catch(()=>{});}catch(e){}}
+  },
   setUStop(v){this._uStop=v;if(v){this._clearTimers();this._interrupted=false;this._type=null;this._hideBanner();}},
   init(a){
     this.aud=a;
@@ -923,12 +930,29 @@ function holdIOSMediaSessionAfterSystemPause(){
   })();
   return true;
 }
+function handleIOSInterruptionPause(){
+  // iOS, bir bildirim/arama/rota değişimi/kilit nedeniyle <audio>'yu kendiliğinden
+  // duraklattı. Oynatma niyetini (S.should) KORUYORUZ ki:
+  //  1) Kilit ekranı / Control Center "Çal" düğmesi (MediaSession 'play') çalışsın,
+  //  2) Ön plana dönüşte (visibilitychange/focus/pageshow) ve recovery timer'ı
+  //     resumeCurrentStation'ı tetikleyebilsin.
+  // S.should=false YAPMIYORUZ ve sessiz-hold WAV'a GEÇMİYORUZ — eski hata buydu.
+  S.softPaused=false;
+  setPausedUI();
+  // Now Playing hedefini canlı tut: metadata + 'paused' durumu kilit ekranında
+  // Çal düğmesini gösterir; kullanıcı dokununca resumeFromMediaSession devreye girer.
+  if(S.cur)updateMeta(S.cur);
+  syncMediaSessionState();
+  // Ön plandaysak kesinti biter bitmez kendiliğinden denemeyi tetikle.
+  if(!document.hidden&&S.cur&&S.should&&!IM._uStop)IOS.resume(700);
+}
 function pauseForUser(opts={}){
   if(!S.cur)return;
   const source=opts.source||'app';
   S.should=false;S.resumable=opts.resumable!==false;IM.setUStop(false);
   IOS._stopRecovery();NP.stop();
-  IM.releaseAudioContext();
+  // Kilit ekranından devam edebilmek için context'i kapatma, askıya al.
+  IM.suspendAudioContext();
   if(shouldSoftPauseForIOS(source))softPauseForIOS();
   else{S.softPaused=false;releaseIOSHoldAudio();pauseAudioWithoutIOSHold();setPausedUI();}
   // Keep station metadata alive so iOS lock screen / Control Center can resume.
@@ -1860,7 +1884,7 @@ function setupAccessibleRows(){
 /* ═══ INIT ═══ */
 function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
-  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();IM.releaseAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
+  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
 
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
@@ -1877,6 +1901,16 @@ function init(){
   // Keep iOS audio activation lazy; the user's play tap starts the stream.
   document.addEventListener('touchstart',function u(){
     if(IM._actx&&IM._actx.state==='suspended'&&!DS.enabled)try{IM._actx.resume();}catch{}
+    // iOS: <audio> elemanını ilk gesture'da bir kez "uyandır". Bu, sistem kesintisi
+    // sonrası arka planda/ön planda aud.play()'in izin alma olasılığını artırır.
+    if(_isIOS()&&!S.cur&&!aud.src){
+      try{
+        aud.muted=true;aud.src=getIOSHoldSrc();aud.load();
+        const p=aud.play();
+        if(p&&p.then)p.then(()=>{try{aud.pause();aud.removeAttribute('src');aud.load();}catch{}finally{aud.muted=false;}}).catch(()=>{aud.muted=false;});
+        else aud.muted=false;
+      }catch{aud.muted=false;}
+    }
     document.removeEventListener('touchstart',u);
   },{once:true});
 
@@ -1887,6 +1921,15 @@ function init(){
   aud.addEventListener('pause',()=>{
     if(_iosHoldSwitching)return;
     if(_suppressIOSPauseHold){_suppressIOSPauseHold=false;return;}
+    // S.should hâlâ true ise bu, kullanıcının bilerek duraklatması DEĞİL —
+    // iOS'un istem dışı kesintisidir (bildirim, arama, rota değişimi, kilit).
+    // Bilerek duraklatmalar (pauseForUser) S.should'ı zaten false yapmıştır.
+    // İstem dışı kesintide oynatma niyetini KORU; ön plana dönüşte veya kilit
+    // ekranı düğmesiyle otomatik devam edebilelim.
+    if(_isIOS()&&S.cur&&S.should&&!IM._uStop){
+      handleIOSInterruptionPause();
+      return;
+    }
     if(holdIOSMediaSessionAfterSystemPause())return;
     S.softPaused=false;
     setPausedUI();
