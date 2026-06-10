@@ -2,7 +2,7 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.6';
+const APP_VERSION='15.0.7';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -180,6 +180,7 @@ function trapDialogFocus(e){
   return false;
 }
 function relTime(ts){const m=Math.floor((Date.now()-ts)/60000);if(m<1)return'Az önce';if(m<60)return m+'dk';const h=Math.floor(m/60);if(h<24)return h+'sa';return Math.floor(h/24)+'g';}
+/* Koyulaştırırken maviyi artırır: logo zeminlerinde gece-moru gölge tonu bilinçli tasarım tercihi */
 function darken(h){try{return`rgb(${Math.max(0,parseInt(h.slice(1,3),16)-50)},${Math.max(0,parseInt(h.slice(3,5),16)-30)},${Math.min(255,parseInt(h.slice(5,7),16)+40)})`;}catch{return'#4a3ab5';}}
 
 /* ── RIPPLE EFFECT ── */
@@ -1210,7 +1211,7 @@ function createCardMeta(s,isOn,extraText){
 }
 function makeCard(s,idx,showDrag){
   const isOn=S.cur?.id===s.id,isFav=fv.includes(s.id);
-  const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'')+(isFav?' fav-on':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
+  const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
   div.setAttribute('role','group');div.setAttribute('aria-label',s.n);
   if(isOn)div.setAttribute('aria-current','true');
   const shell=document.createElement('div');shell.className='card-shell'+(showDrag?' has-drag':'');
