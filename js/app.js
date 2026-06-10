@@ -2,7 +2,7 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.8';
+const APP_VERSION='15.0.9';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -119,6 +119,23 @@ function trNormalize(s){
   x=x.replace(/[ıİşŞğĞüÜöÖçÇâÂîÎûÛôÔêÊ]/g,c=>map[c]||c);
   try{x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch{}
   return x.replace(/[^\p{L}\p{N}]+/gu,'').trim();
+}
+/* trNormalize eşleşmesinin orijinal metindeki [başlangıç,bitiş) aralığını bulur.
+   Filtre trNormalize kullandığı için vurgu da aynı kuralla yapılmalı; ayrıca
+   'İ'.toLowerCase() gibi çok-karakterli dönüşümlerde indeks kayması olmaz. */
+function trMatchRange(name,query){
+  const qn=trNormalize(query);
+  if(!qn)return null;
+  const chars=Array.from(name);
+  let norm='';const idxMap=[];
+  for(let i=0;i<chars.length;i++){
+    const cn=trNormalize(chars[i]);
+    for(let k=0;k<cn.length;k++){norm+=cn[k];idxMap.push(i);}
+  }
+  const pos=norm.indexOf(qn);
+  if(pos<0)return null;
+  const sc=idxMap[pos],ec=idxMap[pos+qn.length-1];
+  return [chars.slice(0,sc).join('').length,chars.slice(0,ec+1).join('').length];
 }
 
 /* ── TOAST v2 ── */
@@ -669,7 +686,6 @@ const IM={
   },
   setUStop(v){this._uStop=v;if(v){this._clearTimers();this._interrupted=false;this._type=null;this._hideBanner();}},
   init(a){
-    this.aud=a;
     a.addEventListener('webkitInterruptBegin',()=>{if(!this._uStop&&(S.playing||S.should))this.interruptCall();});
     a.addEventListener('webkitInterruptEnd',()=>{if(this._interrupted&&this._type==='call')this.resumeFromCall();});
   }
@@ -1109,7 +1125,6 @@ async function resumeCurrentStation(opts={}){
   return _resumePromise;
 }
 function resumeFromMediaSession(){return resumeCurrentStation({source:'media-session'});}
-function userPause(){pauseForUser({source:'app'});}
 function userResume(){return resumeCurrentStation({source:'app'});}
 function prevSt(){
   if(!S.cur||ch.length<2)return;
@@ -1203,11 +1218,9 @@ function createCardLogo(s,isOn){
 }
 function createCardName(s){
   const nm=document.createElement('div');nm.className='cnam';
-  if(_searchQ){
-    const q=_searchQ.toLowerCase(),n=s.n,li=n.toLowerCase().indexOf(q);
-    if(li>=0){nm.innerHTML=esc(n.slice(0,li))+'<b class="mark">'+esc(n.slice(li,li+q.length))+'</b>'+esc(n.slice(li+q.length));}
-    else{nm.textContent=n;}
-  }else{nm.textContent=s.n;}
+  const r=_searchQ?trMatchRange(s.n,_searchQ):null;
+  if(r){const n=s.n;nm.innerHTML=esc(n.slice(0,r[0]))+'<b class="mark">'+esc(n.slice(r[0],r[1]))+'</b>'+esc(n.slice(r[1]));}
+  else{nm.textContent=s.n;}
   return nm;
 }
 function createCardChip(text,cls,title){
@@ -1225,7 +1238,7 @@ function createCardMeta(s,isOn,extraText){
   if(isHttpUrl(s.u))gn.appendChild(createCardChip('HTTP','http','HTTPS altında engellenebilir'));
   return gn;
 }
-function makeCard(s,idx,showDrag){
+function makeCard(s,showDrag){
   const isOn=S.cur?.id===s.id,isFav=fv.includes(s.id);
   const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
   div.setAttribute('role','group');div.setAttribute('aria-label',s.n);
@@ -1374,7 +1387,7 @@ function renderAll(){
   });
   const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Kanallarım <span class="count-badge">${filtered.length}</span>`;
   w.appendChild(sortBar);w.appendChild(ttl);
-  const f=document.createDocumentFragment();filtered.forEach((s,i)=>f.appendChild(makeCard(s,i)));w.appendChild(f);attachDel(w);
+  const f=document.createDocumentFragment();filtered.forEach(s=>f.appendChild(makeCard(s)));w.appendChild(f);attachDel(w);
 }
 function renderFavs(){
   const w=g('favList');w.innerHTML='';
@@ -1386,7 +1399,7 @@ function renderFavs(){
   if(!list.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('search')}</span><h3>Filtre sonucu boş</h3><p>Farklı bir kategori deneyin</p></div>`;return;}
   w.classList.add('fav-mode');
   const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Favorilerim <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
-  const f=document.createDocumentFragment();list.forEach((s,i)=>f.appendChild(makeCard(s,i,true)));w.appendChild(f);attachDel(w);initFavDrag(w);
+  const f=document.createDocumentFragment();list.forEach(s=>f.appendChild(makeCard(s,true)));w.appendChild(f);attachDel(w);initFavDrag(w);
 }
 /* ── DRAG & DROP (favoriler) ── */
 const _dragReady=new WeakSet();
@@ -1466,8 +1479,10 @@ function renderRecent(){
     const nm=document.createElement('div');nm.className='cnam';nm.textContent=s.n;
     const gn=createCardMeta(s,isOn,relTime(r.t));
     const acts=document.createElement('div');acts.className='cacts';
+    const isFav=fv.includes(s.id);
+    const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.innerHTML=_ic('heart',{fill:isFav});fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
     const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.innerHTML=_ic(isOn&&S.playing?'pause':'play',{fill:true});pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
-    acts.appendChild(pb);inf.appendChild(nm);inf.appendChild(gn);shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);f.appendChild(div);
+    acts.appendChild(fb);acts.appendChild(pb);inf.appendChild(nm);inf.appendChild(gn);shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);f.appendChild(div);
   });
   w.appendChild(f);attachDel(w);
 }
@@ -1626,10 +1641,12 @@ function addCh(name,url,genre,emoji,imgUrl,bitrate){
 async function delCh(id){
   const s=ch.find(x=>x.id===id);
   const ok=await confirm2('Kanalı sil',`"${s?.n||'Bu kanal'}" silinecek. Emin misiniz?`);if(!ok)return;
-  const prev={ch:ch.slice(),fv:fv.slice(),rc:rc.slice(),cur:S.cur};
+  const prev={ch:ch.slice(),fv:fv.slice(),rc:rc.slice()};
   ch=ch.filter(x=>x.id!==id);
+  // Önce kaydet, başarılıysa yayını durdur: kayıt başarısız olursa geri alınan
+  // S.cur'un ses/mini-player durumu da bozulmamış olur.
+  if(!dataSave()){ch=prev.ch;fv=prev.fv;rc=prev.rc;toast('Silme kaydedilemedi','err');return;}
   if(S.cur?.id===id){stopSession('delete-station');}
-  if(!dataSave()){ch=prev.ch;fv=prev.fv;rc=prev.rc;S.cur=prev.cur;toast('Silme kaydedilemedi','err');return;}
   renderCards();renderSettings();updateSearchVisibility();updateNavBadge();toast('Silindi');
 }
 
@@ -1873,14 +1890,16 @@ function handleKeyboard(e){
     case 'KeyM':if(aud.volume>0){aud._prevVol=aud.volume;setVol(0);showKbdHint('🔇 Sessiz');}else{setVol(Math.round((aud._prevVol||0.8)*100));showKbdHint('🔊 Ses açıldı');}break;
     case 'KeyF':if(S.cur){toggleFav(S.cur.id);showKbdHint(fv.includes(S.cur.id)?'❤️ Favorilere eklendi':'💔 Favoriden çıkarıldı');}break;
     case 'KeyS':toggleShuffle();break;
-    case 'Escape':closeFP();if(_carOpen)closeCar();break;
   }
 }
 
 /* ── PWA INSTALL ── */
 let _deferredPrompt=null;
 function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;}
-function _isSafari(){return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);}
+/* iOS Chrome (CriOS), Firefox (FxiOS), Edge (EdgiOS), Opera (OPiOS) UA'ları da
+   "Safari/" içerir; onları dışlamazsak Chrome kullanıcısına "Safari'de Paylaş"
+   talimatı gösterilir. */
+function _isSafari(){return /^((?!chrome|android|crios|fxios|edgios|opios).)*safari/i.test(navigator.userAgent);}
 function _isStandalone(){return window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone===true;}
 function openIOSInstall(){setDialogOpen('iosInstallOv',true);}
 function closeIOSInstall(){if(_deferDialogClose('iosInstallOv'))return;setDialogOpen('iosInstallOv',false);lsSave('pwa_dismissed',true);}
@@ -1979,8 +1998,9 @@ function init(){
   // Auto-fetch missing logos after a short delay
   scheduleAutoFetchLogos(2500,5);
 
-  // Visualizer bars
-  const vis=g('fpVis');
+  // Visualizer bars — HTML'deki statik çubukları temizle ki stilsiz 5 çubuk
+  // JS'in rastgele stillendirdiği 12'liyle yan yana kalmasın.
+  const vis=g('fpVis');vis.innerHTML='';
   for(let i=0;i<12;i++){const b=document.createElement('i');b.style.height=(Math.random()*38+6)+'px';b.style.animationDelay=(Math.random()*.5)+'s';b.style.animationDuration=(.3+Math.random()*.4)+'s';vis.appendChild(b);}
 
   IM.init(aud);IOS.init(aud);setupMS();setupInstallPrompt();setupOfflineDetection();setupAccessibleRows();
@@ -2059,7 +2079,9 @@ function init(){
 
   /* mini player */
   g('mplay').addEventListener('click',openFP);
-  g('mplay').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openFP();}});
+  // Yalnız mini oynatıcının kendisi odaktayken (içindeki butonlar değil) çalış;
+  // stopPropagation, document'taki global Space kısayolunun da tetiklenmesini önler.
+  g('mplay').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target===e.currentTarget){e.preventDefault();e.stopPropagation();openFP();}});
   g('btnPP').addEventListener('click',e=>{e.stopPropagation();togglePlay();});
   g('mpVol').addEventListener('click',e=>e.stopPropagation());
   g('volM').addEventListener('input',e=>{e.stopPropagation();setVol(e.target.value);});

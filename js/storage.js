@@ -47,7 +47,11 @@ function decodeBackup(input){
   const token=extractBackupToken(input);
   if(!token)throw new Error('empty-backup');
   if(token.length>MAX_TOKEN_CHARS)throw new Error('backup-too-large');
-  if(token.trim().startsWith('{'))return JSON.parse(token);
+  // Ham JSON yolu da base64 yoluyla aynı 1 MB sınırına tabi olmalı.
+  if(token.trim().startsWith('{')){
+    if(token.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
+    return JSON.parse(token);
+  }
   const bytes=base64ToBytes(token);
   if(bytes.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
   const json=window.TextDecoder?new TextDecoder().decode(bytes):decodeURIComponent(escape(String.fromCharCode.apply(null,bytes)));

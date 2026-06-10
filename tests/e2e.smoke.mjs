@@ -116,8 +116,21 @@ await withServer(async baseUrl => {
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#addMod')?.classList.contains('s'));
 
-  const swRegistered = await page.evaluate(() => 'serviceWorker' in navigator);
-  assert.equal(typeof swRegistered, 'boolean');
+  // Kaydın gerçekten başarılı olduğunu doğrula (eski kontrol her zaman geçen
+  // bir totolojiydi): localhost'ta SW'ye izin verilir, aktif worker beklenir.
+  const swState = await page.evaluate(async () => {
+    if (!('serviceWorker' in navigator)) return 'unsupported';
+    try {
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+      ]);
+      return reg && reg.active ? 'active' : 'no-active-worker';
+    } catch (err) {
+      return 'not-ready: ' + err.message;
+    }
+  });
+  assert.equal(swState, 'active');
   assert.deepEqual(errors, []);
 
   await browser.close();
