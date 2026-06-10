@@ -9,7 +9,6 @@ const required = [
   'js/app.js',
   'js/storage.js',
   'src/lib/core.js',
-  'src/lib/radio-browser.js',
   'icons/icon.svg',
   'icons/apple-touch-icon-180.png',
   'icons/icon-192.png',
@@ -48,12 +47,24 @@ for (const [label, version] of [['js/app.js', appVersion], ['src/lib/core.js', c
   if (version !== pkg.version) failures.push(`${label} version ${version || 'missing'} does not match package.json ${pkg.version}`);
 }
 
+// Ayna-sapması bekçileri: src/lib/core.js, js/app.js'teki saf yardımcıların
+// test aynasıdır; kritik güvenlik/limit değerleri ikisinde de aynı olmalı.
+for (const marker of ["'[::1]'", "'0.0.0.0'", 'localhost']) {
+  if (!appJs.includes(marker)) failures.push(`js/app.js private-host check is missing ${marker}`);
+  if (!core.includes(marker)) failures.push(`src/lib/core.js private-host mirror is missing ${marker}`);
+}
+const appImportLimit = appJs.match(/MAX_IMPORT_STATIONS=(\d+)/)?.[1];
+const coreImportLimit = core.match(/importStations:\s*(\d+)/)?.[1];
+if (appImportLimit !== coreImportLimit) {
+  failures.push(`import station limit drift: js/app.js=${appImportLimit} src/lib/core.js=${coreImportLimit}`);
+}
+
 const css = readFileSync('css/styles.css', 'utf8');
 const open = (css.match(/{/g) || []).length;
 const close = (css.match(/}/g) || []).length;
 if (open !== close) failures.push(`CSS brace mismatch: ${open} != ${close}`);
 
-for (const file of ['sw.js', 'js/app.js', 'js/storage.js', 'src/lib/core.js', 'src/lib/radio-browser.js', 'scripts/static-server.mjs', 'tests/unit.test.mjs', 'tests/e2e.smoke.mjs']) {
+for (const file of ['sw.js', 'js/app.js', 'js/storage.js', 'src/lib/core.js', 'scripts/static-server.mjs', 'tests/unit.test.mjs', 'tests/e2e.smoke.mjs']) {
   try {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
   } catch (error) {
