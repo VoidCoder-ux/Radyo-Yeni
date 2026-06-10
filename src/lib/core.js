@@ -1,16 +1,22 @@
-export const APP_VERSION = '15.0.7';
+// Bu modül, js/app.js içindeki saf yardımcı fonksiyonların test edilebilir
+// AYNASIDIR (app.js modül olmadığı için doğrudan import edilemez).
+// app.js'te bu fonksiyonlardan biri değişirse burası da birebir aynı
+// davranışla güncellenmelidir — aksi halde testler gerçek uygulamayı
+// yansıtmaz. (Bkz. tests/unit.test.mjs)
+export const APP_VERSION = '15.0.8';
 export const EXPORT_VERSION = APP_VERSION;
-export const RADIO_BROWSER_HOSTS = ['de1', 'nl1', 'at1', 'de2'];
 
 export const LIMITS = {
   name: 120,
   genre: 60,
   history: 30,
   emoji: 4,
-  importBytes: 1024 * 1024
+  importBytes: 1024 * 1024,
+  importStations: 1000
 };
 
-const DEFAULT_COLOR = '#7c6cf0';
+// app.js COLORS paletinin ilk rengi — aynadaki varsayılan da paletten olmalı.
+const DEFAULT_COLOR = '#7c5cff';
 const DEFAULT_GENRE = 'Diğer';
 const DEFAULT_EMOJI = '📻';
 
@@ -29,13 +35,19 @@ export function isUrl(value) {
   }
 }
 
+// js/app.js:isPrivateHost aynası. Not: WHATWG URL, IPv6 hostname'i köşeli
+// parantezle ('[::1]') döndürür; her iki biçim de kontrol edilir.
+export function isPrivateHost(host) {
+  const h = String(host || '').toLowerCase();
+  return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '::1' || h === '[::1]' ||
+    h.startsWith('10.') || h.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[0-1])\./.test(h);
+}
+
 export function cleanImageUrl(value) {
   try {
     const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    const isPrivate = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' ||
-      host.startsWith('10.') || host.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-    if (url.protocol !== 'https:' || url.username || url.password || isPrivate) return '';
+    if (url.protocol !== 'https:') return '';
+    if (url.username || url.password || isPrivateHost(url.hostname)) return '';
     return url.href;
   } catch {
     return '';
@@ -113,67 +125,63 @@ export function createBackup({ ch = [], fv = [], rc = [] }) {
   };
 }
 
+// js/app.js:importData aynası. Davranış birebir aynıdır:
+// - importStations sınırı aşılırsa hata atar,
+// - id'si olmayan istasyonlar atlanır (id üretilmez),
+// - URL'si zaten var olan istasyonlar eklenmez; eski id mevcut istasyonun
+//   id'sine eşlenir (idMap) ve favori/geçmiş kayıtları ona taşınır,
+// - geçmiş yeniden sıralanıp history sınırına kırpılır.
 export function mergeImportedBackup({ current, incoming, makeId, colors }) {
   if (!incoming || typeof incoming !== 'object' || !Array.isArray(incoming.ch)) {
     throw new Error('Invalid backup format');
   }
+  if (incoming.ch.length > LIMITS.importStations) {
+    throw new Error('too-many-stations');
+  }
 
   const ch = Array.isArray(current.ch) ? [...current.ch] : [];
   const fv = Array.isArray(current.fv) ? [...current.fv] : [];
-  const rc = Array.isArray(current.rc) ? [...current.rc] : [];
-  const urls = new Set(ch.map(station => station.u));
+  let rc = Array.isArray(current.rc) ? [...current.rc] : [];
   const idMap = new Map();
   let added = 0;
+  let mapped = 0;
 
   for (const candidate of incoming.ch) {
+    if (!candidate || typeof candidate.id !== 'string' || !candidate.id) continue;
+    if (typeof candidate.n !== 'string' || !candidate.n.trim()) continue;
+    if (typeof candidate.u !== 'string' || !isUrl(candidate.u)) continue;
+    const existing = ch.find(station => station.u === candidate.u);
+    if (existing) {
+      idMap.set(candidate.id, existing.id);
+      mapped += 1;
+      continue;
+    }
     const station = normalizeStation(candidate, { makeId, colors });
-    if (!station || urls.has(station.u)) continue;
-    const oldId = station.id;
+    if (!station) continue;
     station.id = makeId();
-    idMap.set(oldId, station.id);
+    idMap.set(candidate.id, station.id);
     ch.push(station);
-    urls.add(station.u);
     added += 1;
   }
 
   const ids = new Set(ch.map(station => station.id));
   if (Array.isArray(incoming.fv)) {
     for (const id of incoming.fv) {
-      const mapped = typeof id === 'string' ? idMap.get(id) || id : null;
-      if (mapped && ids.has(mapped) && !fv.includes(mapped)) fv.push(mapped);
+      if (typeof id !== 'string') continue;
+      const target = idMap.get(id) || id;
+      if (ids.has(target) && !fv.includes(target)) fv.push(target);
     }
   }
 
   if (Array.isArray(incoming.rc)) {
     for (const item of incoming.rc) {
       if (!item || typeof item.id !== 'string' || typeof item.t !== 'number') continue;
-      const mapped = idMap.get(item.id) || item.id;
-      if (ids.has(mapped) && !rc.find(entry => entry.id === mapped)) rc.push({ id: mapped, t: item.t });
+      const target = idMap.get(item.id) || item.id;
+      if (ids.has(target) && !rc.find(entry => entry.id === target)) rc.push({ id: target, t: item.t });
     }
+    rc.sort((a, b) => b.t - a.t);
+    rc = rc.slice(0, LIMITS.history);
   }
 
-  return {
-    ch,
-    fv: fv.filter(id => ids.has(id)),
-    rc: rc
-      .filter(item => item && ids.has(item.id) && typeof item.t === 'number')
-      .sort((a, b) => b.t - a.t)
-      .slice(0, LIMITS.history),
-    added
-  };
-}
-
-export function normalizeRadioBrowserStation(input) {
-  if (!input || typeof input !== 'object') return null;
-  const url = input.url_resolved || input.url;
-  if (!isUrl(url)) return null;
-  return {
-    name: String(input.name || '').trim(),
-    url,
-    favicon: cleanImageUrl(input.favicon),
-    tags: String(input.tags || ''),
-    country: String(input.country || ''),
-    bitrate: Number.isFinite(input.bitrate) ? input.bitrate : 0,
-    stationuuid: String(input.stationuuid || url)
-  };
+  return { ch, fv, rc, added, mapped };
 }

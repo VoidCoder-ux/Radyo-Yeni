@@ -2,7 +2,7 @@
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.7';
+const APP_VERSION='15.0.8';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -135,10 +135,13 @@ let _activeDialog=null,_prevFocus=null;
    gerçek kapanış daima popstate üzerinden yapılır (kullanıcı kapatma butonuna
    bastığında history.back() tetikleyip kapanışı popstate'e bırakırız). */
 const _dlgStack=[];let _dlgPopping=false;
+const _dlgClosePending=new Set();
 function _deferDialogClose(id){
   if(_dlgPopping)return false;            // popstate'ten geliyoruz → gerçekten kapat
   if(_dlgStack.lastIndexOf(id)===-1)return false; // history kaydı yok → gerçekten kapat
-  try{history.back();return true;}catch{return false;}
+  if(_dlgClosePending.has(id))return true; // back() zaten yolda; çift tıklamada ikinci back()'i yutarak alttaki diyaloğun kapanmasını önle
+  _dlgClosePending.add(id);
+  try{history.back();return true;}catch{_dlgClosePending.delete(id);return false;}
 }
 function setDialogOpen(id,open){
   const ov=g(id);if(!ov)return;
@@ -151,6 +154,7 @@ function setDialogOpen(id,open){
   }else{
     ov.classList.remove('s');
     if(_activeDialog===ov)_activeDialog=null;
+    _dlgClosePending.delete(id);
     const idx=_dlgStack.lastIndexOf(id);if(idx!==-1)_dlgStack.splice(idx,1);
     const focusTarget=_prevFocus;
     if(focusTarget&&document.contains(focusTarget))setTimeout(()=>focusTarget.focus?.(),30);
@@ -204,6 +208,9 @@ function haptic(ms=10){if(_reduceMotion)return;try{navigator.vibrate?.(ms);}catc
 let _cfmRes=null;
 function confirm2(title,msg,okLbl='Sil'){
   return new Promise(resolve=>{
+    // Açık bir onay beklerken yeni çağrı gelirse öncekini iptal (false) ile
+    // çöz; aksi halde önceki await sonsuza kadar asılı kalır.
+    if(_cfmRes){try{_cfmRes(false);}catch{}}
     _cfmRes=resolve;g('cfmTitle').textContent=title;g('cfmMsg').textContent=msg;g('cfmYes').textContent=okLbl;setDialogOpen('cfmOv',true);
   });
 }
@@ -602,12 +609,17 @@ const IM={
 
   _reload(cb){
     if(!S.cur)return;
+    // Resume serileştirmesine katıl: token alarak bekleyen resume'ları geçersiz kıl;
+    // bu çağrıdan sonra kullanıcı istasyon değiştirirse (play() token'ı artırır)
+    // aşağıdaki denemeler aud'a dokunmadan sessizce vazgeçer.
+    const token=++_resumeToken;_resumePromise=null;
     if(this._actx&&this._actx.state==='suspended'){try{this._actx.resume().catch(()=>{});}catch(e){}}
     aud.loop=false;aud.volume=0.01;aud.src=S.cur.u;aud.load();
     const attempt=(n)=>{
-      if(!S.cur||this._uStop)return;
-      aud.play().then(()=>{setPlaying(true);S.retries=0;setStatus('live');renderCards();IOS._startRecovery();if(cb)cb();}).catch(()=>{
-        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop){aud.src=S.cur.u;aud.load();aud.volume=0.01;attempt(n+1);}},1000*(n+1));}
+      if(!S.cur||this._uStop||token!==_resumeToken)return;
+      aud.play().then(()=>{if(token!==_resumeToken)return;setPlaying(true);S.retries=0;setStatus('live');renderCards();IOS._startRecovery();if(cb)cb();}).catch(()=>{
+        if(token!==_resumeToken)return;
+        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop&&token===_resumeToken){aud.src=S.cur.u;aud.load();aud.volume=0.01;attempt(n+1);}},1000*(n+1));}
         else{setStatus('retry');toast('Bağlantı yeniden deneniyor...','warn');if(cb)cb();}
       });
     };
@@ -694,7 +706,9 @@ const IOS={
     if(navigator.mediaDevices?.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(S.cur&&S.should&&a.paused&&!IM._uStop&&!IM._interrupted)this.resume(1200);});
   },
   _startRecovery(){
-    if(!_isIOS()||document.hidden||this._recoveryTimer)return;
+    // Tüm platformlarda çalışır: ended/stalled sonrası sessiz kalan yayını
+    // 30 sn'lik bekçi yakalayıp yeniden başlatır (eskiden yalnız iOS'taydı).
+    if(document.hidden||this._recoveryTimer)return;
     this._recoveryTimer=setInterval(()=>{if(S.cur&&S.should&&this.a.paused&&!IM._uStop&&!IM._interrupted&&!this._rel)this.resume(0);},IOS_RECOVERY_INTERVAL_MS);
   },
   _stopRecovery(){if(this._recoveryTimer){clearInterval(this._recoveryTimer);this._recoveryTimer=null;}},
@@ -1052,7 +1066,9 @@ async function resumeCurrentStation(opts={}){
   // Otomatik tetikleyicileri (online/error/stalled/recovery/foreground) birleştir:
   // kısa aralıkta üst üste gelen denemeleri yut. Kullanıcı/MediaSession/istasyon
   // seçimi her zaman geçer.
-  const isAuto=source!=='app'&&source!=='media-session'&&source!=='station-select';
+  // 'ios-reload' kapıdan muaf: reload() çağrısı src'yi silmiş durumda, throttle'a
+  // takılırsa yayın src'siz (sessiz) kalır; _rel bayrağı zaten fırtınayı önlüyor.
+  const isAuto=source!=='app'&&source!=='media-session'&&source!=='station-select'&&source!=='ios-reload';
   const now=Date.now();
   if(isAuto){
     if(now-_lastAutoResumeAt<AUTO_RESUME_MIN_GAP_MS)return false;
@@ -1236,7 +1252,8 @@ function attachDel(container){
   _delegated.add(container);
   container.addEventListener('click',e=>{
     const fb=e.target.closest('[data-action="fav"]'),pb=e.target.closest('[data-action="play"]');
-    if(fb){e.stopPropagation();toggleFav(fb.dataset.id);return;}if(pb){addRipple(e,pb);play(pb.dataset.id);}
+    if(fb){e.stopPropagation();toggleFav(fb.dataset.id);return;}
+    if(pb){addRipple(e,pb);const id=pb.dataset.id;if(S.cur?.id===id){togglePlay();}else{play(id);}}
   });
   container.addEventListener('keydown',e=>{
     if(e.key!=='Enter'&&e.key!==' ')return;
@@ -1304,7 +1321,7 @@ function renderHome(){
     renderMiniLogo(now,current,'home-now-ic');
     const copy=document.createElement('div');
     copy.innerHTML=`<div class="home-now-title">${esc(current.n)}</div><div class="home-now-sub">${S.cur?.id===current.id?(S.playing?'Canlı yayın':'Seçili istasyon'):'Hızlı başlat'} · ${esc(current.g||'Radyo')}</div>`;
-    const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label',`${current.n} kanalını çal`);btn.innerHTML=_ic(S.cur?.id===current.id&&S.playing?'pause':'play',{fill:true});btn.addEventListener('click',()=>play(current.id));
+    const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label',`${current.n} kanalını çal`);btn.innerHTML=_ic(S.cur?.id===current.id&&S.playing?'pause':'play',{fill:true});btn.addEventListener('click',()=>{if(S.cur?.id===current.id){togglePlay();}else{play(current.id);}});
     now.appendChild(copy);now.appendChild(btn);
   }else{
     now.innerHTML=`<div class="home-now-ic">${_ic('radio')}</div><div><div class="home-now-title">Başlamak için radyo ekle</div><div class="home-now-sub">Türkiye, dünya veya manuel yayın adresi</div></div>`;
@@ -1731,6 +1748,8 @@ async function autoFetchLogos(limit=20){
   if(!missing.length)return;
   _logoFetching=true;
   let updated=0;
+  const prevImgs=new Map(missing.map(s=>[s.id,s.img]));
+  const curHadImg=!!S.cur?.img;
   try{
   // Batch: search by URL for each station without logo
   for(const s of missing){
@@ -1755,12 +1774,13 @@ async function autoFetchLogos(limit=20){
   }
   }finally{_logoFetching=false;}
   if(updated>0){
-    if(!dataSave()){toast('Logolar kaydedilemedi','err');return;}
+    // Kayıt başarısızsa bellekteki img mutasyonlarını geri al (diğer tüm
+    // mutasyonlardaki prev-snapshot kuralıyla tutarlı).
+    if(!dataSave()){missing.forEach(s=>{if(prevImgs.has(s.id))s.img=prevImgs.get(s.id);});toast('Logolar kaydedilemedi','err');return;}
     renderCards();
-    if(S.cur){
-      const cur=ch.find(x=>x.id===S.cur.id);
-      if(cur&&cur.img&&!S.cur.img){S.cur=cur;updatePlayerArt();}
-    }
+    // S.cur, ch içindeki objeyle aynı referans olduğundan logosu bu turda
+    // dolduysa S.cur.img zaten dolu; çalma öncesi durumla karşılaştır.
+    if(S.cur?.img&&!curHadImg)updatePlayerArt();
     const left=Math.max(0,allMissing.length-missing.length);
     toast(left?`${updated} logo indirildi, ${left} sonraya bırakıldı`:`${updated} logo otomatik indirildi`,'ok');
   }
@@ -1841,6 +1861,9 @@ function handleKeyboard(e){
   }
   // Skip if focused on input/textarea/select
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  // Odak bir buton/etkileşimli öğedeyken kısayolları bırak: Space butonu
+  // etkinleştirmeli (örn. onay diyaloğundaki Sil/İptal), oynatmayı değil.
+  if(e.target.closest?.('button,[role="button"],a[href]'))return;
   switch(e.code){
     case 'Space':e.preventDefault();if(S.cur){togglePlay();showKbdHint(S.playing?'⏸ Durduruldu':'▶ Oynatılıyor');}break;
     case 'ArrowLeft':e.preventDefault();prevSt();if(S.cur)showKbdHint('⏮ '+S.cur.n);break;

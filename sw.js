@@ -1,4 +1,4 @@
-const CACHE='pulse-radio-v15.0.7';
+const CACHE='pulse-radio-v15.0.8';
 const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 const FONT_CACHE='pulse-radio-fonts-v3';
 
@@ -39,7 +39,9 @@ self.addEventListener('fetch',e=>{
         c.match(e.request).then(r=>{
           if(r)return r;
           return fetch(e.request).then(res=>{
-            if(res.ok)c.put(e.request,res.clone());
+            // Opaque (no-cors) yanıtı da kabul et: eski önbellekteki HTML
+            // crossorigin'siz istek atarsa fontlar yine çevrimdışı çalışsın.
+            if(res.ok||res.type==='opaque')c.put(e.request,res.clone());
             return res;
           }).catch(()=>new Response('',{status:408}));
         })

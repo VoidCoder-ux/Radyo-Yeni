@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   APP_VERSION,
+  LIMITS,
   cleanImageUrl,
   createBackup,
   isUrl,
   mergeImportedBackup,
-  normalizeRadioBrowserStation,
   normalizeStation,
   trNormalize
 } from '../src/lib/core.js';
@@ -55,6 +55,13 @@ test('cleanImageUrl rejects unsafe image origins', () => {
   assert.equal(cleanImageUrl('http://example.com/logo.png'), '');
   assert.equal(cleanImageUrl('https://user:pass@example.com/logo.png'), '');
   assert.equal(cleanImageUrl('https://127.0.0.1/logo.png'), '');
+  // WHATWG URL IPv6 hostname'i '[::1]' olarak döndürür — bu biçim de engellenmeli.
+  assert.equal(cleanImageUrl('https://[::1]/logo.png'), '');
+  assert.equal(cleanImageUrl('https://localhost/logo.png'), '');
+  assert.equal(cleanImageUrl('https://0.0.0.0/logo.png'), '');
+  assert.equal(cleanImageUrl('https://10.0.0.5/logo.png'), '');
+  assert.equal(cleanImageUrl('https://192.168.1.10/logo.png'), '');
+  assert.equal(cleanImageUrl('https://172.16.0.1/logo.png'), '');
 });
 
 test('version markers and service worker navigation fallback stay aligned', () => {
@@ -68,11 +75,11 @@ test('version markers and service worker navigation fallback stay aligned', () =
   assert.match(sw, /caches\.match\('index\.html'\)/);
 });
 
-test('mergeImportedBackup adds unique stations and keeps related ids valid', () => {
+test('mergeImportedBackup mirrors importData: maps duplicate URLs, skips id-less stations', () => {
   let id = 0;
   const makeId = () => `new-${++id}`;
   const current = {
-    ch: [{ id: 'a', n: 'A', u: 'https://a.test', g: 'Pop', e: '📻', c: '#7c6cf0', img: '', br: 0 }],
+    ch: [{ id: 'a', n: 'A', u: 'https://a.test', g: 'Pop', e: '📻', c: '#7c5cff', img: '', br: 0 }],
     fv: ['a'],
     rc: [{ id: 'a', t: 10 }]
   };
@@ -80,37 +87,30 @@ test('mergeImportedBackup adds unique stations and keeps related ids valid', () 
     ch: [
       { id: 'old-b', n: 'B', u: 'https://b.test', g: 'Rock' },
       { id: 'dup', n: 'A duplicate', u: 'https://a.test' },
-      { id: 'bad', n: 'Bad', u: 'nope' }
+      { id: 'bad', n: 'Bad', u: 'nope' },
+      { n: 'No id', u: 'https://noid.test' }
     ],
-    fv: ['old-b', 'missing'],
-    rc: [{ id: 'old-b', t: 20 }, { id: 'missing', t: 30 }]
+    fv: ['old-b', 'dup', 'missing'],
+    rc: [{ id: 'old-b', t: 20 }, { id: 'dup', t: 40 }, { id: 'missing', t: 30 }]
   });
 
   const merged = mergeImportedBackup({ current, incoming, makeId, colors: ['#123456'] });
   assert.equal(merged.added, 1);
-  assert.equal(merged.ch.length, 2);
+  assert.equal(merged.mapped, 1); // 'dup' URL'si mevcut 'a' istasyonuna eşlendi
+  assert.equal(merged.ch.length, 2); // id'siz ve geçersiz URL'li istasyonlar atlandı
   assert.equal(merged.ch[1].id, 'new-1');
-  assert.deepEqual(merged.fv, ['a', 'new-1']);
+  assert.deepEqual(merged.fv, ['a', 'new-1']); // 'dup' favorisi 'a'ya eşlendi (zaten vardı)
   assert.deepEqual(merged.rc, [{ id: 'new-1', t: 20 }, { id: 'a', t: 10 }]);
 });
 
-test('normalizeRadioBrowserStation returns safe stream records', () => {
-  assert.deepEqual(normalizeRadioBrowserStation({
-    name: 'Radio',
-    url_resolved: 'https://stream.example/radio',
-    favicon: 'https://example.com/icon.png',
-    tags: 'pop,news',
-    country: 'Turkey',
-    bitrate: 96,
-    stationuuid: 'abc'
-  }), {
-    name: 'Radio',
-    url: 'https://stream.example/radio',
-    favicon: 'https://example.com/icon.png',
-    tags: 'pop,news',
-    country: 'Turkey',
-    bitrate: 96,
-    stationuuid: 'abc'
+test('mergeImportedBackup enforces the same station limit as importData', () => {
+  const incoming = createBackup({
+    ch: Array.from({ length: LIMITS.importStations + 1 }, (_, i) => ({
+      id: `s${i}`, n: `S${i}`, u: `https://s${i}.test`
+    }))
   });
-  assert.equal(normalizeRadioBrowserStation({ name: 'Bad', url: 'notaurl' }), null);
+  assert.throws(
+    () => mergeImportedBackup({ current: { ch: [], fv: [], rc: [] }, incoming, makeId: () => 'x', colors: ['#123456'] }),
+    /too-many-stations/
+  );
 });
