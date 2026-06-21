@@ -3,7 +3,7 @@
 // app.js'te bu fonksiyonlardan biri değişirse burası da birebir aynı
 // davranışla güncellenmelidir — aksi halde testler gerçek uygulamayı
 // yansıtmaz. (Bkz. tests/unit.test.mjs)
-export const APP_VERSION = '15.0.9';
+export const APP_VERSION = '15.0.10';
 export const EXPORT_VERSION = APP_VERSION;
 
 export const LIMITS = {
