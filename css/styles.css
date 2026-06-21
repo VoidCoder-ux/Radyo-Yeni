@@ -713,8 +713,25 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
 @media (pointer:coarse){
+  /* iPhone/tablet ısınma optimizasyonu: sürekli GPU yükü oluşturan
+     efektleri duraklat veya hafiflet (görsel his korunur). */
   .ambient.playing .ambient-orb{animation-play-state:paused;opacity:.3}
   .fp-vis i{animation-play-state:paused;opacity:.32;transform:scaleY(.45)}
+  /* box-shadow animasyonu en pahalı işlem — kapat, statik glow bırak */
+  .card.playing{animation:none;box-shadow:0 0 0 1px rgba(124,92,255,.4),0 18px 48px rgba(124,92,255,.26)}
+  /* tam ekran oynatıcıdaki büyük bulanık orb animasyonu */
+  .fplayer.s.playing .fp-bg-orb{animation-play-state:paused}
+  /* kalan sürekli (infinite) animasyonlar */
+  .ceq i{animation-play-state:paused;transform:scaleY(.7)}
+  .fplayer.s.playing .fp-art{animation:none}
+  .mplay.s.playing .mp-progress-bar{animation:none;transform:scaleX(.5)}
+  /* büyük bulanık orb'ların yarıçapını düşür (GPU maliyeti blur² ile artar) */
+  .ambient-orb,.fp-bg-orb,.car-bg-orb{filter:blur(56px)}
+  /* sürekli ekranda olan cam yüzeylerde backdrop-filter'ı hafiflet,
+     pahalı saturate()'i kaldır */
+  .hdr{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .bnav{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .mplay{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 }
 @media (max-width:380px),(prefers-reduced-motion:reduce){
   .ambient-orb,.fp-bg-orb,.car-bg-orb{filter:blur(60px)}
