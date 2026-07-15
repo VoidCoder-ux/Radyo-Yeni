@@ -13,7 +13,7 @@ import { encodeBackup, decodeBackup, copyText } from './storage.js';
 (function(){
 'use strict';
 
-const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1'};
+const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1'};
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -368,6 +368,46 @@ async function doCloudRestore(input){
   }catch{toast('Yedek linki okunamadı','err');}
 }
 function maybeRestoreHashBackup(){if(location.hash.includes('backup='))setTimeout(()=>doCloudRestore(location.href),800);}
+
+/* ═══ BAŞLANGIÇ PAKETİ (ilk açılış onboarding'i) ═══ */
+let _starterLoading=false;
+function starterDismissed(){return !!lsLoad(LS.OB,false);}
+async function loadStarterPack(btn){
+  if(_starterLoading)return;_starterLoading=true;
+  if(btn){btn.disabled=true;btn.textContent='Ekleniyor...';}
+  try{
+    const r=await fetchWithTimeout('data/starter-stations.json',{},8000);
+    if(!r.ok)throw new Error(r.status);
+    const list=await r.json();
+    if(!Array.isArray(list))throw new Error('format');
+    const prev=ch.slice();
+    let added=0;
+    for(const item of list){
+      const s=normalizeStation({...item,id:mkId()},{colors:COLORS,makeId:mkId});
+      if(!s||ch.some(x=>x.u===s.u))continue;
+      ch.push(s);added++;
+    }
+    if(added&&!dataSave()){ch=prev;toast('Kanallar kaydedilemedi','err');return;}
+    lsSave(LS.OB,true);
+    renderCards();renderSettings();updateSearchVisibility();updateNavBadge();
+    toast(added?`${added} radyo eklendi — iyi dinlemeler!`:'Kanallar zaten ekli','ok');
+    scheduleAutoFetchLogos(1500,10);
+  }catch{
+    toast('Hazır liste yüklenemedi','err');
+    if(btn){btn.disabled=false;btn.textContent='Popüler radyoları ekle';}
+  }finally{_starterLoading=false;}
+}
+function makeStarterBox(){
+  const box=document.createElement('section');box.className='starter-box';
+  box.innerHTML=`<h3>${_ic('radio')}Hazır listeyle başla</h3><p>Türkiye'nin popüler radyolarını tek dokunuşla ekle. Sonradan istediğini silebilir veya düzenleyebilirsin.</p>`;
+  const row=document.createElement('div');row.className='starter-btns';
+  const b1=document.createElement('button');b1.type='button';b1.className='fbtn fk';b1.textContent='Popüler radyoları ekle';
+  b1.addEventListener('click',()=>loadStarterPack(b1));
+  const b2=document.createElement('button');b2.type='button';b2.className='fbtn fc';b2.textContent='Kendim ekleyeceğim';
+  b2.addEventListener('click',()=>{lsSave(LS.OB,true);renderCards();openMod();});
+  row.appendChild(b1);row.appendChild(b2);box.appendChild(row);
+  return box;
+}
 
 /* ═══ NOW PLAYING (Icecast/Shoutcast metadata best-effort) ═══ */
 const NP={
@@ -1278,6 +1318,10 @@ function renderHome(){
     const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label','Radyo ekle');btn.innerHTML=_ic('plus');btn.addEventListener('click',openMod);now.appendChild(btn);
   }
   hero.appendChild(now);w.appendChild(hero);
+
+  if(!ch.length&&!starterDismissed()){
+    w.appendChild(makeStarterBox());
+  }
 
   const quick=document.createElement('div');quick.className='quick-grid';
   quick.appendChild(quickButton('heart','Favoriler',`${fv.length} kayıt`,()=>goPage('f')));

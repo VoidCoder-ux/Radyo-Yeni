@@ -1,0 +1,19 @@
+[
+  {"n":"Metro FM","u":"https://playerservices.streamtheworld.com/api/livestream-redirect/METRO_FM128AAC.aac","g":"Pop","e":"🎧","c":"#7c5cff","br":128},
+  {"n":"Joy FM","u":"https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_FM128AAC.aac","g":"Karma","e":"🎷","c":"#22d3ee","br":128},
+  {"n":"Joy Türk","u":"https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK128AAC.aac","g":"Pop","e":"🎶","c":"#34d399","br":128},
+  {"n":"Süper FM","u":"https://playerservices.streamtheworld.com/api/livestream-redirect/SUPER_FM128AAC.aac","g":"Pop","e":"⚡","c":"#60a5fa","br":128},
+  {"n":"Virgin Radio Türkiye","u":"https://playerservices.streamtheworld.com/api/livestream-redirect/VIRGIN_RADIO128AAC.aac","g":"Rock","e":"🎸","c":"#ec4899","br":128},
+  {"n":"Power FM","u":"https://listen.powerapp.com.tr/powerfm/mpeg/icecast.audio","g":"Elektronik","e":"🔊","c":"#a855f7","br":128},
+  {"n":"PowerTürk","u":"https://listen.powerapp.com.tr/powerturk/mpeg/icecast.audio","g":"Pop","e":"🇹🇷","c":"#14b8a6","br":128},
+  {"n":"Radyo Fenomen","u":"https://live.radyofenomen.com/fenomen/128/icecast.audio","g":"Pop","e":"🌟","c":"#818cf8","br":128},
+  {"n":"Kral FM","u":"https://dygedge.radyotvonline.com/kralfm/playlist.m3u8","g":"Karma","e":"👑","c":"#38bdf8","br":0},
+  {"n":"Kral Pop","u":"https://dygedge.radyotvonline.com/kralpop/playlist.m3u8","g":"Pop","e":"🎤","c":"#2dd4bf","br":0},
+  {"n":"Slow Türk","u":"https://moondigitaledge.radyotvonline.net/slowturk/playlist.m3u8","g":"Karma","e":"🌙","c":"#93c5fd","br":0},
+  {"n":"Radyo Eksen","u":"https://moondigitaledge.radyotvonline.net/radyoeksen/playlist.m3u8","g":"Rock","e":"🎵","c":"#c084fc","br":0},
+  {"n":"TRT FM","u":"https://radio-trtfm.live.trt.com.tr/master_720.m3u8","g":"Pop","e":"📻","c":"#7c5cff","br":0},
+  {"n":"TRT Radyo 1","u":"https://radio-radyo1.live.trt.com.tr/master_720.m3u8","g":"Haber","e":"🗞️","c":"#60a5fa","br":0},
+  {"n":"TRT Radyo 3","u":"https://radio-radyo3.live.trt.com.tr/master_720.m3u8","g":"Caz","e":"🎼","c":"#22d3ee","br":0},
+  {"n":"TRT Nağme","u":"https://radio-trtnagme.live.trt.com.tr/master_720.m3u8","g":"TSM","e":"🪕","c":"#34d399","br":0},
+  {"n":"TRT Türkü","u":"https://radio-trtturku.live.trt.com.tr/master_720.m3u8","g":"THM","e":"🪗","c":"#14b8a6","br":0}
+]
