@@ -1436,11 +1436,18 @@ function renderSettings(){
     const lb=document.createElement('div');lb.className='set-lb';
     const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=(s.g||'Radyo')+(s.br?' · '+s.br+'kbps':'');
     lb.appendChild(h4);lb.appendChild(p);
+    const acts=document.createElement('div');acts.className='set-row-acts';
+    const eb=document.createElement('button');eb.className='edit-b';eb.dataset.action='edit';eb.dataset.id=s.id;eb.innerHTML=_ic('edit');eb.setAttribute('aria-label',`${s.n} kanalını düzenle`);
     const btn=document.createElement('button');btn.className='del-b';btn.dataset.action='del';btn.dataset.id=s.id;btn.innerHTML=_ic('trash');btn.setAttribute('aria-label',`${s.n} kanalını sil`);
-    r.appendChild(ic);r.appendChild(lb);r.appendChild(btn);f.appendChild(r);
+    acts.appendChild(eb);acts.appendChild(btn);
+    r.appendChild(ic);r.appendChild(lb);r.appendChild(acts);f.appendChild(r);
   });
   w.appendChild(f);
-  if(!_delegated.has(w)){_delegated.add(w);w.addEventListener('click',e=>{const b=e.target.closest('[data-action="del"]');if(b){e.stopPropagation();delCh(b.dataset.id);}});}
+  if(!_delegated.has(w)){_delegated.add(w);w.addEventListener('click',e=>{
+    const eb=e.target.closest('[data-action="edit"]');
+    if(eb){e.stopPropagation();openEditCh(eb.dataset.id);return;}
+    const b=e.target.closest('[data-action="del"]');if(b){e.stopPropagation();delCh(b.dataset.id);}
+  });}
 }
 
 /* ── CHIPS (genre filter) ── */
@@ -1594,8 +1601,35 @@ function updateSearchVisibility(){
 }
 
 /* ── MODAL ── */
+let _editId=null;
 function openMod(){setDialogOpen('addMod',true);}
-function closeMod(){if(_deferDialogClose('addMod'))return;setDialogOpen('addMod',false);['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');}
+function closeMod(){
+  if(_deferDialogClose('addMod'))return;
+  setDialogOpen('addMod',false);
+  ['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');
+  g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';
+  g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');
+  if(_editId){
+    _editId=null;
+    g('addModalTitle').innerHTML=`${_ic('radio')}Radyo Ekle`;
+    g('btnMAdd').textContent='Ekle';
+    document.querySelector('.add-tabs').classList.remove('is-hidden');
+    _activateAddTab('tr');
+  }
+}
+function openEditCh(id){
+  const s=ch.find(x=>x.id===id);if(!s)return;
+  _editId=id;
+  g('addModalTitle').innerHTML=`${_ic('edit')}Radyoyu Düzenle`;
+  g('btnMAdd').textContent='Kaydet';
+  document.querySelector('.add-tabs').classList.add('is-hidden');
+  _activateAddTab('manual');
+  g('inN').value=s.n;g('inU').value=s.u;
+  const inC=g('inC');inC.value=s.g||'Diğer';if(inC.value!==s.g)inC.value='Diğer';
+  g('inE').value=s.e||'📻';g('inImg').value=s.img||'';
+  g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');
+  setDialogOpen('addMod',true);
+}
 function setupAddSheetKeyboard(){
   const modal=g('addMod');
   const sheet=modal?.querySelector('.modal-c');
@@ -1611,6 +1645,7 @@ function setupAddSheetKeyboard(){
     sync();
   }
 }
+let _activateAddTab=()=>{};
 function setupAddTabs(){
   const tabs=[...document.querySelectorAll('[data-add-tab]')];
   const panels=[...document.querySelectorAll('[data-add-panel]')];
@@ -1618,13 +1653,36 @@ function setupAddTabs(){
     tabs.forEach(tab=>{const on=tab.dataset.addTab===name;tab.classList.toggle('a',on);tab.setAttribute('aria-selected',String(on));});
     panels.forEach(panel=>panel.classList.toggle('a',panel.dataset.addPanel===name));
   };
+  _activateAddTab=activate;
   tabs.forEach(tab=>tab.addEventListener('click',()=>activate(tab.dataset.addTab)));
 }
 function doManualAdd(){
   const name=g('inN').value.trim(),url=g('inU').value.trim();let ok=true;
   if(!name){g('fgN').classList.add('bad');ok=false;}else g('fgN').classList.remove('bad');
   if(!isUrl(url)){g('fgU').classList.add('bad');ok=false;}else g('fgU').classList.remove('bad');
-  if(!ok)return;if(addCh(name,url,g('inC').value,g('inE').value||'📻',g('inImg').value.trim()))closeMod();
+  if(!ok)return;
+  if(_editId){if(applyEditCh(_editId,name,url))closeMod();return;}
+  if(addCh(name,url,g('inC').value,g('inE').value||'📻',g('inImg').value.trim()))closeMod();
+}
+function applyEditCh(id,name,url){
+  const s=ch.find(x=>x.id===id);
+  if(!s){toast('Kanal bulunamadı','err');return true;}
+  if(ch.some(x=>x.id!==id&&x.u===url)){toast('Bu URL başka bir kanalda kayıtlı','warn');return false;}
+  const prev={...s};
+  const urlChanged=s.u!==url;
+  s.n=name.slice(0,MAX_N);s.g=(g('inC').value||'Diğer').slice(0,MAX_G);s.u=url;
+  s.e=(g('inE').value||'📻').slice(0,4);s.img=cleanImageUrl(g('inImg').value.trim());
+  if(!dataSave()){Object.assign(s,prev);toast('Değişiklik kaydedilemedi','err');return false;}
+  renderCards();renderSettings();
+  if(S.cur?.id===s.id){
+    g('mName').textContent=s.n;g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
+    updatePlayerArt();
+    // URL değiştiyse ve yayın niyeti sürüyorsa yeni adresle yeniden başlat
+    if(urlChanged&&(S.playing||S.should))play(s.id);
+  }
+  toast('Kanal güncellendi','ok');
+  if(!s.img)scheduleAutoFetchLogos(500,3);
+  return true;
 }
 
 /* ── SEARCH API ── */
