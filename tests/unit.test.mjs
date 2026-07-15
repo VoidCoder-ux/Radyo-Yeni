@@ -69,7 +69,9 @@ test('version markers and service worker navigation fallback stay aligned', () =
   const app = readFileSync('js/app.js', 'utf8');
   const sw = readFileSync('sw.js', 'utf8');
   assert.equal(APP_VERSION, pkg.version);
-  assert.match(app, new RegExp(`APP_VERSION='${pkg.version}'`));
+  // app.js sürümü artık core.js'ten import eder; yerel bir kopya geri dönmesin.
+  assert.match(app, /^import \{\n  APP_VERSION,/m);
+  assert.doesNotMatch(app, /APP_VERSION='/);
   assert.match(sw, new RegExp(`pulse-radio-v${pkg.version}`));
   assert.match(sw, /isNavigation/);
   assert.match(sw, /caches\.match\('index\.html'\)/);

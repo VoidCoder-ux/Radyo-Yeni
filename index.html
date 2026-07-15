@@ -11,8 +11,7 @@
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" id="atiAny" href="icons/apple-touch-icon-180.png">
-<link rel="apple-touch-icon" id="ati180" href="icons/apple-touch-icon-180.png" sizes="180x180">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" sizes="180x180">
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://de1.api.radio-browser.info">
@@ -50,9 +49,6 @@
     <symbol id="i-volume-hi" viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M10.5 4.5a5 5 0 0 1 0 7m2-9a8 8 0 0 1 0 11"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="3" x2="12" y2="16"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><polyline points="8 8 12 4 16 8"/><line x1="12" y1="4" x2="12" y2="17"/></symbol>
-    <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 18z"/></symbol>
-    <symbol id="i-cloud-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 18"/><polyline points="9 14 12 11 15 14"/><line x1="12" y1="11" x2="12" y2="20"/></symbol>
-    <symbol id="i-cloud-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 16a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 16"/><polyline points="9 17 12 20 15 17"/><line x1="12" y1="20" x2="12" y2="11"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></symbol>
     <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.6" cy="9" r="1.6"/><polyline points="20 16 15 11 5 21"/></symbol>
@@ -188,9 +184,6 @@
         <div class="set-t">Bulut Yedek</div>
         <div class="set-row" id="btnCloudBackup"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-link"/></svg></div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row" id="btnCloudRestore"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-undo"/></svg></div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic ic-blue"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud"/></svg></div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncPush"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-up"/></svg></div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncPull"><div class="set-ic ic-warn"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-down"/></svg></div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row" id="btnFetchLogos"><div class="set-ic ic-cyan"><svg class="svg-i" aria-hidden="true"><use href="#i-image"/></svg></div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row" id="btnReset"><div class="set-ic ic-danger"><svg class="svg-i" aria-hidden="true"><use href="#i-trash"/></svg></div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-t">Kanallarım (<span id="chCount">0</span>)</div>
@@ -354,7 +347,7 @@
 
 <div class="kbd-hint" id="kbdHint"></div>
 
-<audio id="aud" preload="none" webkit-playsinline playsinline></audio>
+<audio id="aud" preload="none" playsinline></audio>
 
 <script type="module" src="js/app.js"></script>
 </body>

@@ -13,7 +13,7 @@ import { encodeBackup, decodeBackup, copyText } from './storage.js';
 (function(){
 'use strict';
 
-const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
+const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1'};
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -31,15 +31,7 @@ function setImageSrc(img,value){
   img.src=clean;
   return true;
 }
-function timeoutSignal(ms){
-  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')return AbortSignal.timeout(ms);
-  if(typeof AbortController==='undefined')return undefined;
-  const ctrl=new AbortController();
-  setTimeout(()=>ctrl.abort(),ms);
-  return ctrl.signal;
-}
 function fetchWithTimeout(url,opts={},ms=6000){
-  if(typeof AbortController==='undefined')return fetch(url,{...opts,signal:opts.signal||timeoutSignal(ms)});
   const ctrl=new AbortController();
   const onAbort=()=>ctrl.abort();
   const t=setTimeout(()=>ctrl.abort(),ms);
@@ -50,18 +42,6 @@ function fetchWithTimeout(url,opts={},ms=6000){
   return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>{
     clearTimeout(t);
     if(opts.signal)opts.signal.removeEventListener('abort',onAbort);
-  });
-}
-function firstFulfilled(promises){
-  if(Promise.any)return Promise.any(promises);
-  return new Promise((resolve,reject)=>{
-    let left=promises.length;
-    const errors=[];
-    if(!left){reject(new Error('No promises'));return;}
-    promises.forEach((p,i)=>Promise.resolve(p).then(resolve,err=>{
-      errors[i]=err;
-      if(--left===0)reject(new Error('All promises rejected'));
-    }));
   });
 }
 function initialRoute(){
@@ -338,33 +318,6 @@ function loadDS(){DS.enabled=!!lsLoad(LS.DS,false);setVisible('dsPill',DS.enable
 function saveDS(){lsSave(LS.DS,DS.enabled);setVisible('dsPill',DS.enabled,'inline-flex');}
 
 /* ═══ CLOUD / ANONYMOUS BACKUP ═══ */
-function loadSyncCfg(){
-  const cfg=lsLoad(LS.SYNC,{endpoint:''});
-  return cfg&&typeof cfg==='object'?{endpoint:typeof cfg.endpoint==='string'?cfg.endpoint:''}:{endpoint:''};
-}
-function saveSyncCfg(cfg){lsSave(LS.SYNC,{endpoint:cfg.endpoint||''});renderSyncStatus();}
-function renderSyncStatus(){
-  const el=g('syncStatusTxt');if(!el)return;
-  const ep=loadSyncCfg().endpoint;
-  if(!ep){el.textContent='Endpoint ayarlı değil';return;}
-  try{el.textContent='Endpoint: '+new URL(ep).host;}catch{el.textContent='Endpoint ayarlı';}
-}
-function validateSyncEndpoint(url){
-  try{
-    const u=new URL(url);
-    return u.protocol==='https:'||(u.protocol==='http:'&&/^(localhost|127\.0\.0\.1|\[::1\])$/.test(u.hostname));
-  }catch{return false;}
-}
-function askSyncEndpoint(){
-  const current=loadSyncCfg().endpoint;
-  const next=prompt('HTTPS sync endpoint URL girin. POST yedekler, GET geri yükler.',current);
-  if(next===null)return null;
-  const clean=next.trim();
-  if(!clean){saveSyncCfg({endpoint:''});toast('Sync endpoint temizlendi');return null;}
-  if(!validateSyncEndpoint(clean)){toast('Endpoint HTTPS olmalı veya localhost olmalı','err');return null;}
-  saveSyncCfg({endpoint:clean});toast('Sync endpoint kaydedildi','ok');return clean;
-}
-function getSyncEndpoint(){const ep=loadSyncCfg().endpoint;return ep||askSyncEndpoint();}
 async function doCloudBackup(){
   let token;
   try{token=encodeBackup(backupData());}
@@ -392,27 +345,6 @@ async function doCloudRestore(input){
     toast(res.mapped?`${res.added} yeni, ${res.mapped} mevcut kanal eşlendi`:`${res.added} kanal yüklendi`,'ok');
     if(location.hash.includes('backup='))history.replaceState(null,'',location.pathname+location.search);
   }catch{toast('Yedek linki okunamadı','err');}
-}
-async function syncPush(){
-  const ep=getSyncEndpoint();if(!ep)return;
-  const ok=await confirm2('Buluta yedekle','Kanal, favori ve geçmiş yedeği ayarlı endpoint’e JSON olarak gönderilecek.','Gönder');
-  if(!ok)return;
-  try{
-    const r=await fetchWithTimeout(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(backupData()),cache:'no-store'},15000);
-    if(!r.ok)throw new Error(r.status);
-    toast('Bulut yedeği gönderildi','ok');
-  }catch{toast('Bulut yedeği gönderilemedi','err');}
-}
-async function syncPull(){
-  const ep=getSyncEndpoint();if(!ep)return;
-  const ok=await confirm2('Buluttan geri yükle','Endpoint’ten gelen yedek mevcut listeye eklenecek; aynı URL’ler eşlenecek.','Yükle');
-  if(!ok)return;
-  try{
-    const r=await fetchWithTimeout(ep,{cache:'no-store'},15000);
-    if(!r.ok)throw new Error(r.status);
-    const res=importData(await r.json());
-    toast(res.mapped?`${res.added} yeni, ${res.mapped} mevcut kanal eşlendi`:`${res.added} kanal yüklendi`,'ok');
-  }catch{toast('Bulut yedeği alınamadı','err');}
 }
 function maybeRestoreHashBackup(){if(location.hash.includes('backup='))setTimeout(()=>doCloudRestore(location.href),800);}
 
@@ -1681,7 +1613,7 @@ function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.del
 async function apiCall(ep){
   const ctrls=typeof AbortController!=='undefined'?APIS.map(()=>new AbortController()):[];
   const reqs=APIS.map((h,i)=>fetchWithTimeout(`https://${h}.api.radio-browser.info/json/${ep}`,{cache:'no-store',signal:ctrls[i]?.signal},6000).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}));
-  try{return await firstFulfilled(reqs);}catch{return null;}
+  try{return await Promise.any(reqs);}catch{return null;}
   finally{ctrls.forEach(c=>{try{c.abort();}catch{}});}
 }
 async function doSearch(q,extra,targetId,key){
@@ -1809,7 +1741,7 @@ function importData(d){
   const prev={ch,fv,rc};
   ch=res.ch;fv=res.fv;rc=res.rc;
   if(!dataSave()){ch=prev.ch;fv=prev.fv;rc=prev.rc;throw new Error('save-failed');}
-  renderCards();renderSettings();updateSearchVisibility();updateNavBadge();renderSyncStatus();
+  renderCards();renderSettings();updateSearchVisibility();updateNavBadge();
   return{added:res.added,mapped:res.mapped};
 }
 function doImport(e){
@@ -1865,7 +1797,7 @@ function handleKeyboard(e){
 
 /* ── PWA INSTALL ── */
 let _deferredPrompt=null;
-function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;}
+function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
 /* iOS Chrome (CriOS), Firefox (FxiOS), Edge (EdgiOS), Opera (OPiOS) UA'ları da
    "Safari/" içerir; onları dışlamazsak Chrome kullanıcısına "Safari'de Paylaş"
    talimatı gösterilir. */
@@ -1947,7 +1879,7 @@ function setupOfflineDetection(){
   update();
 }
 function setupAccessibleRows(){
-  const ids=['btnOpenCar','btnInstallApp','btnExport','btnImport','btnCloudBackup','btnCloudRestore','btnSyncEndpoint','btnSyncPush','btnSyncPull','btnFetchLogos','btnReset'];
+  const ids=['btnOpenCar','btnInstallApp','btnExport','btnImport','btnCloudBackup','btnCloudRestore','btnFetchLogos','btnReset'];
   ids.forEach(id=>{
     const el=g(id);if(!el)return;
     el.tabIndex=0;el.setAttribute('role','button');
@@ -1962,9 +1894,10 @@ function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
   window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
 
+  try{localStorage.removeItem('trsync1');}catch{} // kaldırılan Özel Sync Endpoint özelliğinin eski kaydı
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
-  renderSyncStatus();maybeRestoreHashBackup();
+  maybeRestoreHashBackup();
   // Auto-fetch missing logos after a short delay
   scheduleAutoFetchLogos(2500,5);
 
@@ -2130,9 +2063,6 @@ function init(){
   g('fileIn').addEventListener('change',doImport);
   g('btnCloudBackup').addEventListener('click',doCloudBackup);
   g('btnCloudRestore').addEventListener('click',()=>doCloudRestore());
-  g('btnSyncEndpoint').addEventListener('click',askSyncEndpoint);
-  g('btnSyncPush').addEventListener('click',syncPush);
-  g('btnSyncPull').addEventListener('click',syncPull);
   g('btnReset').addEventListener('click',doReset);
   g('btnFetchLogos').addEventListener('click',()=>{
     const missing=ch.filter(s=>!s.img).length;
@@ -2155,6 +2085,6 @@ function init(){
   if(route.openAdd)setTimeout(openMod,0);
 }
 
-window.TurkRadyo={version:APP_VERSION,exportData:backupData,importData,syncPush,syncPull};
+window.TurkRadyo={version:APP_VERSION,exportData:backupData,importData};
 init();
 })();
