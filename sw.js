@@ -1,5 +1,5 @@
-const CACHE='pulse-radio-v15.0.10';
-const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
+const CACHE='pulse-radio-v16.0.0';
+const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','src/lib/core.js','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 const FONT_CACHE='pulse-radio-fonts-v3';
 
 self.addEventListener('install',e=>{

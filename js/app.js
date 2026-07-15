@@ -1,32 +1,29 @@
+import {
+  APP_VERSION,
+  LIMITS,
+  isUrl,
+  cleanImageUrl,
+  trNormalize,
+  normalizeStation,
+  createBackup,
+  mergeImportedBackup
+} from '../src/lib/core.js';
+import { encodeBackup, decodeBackup, copyText } from './storage.js';
+
 (function(){
 'use strict';
 
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.10';
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
-const MAX_N=120,MAX_G=60,MAX_H=30,MAX_IMPORT_BYTES=1024*1024,MAX_IMPORT_STATIONS=1000,MAX_BACKUP_TOKEN=1400000;
+const MAX_N=LIMITS.name,MAX_G=LIMITS.genre,MAX_H=LIMITS.history,MAX_IMPORT_BYTES=LIMITS.importBytes,MAX_BACKUP_TOKEN=1400000;
 const IOS_RECOVERY_INTERVAL_MS=30000,NP_POLL_MS=60000,NP_IOS_POLL_MS=120000,DATA_USAGE_TICK_MS=15000,DATA_USAGE_LOW_POWER_TICK_MS=60000;
 const _corruptStorage=new Map();
 
 function esc(s){const d=document.createElement('div');d.textContent=(s==null)?'':String(s);return d.innerHTML;}
 function mkId(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function isUrl(u){try{const p=new URL(u);return p.protocol==='https:'||p.protocol==='http:';}catch{return false;}}
 function isHttpUrl(u){try{return new URL(u).protocol==='http:';}catch{return false;}}
-function isPrivateHost(host){
-  const h=String(host||'').toLowerCase();
-  return h==='localhost'||h==='127.0.0.1'||h==='0.0.0.0'||h==='::1'||h==='[::1]'||
-    h.startsWith('10.')||h.startsWith('192.168.')||/^172\.(1[6-9]|2\d|3[0-1])\./.test(h);
-}
-function cleanImageUrl(value){
-  try{
-    const u=new URL(value);
-    if(u.protocol!=='https:')return '';
-    if(u.username||u.password||isPrivateHost(u.hostname))return '';
-    return u.href;
-  }catch{return '';}
-}
 function setImageSrc(img,value){
   const clean=cleanImageUrl(value);
   if(!clean)return false;
@@ -111,15 +108,6 @@ function setVisible(target,on,display='block'){const el=typeof target==='string'
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 /* SVG icon helper — references symbols defined in the index.html sprite */
 function _ic(name,opts){const o=opts||{};const cls='svg-i'+(o.fill?' fill':'')+(o.cls?' '+o.cls:'');return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
-/* Türkçe toleranslı arama: şapkalı harf, ı/i, büyük/küçük, boşluk/noktalama normalize */
-function trNormalize(s){
-  if(s==null)return'';
-  let x=String(s).toLocaleLowerCase('tr-TR');
-  const map={'ı':'i','İ':'i','ş':'s','Ş':'s','ğ':'g','Ğ':'g','ü':'u','Ü':'u','ö':'o','Ö':'o','ç':'c','Ç':'c','â':'a','Â':'a','î':'i','Î':'i','û':'u','Û':'u','ô':'o','Ô':'o','ê':'e','Ê':'e'};
-  x=x.replace(/[ıİşŞğĞüÜöÖçÇâÂîÎûÛôÔêÊ]/g,c=>map[c]||c);
-  try{x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch{}
-  return x.replace(/[^\p{L}\p{N}]+/gu,'').trim();
-}
 /* trNormalize eşleşmesinin orijinal metindeki [başlangıç,bitiş) aralığını bulur.
    Filtre trNormalize kullandığı için vurgu da aynı kuralla yapılmalı; ayrıca
    'İ'.toLowerCase() gibi çok-karakterli dönüşümlerde indeks kayması olmaz. */
@@ -244,7 +232,7 @@ let _filterGenre='Tümü',_searchQ='',_sortMode='default',_shuffle=false;
 
 function dataLoad(){
   const rCh=lsLoad(LS.CH,[]),rFv=lsLoad(LS.FV,[]),rRc=lsLoad(LS.RC,[]);
-  ch=Array.isArray(rCh)?rCh.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&x.id&&typeof x.n==='string'&&x.n.trim()&&typeof x.u==='string'&&isUrl(x.u)).map(x=>({id:x.id,n:String(x.n).slice(0,MAX_N),g:typeof x.g==='string'?x.g.slice(0,MAX_G):'Diğer',u:x.u,e:typeof x.e==='string'?x.e.slice(0,4):'📻',c:typeof x.c==='string'&&/^#[0-9a-f]{6}$/i.test(x.c)?x.c:COLORS[0],img:typeof x.img==='string'?cleanImageUrl(x.img):'',br:typeof x.br==='number'?x.br:0})):[];
+  ch=Array.isArray(rCh)?rCh.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&x.id).map(x=>normalizeStation(x,{colors:COLORS,makeId:mkId})).filter(Boolean):[];
   const ids=new Set(ch.map(x=>x.id));
   fv=Array.isArray(rFv)?[...new Set(rFv.filter(f=>typeof f==='string'&&ids.has(f)))]:[];
   const seen=new Set();
@@ -257,7 +245,7 @@ function dataSave(){
   const ok=lsSave(LS.CH,ch)&lsSave(LS.FV,fv)&lsSave(LS.RC,rc);
   return !!ok;
 }
-function backupData(){return{version:APP_VERSION,exportedAt:new Date().toISOString(),ch,fv,rc};}
+function backupData(){return createBackup({ch,fv,rc});}
 
 function getFiltered(list){
   let out=list;
@@ -378,10 +366,8 @@ function askSyncEndpoint(){
 }
 function getSyncEndpoint(){const ep=loadSyncCfg().endpoint;return ep||askSyncEndpoint();}
 async function doCloudBackup(){
-  const storage=window.TurkRadyoStorage;
-  if(!storage){toast('Yedek modülü yüklenemedi','err');return;}
   let token;
-  try{token=storage.encodeBackup(backupData());}
+  try{token=encodeBackup(backupData());}
   catch{toast('Yedek çok büyük; JSON dosyası indiriliyor','warn');doExport();return;}
   const link=location.origin+location.pathname+'#backup='+encodeURIComponent(token);
   if(link.length>60000){toast('Yedek link için büyük; JSON dosyası indiriliyor','warn');doExport();return;}
@@ -389,19 +375,17 @@ async function doCloudBackup(){
     try{await navigator.share({title:'Pulse Radio yedeği',text:'Pulse Radio anonim yedek linki',url:link});toast('Yedek linki paylaşıldı','ok');return;}catch{}
   }
   try{
-    const copied=await storage.copyText(link);
+    const copied=await copyText(link);
     if(copied){toast('Yedek linki kopyalandı','ok');return;}
   }catch{}
   prompt('Yedek linki:',link);
 }
 async function doCloudRestore(input){
-  const storage=window.TurkRadyoStorage;
-  if(!storage){toast('Yedek modülü yüklenemedi','err');return;}
   const raw=input||prompt('Anonim yedek linki veya kodu yapıştırın:','');
   if(!raw)return;
   if(String(raw).length>MAX_BACKUP_TOKEN){toast('Yedek linki çok büyük','err');return;}
   try{
-    const d=storage.decodeBackup(raw);
+    const d=decodeBackup(raw);
     const ok=await confirm2('Yedeği geri yükle','Linkteki kanallar mevcut listeye eklenecek; aynı URL’ler eşlenecek.','Yükle');
     if(!ok)return;
     const res=importData(d);
@@ -1820,27 +1804,13 @@ function doExport(){
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='pulse_radio_yedek.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Yedek indirildi','ok');
 }
 function importData(d){
-  if(!d||typeof d!=='object'||!Array.isArray(d.ch))throw new Error('format');
-  if(d.ch.length>MAX_IMPORT_STATIONS)throw new Error('too-many-stations');
-  const prev={ch:ch.slice(),fv:fv.slice(),rc:rc.slice()};
-  let added=0,mapped=0;
-  const idMap=new Map();
-  try{
-    d.ch.forEach(x=>{
-      if(!x||typeof x.id!=='string'||!x.id)return;if(typeof x.n!=='string'||!x.n.trim())return;if(typeof x.u!=='string'||!isUrl(x.u))return;
-      const existing=ch.find(c=>c.u===x.u);
-      if(existing){idMap.set(x.id,existing.id);mapped++;return;}
-      const newId=mkId();
-      ch.push({id:newId,n:String(x.n).slice(0,MAX_N),g:typeof x.g==='string'?x.g.slice(0,MAX_G):'Diğer',u:x.u,e:typeof x.e==='string'?x.e.slice(0,4):'\uD83D\uDCFB',c:typeof x.c==='string'&&/^#[0-9a-f]{6}$/i.test(x.c)?x.c:COLORS[Math.floor(Math.random()*COLORS.length)],img:typeof x.img==='string'?cleanImageUrl(x.img):'',br:typeof x.br==='number'?x.br:0});
-      idMap.set(x.id,newId);added++;
-    });
-    const ids=new Set(ch.map(x=>x.id));
-    if(Array.isArray(d.fv))d.fv.forEach(f=>{if(typeof f!=='string')return;const id=idMap.get(f)||f;if(ids.has(id)&&!fv.includes(id))fv.push(id);});
-    if(Array.isArray(d.rc)){d.rc.forEach(r=>{if(!r||typeof r.id!=='string'||typeof r.t!=='number')return;const id=idMap.get(r.id)||r.id;if(ids.has(id)&&!rc.find(h=>h.id===id))rc.push({id,t:r.t});});rc.sort((a,b)=>b.t-a.t);rc=rc.slice(0,MAX_H);}
-    if(!dataSave())throw new Error('save-failed');
-  }catch(err){ch=prev.ch;fv=prev.fv;rc=prev.rc;throw err;}
+  // Birleştirme mantığı tek kaynaktan: src/lib/core.js:mergeImportedBackup.
+  const res=mergeImportedBackup({current:{ch,fv,rc},incoming:d,makeId:mkId,colors:COLORS});
+  const prev={ch,fv,rc};
+  ch=res.ch;fv=res.fv;rc=res.rc;
+  if(!dataSave()){ch=prev.ch;fv=prev.fv;rc=prev.rc;throw new Error('save-failed');}
   renderCards();renderSettings();updateSearchVisibility();updateNavBadge();renderSyncStatus();
-  return{added,mapped};
+  return{added:res.added,mapped:res.mapped};
 }
 function doImport(e){
   const f=e.target.files[0];if(!f)return;

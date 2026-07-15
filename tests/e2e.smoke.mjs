@@ -62,7 +62,11 @@ async function withServer(callback) {
 const { chromium } = await loadPlaywright();
 
 await withServer(async baseUrl => {
-  const browser = await chromium.launch();
+  // PW_CHROMIUM: sistemde kurulu bir Chromium ikilisi ile çalıştırma imkânı
+  // (Playwright'ın kendi indirdiği sürüm yoksa, örn. paylaşımlı CI imajları).
+  const browser = await chromium.launch(
+    process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}
+  );
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));

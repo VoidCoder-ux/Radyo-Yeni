@@ -13,7 +13,7 @@ Pulse Radio, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır
 
 ## Geliştirme
 
-Bu repo framework gerektirmeyen statik bir uygulama olarak kalır. NPM yalnızca geliştirme, kalite kontrolü ve test komutları için kullanılır.
+Bu repo framework gerektirmeyen statik bir uygulama olarak kalır. Kod, build adımı olmadan tarayıcının native ES modülleriyle çalışır (`js/app.js`, paylaşılan saf yardımcıları `src/lib/core.js`'ten import eder). NPM yalnızca geliştirme, kalite kontrolü ve test komutları için kullanılır.
 
 ```bash
 npm install
@@ -43,6 +43,7 @@ Uygulama statik dosyalarla çalışır. GitHub Pages veya herhangi bir statik ho
 - `sw.js`
 - `css/`
 - `js/`
+- `src/`
 - `icons/`
 
 Build adımı zorunlu değildir.
