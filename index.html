@@ -138,6 +138,18 @@
   </div>
 </div>
 
+<div class="cfm-ov" id="inpOv" role="dialog" aria-modal="true" aria-labelledby="inpTitle" aria-describedby="inpMsg">
+  <div class="cfm-box" tabindex="-1">
+    <h3 id="inpTitle"></h3>
+    <p id="inpMsg"></p>
+    <input id="inpField" class="inp-field" autocomplete="off" spellcheck="false" aria-labelledby="inpTitle">
+    <div class="cfm-btns">
+      <button class="cfm-btn cc" id="inpNo">İptal</button>
+      <button class="cfm-btn ck" id="inpYes">Tamam</button>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
   <header class="hdr">
     <div class="hdr-r">
@@ -328,7 +340,8 @@
       <div class="fg" id="fgN"><label for="inN">Ad</label><input id="inN" placeholder="Radyo adı" autocomplete="off"><span class="ferr">Ad zorunludur</span></div>
       <div class="fg" id="fgU"><label for="inU">URL</label><input id="inU" placeholder="https://..." autocomplete="off" inputmode="url" aria-describedby="inUHelp"><small id="inUHelp">MP3 / AAC / M3U8 stream adresi</small><span class="ferr">Geçerli bir http:// veya https:// adresi girin</span></div>
       <div class="fg"><label for="inC">Kategori</label>
-        <select id="inC"><option>Pop</option><option>Rock</option><option>Haber</option><option>THM</option><option>TSM</option><option>Arabesk</option><option>Caz</option><option>Elektronik</option><option>Karma</option><option>Dini</option><option>Çocuk</option><option>Spor</option><option>Diğer</option></select>
+        <!-- Seçenekler js/app.js içindeki GENRES listesinden doldurulur (tek kaynak). -->
+        <select id="inC"></select>
       </div>
       <div class="fg"><label for="inE">Emoji</label><input id="inE" class="emoji-input" maxlength="2" value="&#x1F4FB;"></div>
       <div class="fg"><label for="inImg">Logo URL (opsiyonel)</label><input id="inImg" placeholder="https://...logo.png" autocomplete="off" inputmode="url"><small>Radyo logosu (PNG/JPG)</small></div>

@@ -595,6 +595,10 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 .cfm-btn.cc:hover{background:var(--gl-4);color:var(--tx)}
 .cfm-btn.cd{background:rgba(251,113,133,.16);color:var(--no)}
 .cfm-btn.cd:hover{background:rgba(251,113,133,.26)}
+.cfm-btn.ck{background:var(--grad);color:#fff;box-shadow:0 10px 24px rgba(124,92,255,.32)}
+.cfm-btn.ck:hover{filter:brightness(1.1)}
+.inp-field{width:100%;min-height:48px;margin-top:14px;border:1px solid var(--bd);border-radius:14px;background:var(--gl-1);color:var(--tx);padding:0 14px;font-size:16px;font-weight:500;outline:0;transition:border-color var(--fast),box-shadow var(--fast),background var(--fast)}
+.inp-field:focus{border-color:rgba(124,92,255,.5);background:var(--gl-2);box-shadow:0 0 0 4px rgba(124,92,255,.14)}
 
 /* ---------------- Car mode ------------------ */
 .car-mode{position:fixed;inset:0;min-height:100dvh;z-index:400;display:none;flex-direction:column;padding:calc(var(--st) + 18px) max(18px,var(--sr)) calc(var(--sb) + 18px) max(18px,var(--sl));overflow:hidden;background:radial-gradient(120% 70% at 50% 0,rgba(124,92,255,.28),transparent 60%),linear-gradient(180deg,#06070f,#0a0c1a)}

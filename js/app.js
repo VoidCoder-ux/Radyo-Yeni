@@ -151,6 +151,7 @@ const _dialogClosers={
   carMode:()=>closeCar(),
   addMod:()=>closeMod(),
   cfmOv:()=>_cfmClose(_cfmPendingVal===undefined?false:_cfmPendingVal),
+  inpOv:()=>_inpClose(_inpPendingVal===undefined?null:_inpPendingVal),
   iosInstallOv:()=>closeIOSInstall()
 };
 window.addEventListener('popstate',()=>{
@@ -204,6 +205,26 @@ function _cfmClose(val){
   if(_deferDialogClose('cfmOv')){_cfmPendingVal=val;return;}
   _cfmPendingVal=undefined;
   setDialogOpen('cfmOv',false);if(_cfmRes){_cfmRes(val);_cfmRes=null;}
+}
+
+/* ── PROMPT (özel giriş modalı; native prompt() bazı WebView/standalone
+   ortamlarda sessizce null döner ve tasarımla uyumsuzdur) ── */
+let _inpRes=null,_inpPendingVal;
+function prompt2(title,msg,opts={}){
+  return new Promise(resolve=>{
+    if(_inpRes){try{_inpRes(null);}catch{}}
+    _inpRes=resolve;
+    g('inpTitle').textContent=title;g('inpMsg').textContent=msg;
+    const f=g('inpField');f.value=opts.value||'';f.placeholder=opts.placeholder||'';
+    g('inpYes').textContent=opts.okLbl||'Tamam';
+    setDialogOpen('inpOv',true);
+    setTimeout(()=>{f.focus();if(opts.selectAll)f.select();},60);
+  });
+}
+function _inpClose(val){
+  if(_deferDialogClose('inpOv')){_inpPendingVal=val;return;}
+  _inpPendingVal=undefined;
+  setDialogOpen('inpOv',false);if(_inpRes){_inpRes(val);_inpRes=null;}
 }
 
 /* ── DATA ── */
@@ -331,10 +352,10 @@ async function doCloudBackup(){
     const copied=await copyText(link);
     if(copied){toast('Yedek linki kopyalandı','ok');return;}
   }catch{}
-  prompt('Yedek linki:',link);
+  await prompt2('Yedek linki','Linki kopyalayıp güvenli bir yerde saklayın.',{value:link,okLbl:'Kapat',selectAll:true});
 }
 async function doCloudRestore(input){
-  const raw=input||prompt('Anonim yedek linki veya kodu yapıştırın:','');
+  const raw=input||await prompt2('Linkten geri yükle','Anonim yedek linkini veya kodunu yapıştırın.',{placeholder:'#backup=... veya kod',okLbl:'Devam'});
   if(!raw)return;
   if(String(raw).length>MAX_BACKUP_TOKEN){toast('Yedek linki çok büyük','err');return;}
   try{
@@ -1774,6 +1795,7 @@ function handleKeyboard(e){
   if(trapDialogFocus(e))return;
   if(e.code==='Escape'){
     if(_activeDialog?.id==='cfmOv'){e.preventDefault();_cfmClose(false);return;}
+    if(_activeDialog?.id==='inpOv'){e.preventDefault();_inpClose(null);return;}
     if(_activeDialog?.id==='addMod'){e.preventDefault();closeMod();return;}
     if(_activeDialog?.id==='iosInstallOv'){e.preventDefault();closeIOSInstall();return;}
     closeFP();if(_carOpen)closeCar();return;
@@ -1979,6 +2001,16 @@ function init(){
   g('cfmYes').addEventListener('click',()=>_cfmClose(true));
   g('cfmNo').addEventListener('click',()=>_cfmClose(false));
   g('cfmOv').addEventListener('click',e=>{if(e.target===g('cfmOv'))_cfmClose(false);});
+
+  /* input modal */
+  g('inpYes').addEventListener('click',()=>_inpClose(g('inpField').value.trim()||null));
+  g('inpNo').addEventListener('click',()=>_inpClose(null));
+  g('inpOv').addEventListener('click',e=>{if(e.target===g('inpOv'))_inpClose(null);});
+  g('inpField').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();_inpClose(g('inpField').value.trim()||null);}});
+
+  /* manuel ekleme kategori seçenekleri — GENRES tek kaynak ('Tümü' filtre etiketi hariç) */
+  const inC=g('inC');
+  GENRES.filter(x=>x!=='Tümü').forEach(genre=>{const o=document.createElement('option');o.textContent=genre;inC.appendChild(o);});
 
   /* mini player */
   g('mplay').addEventListener('click',openFP);
