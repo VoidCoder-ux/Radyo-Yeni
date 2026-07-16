@@ -1,6 +1,4 @@
-(function(){
-'use strict';
-
+// Anonim yedek linki kodlama/çözme yardımcıları (ES modülü; js/app.js import eder).
 const MAX_TOKEN_CHARS=1400000;
 const MAX_JSON_CHARS=1048576;
 
@@ -22,14 +20,13 @@ function base64ToBytes(text){
   return bytes;
 }
 
-function encodeBackup(data){
+export function encodeBackup(data){
   const json=JSON.stringify(data);
   if(json.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
-  if(window.TextEncoder)return bytesToBase64(new TextEncoder().encode(json));
-  return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return bytesToBase64(new TextEncoder().encode(json));
 }
 
-function extractBackupToken(input){
+export function extractBackupToken(input){
   const raw=String(input||'').trim();
   if(!raw)return '';
   try{
@@ -43,7 +40,7 @@ function extractBackupToken(input){
   return hash?decodeURIComponent(hash[1]):raw;
 }
 
-function decodeBackup(input){
+export function decodeBackup(input){
   const token=extractBackupToken(input);
   if(!token)throw new Error('empty-backup');
   if(token.length>MAX_TOKEN_CHARS)throw new Error('backup-too-large');
@@ -54,18 +51,47 @@ function decodeBackup(input){
   }
   const bytes=base64ToBytes(token);
   if(bytes.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
-  const json=window.TextDecoder?new TextDecoder().decode(bytes):decodeURIComponent(escape(String.fromCharCode.apply(null,bytes)));
+  const json=new TextDecoder().decode(bytes);
   if(json.length>MAX_JSON_CHARS)throw new Error('backup-too-large');
   return JSON.parse(json);
 }
 
-async function copyText(text){
+/* ── Tek istasyonluk paylaşım linki (#add=<token>) ── */
+const MAX_STATION_CHARS=8192;
+
+export function encodeStation(s){
+  const json=JSON.stringify({n:s.n,u:s.u,g:s.g||'',e:s.e||'',c:s.c||'',img:s.img||'',br:s.br||0});
+  if(json.length>MAX_STATION_CHARS)throw new Error('station-too-large');
+  return bytesToBase64(new TextEncoder().encode(json));
+}
+
+export function extractStationToken(input){
+  const raw=String(input||'').trim();
+  if(!raw)return '';
+  try{
+    const u=new URL(raw,location.href);
+    const fromHash=(u.hash||'').match(/add=([^&]+)/);
+    if(fromHash)return decodeURIComponent(fromHash[1]);
+  }catch{}
+  const hash=raw.match(/add=([^&\s]+)/);
+  return hash?decodeURIComponent(hash[1]):raw;
+}
+
+export function decodeStation(input){
+  const token=extractStationToken(input);
+  if(!token)throw new Error('empty-station');
+  if(token.length>MAX_STATION_CHARS)throw new Error('station-too-large');
+  const bytes=base64ToBytes(token);
+  if(bytes.length>MAX_STATION_CHARS)throw new Error('station-too-large');
+  const d=JSON.parse(new TextDecoder().decode(bytes));
+  if(!d||typeof d!=='object'||Array.isArray(d))throw new Error('station-format');
+  return d;
+}
+
+export async function copyText(text){
   if(navigator.clipboard&&window.isSecureContext){
     await navigator.clipboard.writeText(text);
     return true;
   }
   return false;
 }
-
-window.TurkRadyoStorage={encodeBackup,decodeBackup,extractBackupToken,copyText};
-})();

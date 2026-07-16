@@ -1,9 +1,8 @@
-// Bu modül, js/app.js içindeki saf yardımcı fonksiyonların test edilebilir
-// AYNASIDIR (app.js modül olmadığı için doğrudan import edilemez).
-// app.js'te bu fonksiyonlardan biri değişirse burası da birebir aynı
-// davranışla güncellenmelidir — aksi halde testler gerçek uygulamayı
-// yansıtmaz. (Bkz. tests/unit.test.mjs)
-export const APP_VERSION = '15.0.10';
+// Uygulamanın saf yardımcı fonksiyonları — TEK KAYNAK. js/app.js bu modülü
+// doğrudan import eder; birim testler de aynı modülü test eder
+// (bkz. tests/unit.test.mjs). Burada yapılan her değişiklik uygulamada da,
+// testlerde de aynı anda geçerli olur.
+export const APP_VERSION = '16.0.0';
 export const EXPORT_VERSION = APP_VERSION;
 
 export const LIMITS = {

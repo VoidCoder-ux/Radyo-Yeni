@@ -1,19 +1,22 @@
 # Pulse Radio
 
-Pulse Radio, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır. Kanal ekleme, Radio Browser üzerinden arama, favoriler, son dinlenenler, ana sayfa, tam ekran oynatıcı, araba modu, uyku zamanlayıcısı, veri kullanımı takibi ve JSON yedek içe/dışa aktarma özelliklerini içerir.
+Pulse Radio, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır. Kanal ekleme/düzenleme, Radio Browser üzerinden arama, favoriler, son dinlenenler, dinleme istatistikleri, ana sayfa, tam ekran oynatıcı, araba modu, uyku zamanlayıcısı, HLS desteği, açık/koyu tema, veri kullanımı takibi ve JSON/link yedekleme özelliklerini içerir.
 
 ## Özellikler
 
-- Favori, son dinlenenler ve kategori filtreleri
-- Manuel radyo ekleme ve Radio Browser araması
+- Favori, son dinlenenler, dinleme istatistikleri ve kategori filtreleri
+- Manuel radyo ekleme, düzenleme ve Radio Browser araması (yazarken arama, sayfalama, ülke filtresi)
+- İlk açılışta popüler Türk radyolarından oluşan başlangıç paketi
+- HLS (m3u8) desteği: Safari native, diğer tarayıcılarda vendorlanmış hls.js lazy yüklenir
 - Media Session kontrolleri, tam ekran oynatıcı ve araba modu
-- PWA kurulumu, service worker cache ve offline fallback
-- JSON yedek dışa/içe aktarma
+- Sistem/Koyu/Açık tema seçimi
+- PWA kurulumu, service worker cache ve offline fallback (fontlar dahil self-host)
+- JSON yedek dışa/içe aktarma, anonim yedek linki ve tek istasyonluk paylaşım linki
 - Basit veri kullanımı tahmini ve düşük bağlantı uyarıları
 
 ## Geliştirme
 
-Bu repo framework gerektirmeyen statik bir uygulama olarak kalır. NPM yalnızca geliştirme, kalite kontrolü ve test komutları için kullanılır.
+Bu repo framework gerektirmeyen statik bir uygulama olarak kalır. Kod, build adımı olmadan tarayıcının native ES modülleriyle çalışır (`js/app.js`, paylaşılan saf yardımcıları `src/lib/core.js`'ten import eder). NPM yalnızca geliştirme, kalite kontrolü ve test komutları için kullanılır.
 
 ```bash
 npm install
@@ -43,6 +46,10 @@ Uygulama statik dosyalarla çalışır. GitHub Pages veya herhangi bir statik ho
 - `sw.js`
 - `css/`
 - `js/`
+- `src/`
+- `data/`
+- `fonts/`
+- `screenshots/`
 - `icons/`
 
 Build adımı zorunlu değildir.

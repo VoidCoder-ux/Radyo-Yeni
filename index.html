@@ -9,15 +9,14 @@
 <meta name="apple-mobile-web-app-title" content="Pulse Radio">
 <meta name="theme-color" content="#06070f">
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
+<script>
+/* Tema, CSS yüklenmeden atanır ki açık temada koyu flaş olmasın (tam mantık js/app.js'te). */
+try{var _t=JSON.parse(localStorage.getItem('trth1')||'"auto"');document.documentElement.dataset.theme=(_t==='light'||(_t!=='dark'&&matchMedia('(prefers-color-scheme: light)').matches))?'light':'dark';}catch(e){document.documentElement.dataset.theme='dark';}
+</script>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" id="atiAny" href="icons/apple-touch-icon-180.png">
-<link rel="apple-touch-icon" id="ati180" href="icons/apple-touch-icon-180.png" sizes="180x180">
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" sizes="180x180">
 <link rel="preconnect" href="https://de1.api.radio-browser.info">
-<!-- crossorigin: yanıt CORS modunda gelsin ki service worker res.ok görüp FONT_CACHE'e alabilsin (çevrimdışı font) -->
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -50,9 +49,6 @@
     <symbol id="i-volume-hi" viewBox="0 0 16 16"><path fill="currentColor" d="M7 3L3.5 6H1v4h2.5L7 13V3z"/><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M10.5 4.5a5 5 0 0 1 0 7m2-9a8 8 0 0 1 0 11"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="3" x2="12" y2="16"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><polyline points="8 8 12 4 16 8"/><line x1="12" y1="4" x2="12" y2="17"/></symbol>
-    <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 18z"/></symbol>
-    <symbol id="i-cloud-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 18"/><polyline points="9 14 12 11 15 14"/><line x1="12" y1="11" x2="12" y2="20"/></symbol>
-    <symbol id="i-cloud-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 16a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.7A3.5 3.5 0 0 0 6.5 16"/><polyline points="9 17 12 20 15 17"/><line x1="12" y1="20" x2="12" y2="11"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></symbol>
     <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.6" cy="9" r="1.6"/><polyline points="20 16 15 11 5 21"/></symbol>
@@ -142,6 +138,18 @@
   </div>
 </div>
 
+<div class="cfm-ov" id="inpOv" role="dialog" aria-modal="true" aria-labelledby="inpTitle" aria-describedby="inpMsg">
+  <div class="cfm-box" tabindex="-1">
+    <h3 id="inpTitle"></h3>
+    <p id="inpMsg"></p>
+    <input id="inpField" class="inp-field" autocomplete="off" spellcheck="false" aria-labelledby="inpTitle">
+    <div class="cfm-btns">
+      <button class="cfm-btn cc" id="inpNo">İptal</button>
+      <button class="cfm-btn ck" id="inpYes">Tamam</button>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
   <header class="hdr">
     <div class="hdr-r">
@@ -173,12 +181,14 @@
           <div class="stat-card"><div class="stat-val" id="statCh">0</div><div class="stat-lbl">Kanal</div></div>
           <div class="stat-card"><div class="stat-val" id="statFav">0</div><div class="stat-lbl">Favori</div></div>
           <div class="stat-card"><div class="stat-val" id="statRec">0</div><div class="stat-lbl">Dinlenen</div></div>
+          <div class="stat-card"><div class="stat-val" id="statTime">0 dk</div><div class="stat-lbl">Dinleme</div></div>
         </div>
         <div class="set-t">Dinleme</div>
         <div class="set-row" id="btnOpenCar"><div class="set-ic ic-blue"><svg class="svg-i" aria-hidden="true"><use href="#i-car"/></svg></div><div class="set-lb"><h4>Araba Modu</h4><p>Büyük butonlar, tek el, yol için</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row is-static"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-leaf"/></svg></div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill is-hidden" id="dsPill">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
         <div class="set-row is-static is-wrap"><div class="set-ic ic-cyan"><svg class="svg-i" aria-hidden="true"><use href="#i-signal"/></svg></div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b quiet" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla">Sıfırla</button></div>
         <div class="set-t">Uygulama</div>
+        <div class="set-row is-static is-wrap"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-settings"/></svg></div><div class="set-lb"><h4>Görünüm</h4><p>Sistem tercihini izle veya sabitle</p></div><div class="seg" id="themeSeg" role="group" aria-label="Tema seçimi"><button type="button" data-th="auto">Sistem</button><button type="button" data-th="dark">Koyu</button><button type="button" data-th="light">Açık</button></div></div>
         <div class="set-row is-hidden" id="btnInstallApp"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row is-static is-hidden" id="btnAlreadyInstalled"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
         <div class="set-t">Veriler</div>
@@ -188,9 +198,6 @@
         <div class="set-t">Bulut Yedek</div>
         <div class="set-row" id="btnCloudBackup"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-link"/></svg></div><div class="set-lb"><h4>Anonim Yedek Linki</h4><p>Favori ve kanal listesini paylaşılabilir linke dönüştür</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row" id="btnCloudRestore"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-undo"/></svg></div><div class="set-lb"><h4>Linkten Geri Yükle</h4><p>Anonim yedek linki veya kodu yapıştır</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncEndpoint"><div class="set-ic ic-blue"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud"/></svg></div><div class="set-lb"><h4>Özel Sync Endpoint</h4><p id="syncStatusTxt">Endpoint ayarlı değil</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncPush"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-up"/></svg></div><div class="set-lb"><h4>Buluta Yedekle</h4><p>Ayarlı endpoint'e güvenli JSON gönder</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
-        <div class="set-row" id="btnSyncPull"><div class="set-ic ic-warn"><svg class="svg-i" aria-hidden="true"><use href="#i-cloud-down"/></svg></div><div class="set-lb"><h4>Buluttan Geri Yükle</h4><p>Ayarlı endpoint'ten yedek JSON çek</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row" id="btnFetchLogos"><div class="set-ic ic-cyan"><svg class="svg-i" aria-hidden="true"><use href="#i-image"/></svg></div><div class="set-lb"><h4>Logoları Getir</h4><p>Eksik logoları otomatik olarak indir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row" id="btnReset"><div class="set-ic ic-danger"><svg class="svg-i" aria-hidden="true"><use href="#i-trash"/></svg></div><div class="set-lb"><h4>Tümünü Sil</h4><p>Kanallar, favoriler ve geçmiş silinir</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-t">Kanallarım (<span id="chCount">0</span>)</div>
@@ -323,6 +330,27 @@
     <div class="srch-sec add-panel" data-add-panel="gl" role="tabpanel">
       <h3><svg class="svg-i" aria-hidden="true"><use href="#i-globe"/></svg>Tüm Dünya</h3>
       <div class="srch-row"><input id="qGL" placeholder="Herhangi bir radyo..." autocomplete="off"><button id="bGL">Ara</button></div>
+      <div class="srch-row">
+        <select id="glCountry" class="country-sel" aria-label="Ülke filtresi">
+          <option value="">🌍 Tüm ülkeler</option>
+          <option value="DE">Almanya</option>
+          <option value="US">ABD</option>
+          <option value="GB">İngiltere</option>
+          <option value="FR">Fransa</option>
+          <option value="NL">Hollanda</option>
+          <option value="AT">Avusturya</option>
+          <option value="CH">İsviçre</option>
+          <option value="AZ">Azerbaycan</option>
+          <option value="IT">İtalya</option>
+          <option value="ES">İspanya</option>
+          <option value="GR">Yunanistan</option>
+          <option value="BG">Bulgaristan</option>
+          <option value="SA">Suudi Arabistan</option>
+          <option value="EG">Mısır</option>
+          <option value="JP">Japonya</option>
+          <option value="BR">Brezilya</option>
+        </select>
+      </div>
       <div id="rGL"></div>
     </div>
     <div class="srch-sec add-panel" data-add-panel="tg" role="tabpanel">
@@ -335,7 +363,8 @@
       <div class="fg" id="fgN"><label for="inN">Ad</label><input id="inN" placeholder="Radyo adı" autocomplete="off"><span class="ferr">Ad zorunludur</span></div>
       <div class="fg" id="fgU"><label for="inU">URL</label><input id="inU" placeholder="https://..." autocomplete="off" inputmode="url" aria-describedby="inUHelp"><small id="inUHelp">MP3 / AAC / M3U8 stream adresi</small><span class="ferr">Geçerli bir http:// veya https:// adresi girin</span></div>
       <div class="fg"><label for="inC">Kategori</label>
-        <select id="inC"><option>Pop</option><option>Rock</option><option>Haber</option><option>THM</option><option>TSM</option><option>Arabesk</option><option>Caz</option><option>Elektronik</option><option>Karma</option><option>Dini</option><option>Çocuk</option><option>Spor</option><option>Diğer</option></select>
+        <!-- Seçenekler js/app.js içindeki GENRES listesinden doldurulur (tek kaynak). -->
+        <select id="inC"></select>
       </div>
       <div class="fg"><label for="inE">Emoji</label><input id="inE" class="emoji-input" maxlength="2" value="&#x1F4FB;"></div>
       <div class="fg"><label for="inImg">Logo URL (opsiyonel)</label><input id="inImg" placeholder="https://...logo.png" autocomplete="off" inputmode="url"><small>Radyo logosu (PNG/JPG)</small></div>
@@ -354,9 +383,8 @@
 
 <div class="kbd-hint" id="kbdHint"></div>
 
-<audio id="aud" preload="none" webkit-playsinline playsinline></audio>
+<audio id="aud" preload="none" playsinline></audio>
 
-<script src="js/storage.js" defer></script>
-<script src="js/app.js" defer></script>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

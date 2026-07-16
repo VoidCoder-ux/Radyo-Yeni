@@ -1,82 +1,46 @@
+import {
+  APP_VERSION,
+  LIMITS,
+  isUrl,
+  cleanImageUrl,
+  trNormalize,
+  normalizeStation,
+  createBackup,
+  mergeImportedBackup
+} from '../src/lib/core.js';
+import { encodeBackup, decodeBackup, encodeStation, decodeStation, copyText } from './storage.js';
+import {
+  mkId,
+  isHttpUrl,
+  debounce,
+  relTime,
+  darken,
+  icon as _ic,
+  fetchWithTimeout,
+  initialRoute,
+  trMatchRange,
+  formatBytes,
+  formatListenTime
+} from './utils.js';
+import { apiCall, genreFromTags } from './api.js';
+
 (function(){
 'use strict';
 
-const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',SYNC:'trsync1'};
-const APP_VERSION='15.0.10';
+const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1',ST:'trst1',TH:'trth1'};
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
-const APIS=['de1','nl1','at1','de2'];
-const MAX_N=120,MAX_G=60,MAX_H=30,MAX_IMPORT_BYTES=1024*1024,MAX_IMPORT_STATIONS=1000,MAX_BACKUP_TOKEN=1400000;
+const MAX_N=LIMITS.name,MAX_G=LIMITS.genre,MAX_H=LIMITS.history,MAX_IMPORT_BYTES=LIMITS.importBytes,MAX_BACKUP_TOKEN=1400000;
 const IOS_RECOVERY_INTERVAL_MS=30000,NP_POLL_MS=60000,NP_IOS_POLL_MS=120000,DATA_USAGE_TICK_MS=15000,DATA_USAGE_LOW_POWER_TICK_MS=60000;
 const _corruptStorage=new Map();
 
 function esc(s){const d=document.createElement('div');d.textContent=(s==null)?'':String(s);return d.innerHTML;}
-function mkId(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function isUrl(u){try{const p=new URL(u);return p.protocol==='https:'||p.protocol==='http:';}catch{return false;}}
-function isHttpUrl(u){try{return new URL(u).protocol==='http:';}catch{return false;}}
-function isPrivateHost(host){
-  const h=String(host||'').toLowerCase();
-  return h==='localhost'||h==='127.0.0.1'||h==='0.0.0.0'||h==='::1'||h==='[::1]'||
-    h.startsWith('10.')||h.startsWith('192.168.')||/^172\.(1[6-9]|2\d|3[0-1])\./.test(h);
-}
-function cleanImageUrl(value){
-  try{
-    const u=new URL(value);
-    if(u.protocol!=='https:')return '';
-    if(u.username||u.password||isPrivateHost(u.hostname))return '';
-    return u.href;
-  }catch{return '';}
-}
 function setImageSrc(img,value){
   const clean=cleanImageUrl(value);
   if(!clean)return false;
   img.referrerPolicy='no-referrer';
   img.src=clean;
   return true;
-}
-function timeoutSignal(ms){
-  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')return AbortSignal.timeout(ms);
-  if(typeof AbortController==='undefined')return undefined;
-  const ctrl=new AbortController();
-  setTimeout(()=>ctrl.abort(),ms);
-  return ctrl.signal;
-}
-function fetchWithTimeout(url,opts={},ms=6000){
-  if(typeof AbortController==='undefined')return fetch(url,{...opts,signal:opts.signal||timeoutSignal(ms)});
-  const ctrl=new AbortController();
-  const onAbort=()=>ctrl.abort();
-  const t=setTimeout(()=>ctrl.abort(),ms);
-  if(opts.signal){
-    if(opts.signal.aborted)ctrl.abort();
-    else opts.signal.addEventListener('abort',onAbort,{once:true});
-  }
-  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>{
-    clearTimeout(t);
-    if(opts.signal)opts.signal.removeEventListener('abort',onAbort);
-  });
-}
-function firstFulfilled(promises){
-  if(Promise.any)return Promise.any(promises);
-  return new Promise((resolve,reject)=>{
-    let left=promises.length;
-    const errors=[];
-    if(!left){reject(new Error('No promises'));return;}
-    promises.forEach((p,i)=>Promise.resolve(p).then(resolve,err=>{
-      errors[i]=err;
-      if(--left===0)reject(new Error('All promises rejected'));
-    }));
-  });
-}
-function initialRoute(){
-  try{
-    const page=new URLSearchParams(location.search).get('page');
-    if(page==='fav'||page==='favorites'||page==='f')return{page:'f'};
-    if(page==='add')return{page:'a',openAdd:true};
-    if(page==='all'||page==='channels'||page==='a')return{page:'a'};
-    if(page==='recent'||page==='history'||page==='r')return{page:'r'};
-    if(page==='settings'||page==='s')return{page:'s'};
-  }catch{}
-  return{page:'h'};
 }
 function backupCorruptValue(k,raw){
   if(!raw||_corruptStorage.has(k))return;
@@ -108,35 +72,6 @@ function lsLoad(k,d){
 }
 function g(id){return document.getElementById(id);}
 function setVisible(target,on,display='block'){const el=typeof target==='string'?g(target):target;if(!el)return;if(on){el.classList.remove('is-hidden');el.style.display=display;}else{el.classList.add('is-hidden');el.style.display='none';}}
-function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
-/* SVG icon helper — references symbols defined in the index.html sprite */
-function _ic(name,opts){const o=opts||{};const cls='svg-i'+(o.fill?' fill':'')+(o.cls?' '+o.cls:'');return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
-/* Türkçe toleranslı arama: şapkalı harf, ı/i, büyük/küçük, boşluk/noktalama normalize */
-function trNormalize(s){
-  if(s==null)return'';
-  let x=String(s).toLocaleLowerCase('tr-TR');
-  const map={'ı':'i','İ':'i','ş':'s','Ş':'s','ğ':'g','Ğ':'g','ü':'u','Ü':'u','ö':'o','Ö':'o','ç':'c','Ç':'c','â':'a','Â':'a','î':'i','Î':'i','û':'u','Û':'u','ô':'o','Ô':'o','ê':'e','Ê':'e'};
-  x=x.replace(/[ıİşŞğĞüÜöÖçÇâÂîÎûÛôÔêÊ]/g,c=>map[c]||c);
-  try{x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch{}
-  return x.replace(/[^\p{L}\p{N}]+/gu,'').trim();
-}
-/* trNormalize eşleşmesinin orijinal metindeki [başlangıç,bitiş) aralığını bulur.
-   Filtre trNormalize kullandığı için vurgu da aynı kuralla yapılmalı; ayrıca
-   'İ'.toLowerCase() gibi çok-karakterli dönüşümlerde indeks kayması olmaz. */
-function trMatchRange(name,query){
-  const qn=trNormalize(query);
-  if(!qn)return null;
-  const chars=Array.from(name);
-  let norm='';const idxMap=[];
-  for(let i=0;i<chars.length;i++){
-    const cn=trNormalize(chars[i]);
-    for(let k=0;k<cn.length;k++){norm+=cn[k];idxMap.push(i);}
-  }
-  const pos=norm.indexOf(qn);
-  if(pos<0)return null;
-  const sc=idxMap[pos],ec=idxMap[pos+qn.length-1];
-  return [chars.slice(0,sc).join('').length,chars.slice(0,ec+1).join('').length];
-}
 
 /* ── TOAST v2 ── */
 let _toastT=null;
@@ -183,6 +118,7 @@ const _dialogClosers={
   carMode:()=>closeCar(),
   addMod:()=>closeMod(),
   cfmOv:()=>_cfmClose(_cfmPendingVal===undefined?false:_cfmPendingVal),
+  inpOv:()=>_inpClose(_inpPendingVal===undefined?null:_inpPendingVal),
   iosInstallOv:()=>closeIOSInstall()
 };
 window.addEventListener('popstate',()=>{
@@ -200,9 +136,6 @@ function trapDialogFocus(e){
   if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();return true;}
   return false;
 }
-function relTime(ts){const m=Math.floor((Date.now()-ts)/60000);if(m<1)return'Az önce';if(m<60)return m+'dk';const h=Math.floor(m/60);if(h<24)return h+'sa';return Math.floor(h/24)+'g';}
-/* Koyulaştırırken maviyi artırır: logo zeminlerinde gece-moru gölge tonu bilinçli tasarım tercihi */
-function darken(h){try{return`rgb(${Math.max(0,parseInt(h.slice(1,3),16)-50)},${Math.max(0,parseInt(h.slice(3,5),16)-30)},${Math.min(255,parseInt(h.slice(5,7),16)+40)})`;}catch{return'#4a3ab5';}}
 
 /* ── RIPPLE EFFECT ── */
 function addRipple(e,el){
@@ -238,13 +171,33 @@ function _cfmClose(val){
   setDialogOpen('cfmOv',false);if(_cfmRes){_cfmRes(val);_cfmRes=null;}
 }
 
+/* ── PROMPT (özel giriş modalı; native prompt() bazı WebView/standalone
+   ortamlarda sessizce null döner ve tasarımla uyumsuzdur) ── */
+let _inpRes=null,_inpPendingVal;
+function prompt2(title,msg,opts={}){
+  return new Promise(resolve=>{
+    if(_inpRes){try{_inpRes(null);}catch{}}
+    _inpRes=resolve;
+    g('inpTitle').textContent=title;g('inpMsg').textContent=msg;
+    const f=g('inpField');f.value=opts.value||'';f.placeholder=opts.placeholder||'';
+    g('inpYes').textContent=opts.okLbl||'Tamam';
+    setDialogOpen('inpOv',true);
+    setTimeout(()=>{f.focus();if(opts.selectAll)f.select();},60);
+  });
+}
+function _inpClose(val){
+  if(_deferDialogClose('inpOv')){_inpPendingVal=val;return;}
+  _inpPendingVal=undefined;
+  setDialogOpen('inpOv',false);if(_inpRes){_inpRes(val);_inpRes=null;}
+}
+
 /* ── DATA ── */
 let ch=[],fv=[],rc=[];
 let _filterGenre='Tümü',_searchQ='',_sortMode='default',_shuffle=false;
 
 function dataLoad(){
   const rCh=lsLoad(LS.CH,[]),rFv=lsLoad(LS.FV,[]),rRc=lsLoad(LS.RC,[]);
-  ch=Array.isArray(rCh)?rCh.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&x.id&&typeof x.n==='string'&&x.n.trim()&&typeof x.u==='string'&&isUrl(x.u)).map(x=>({id:x.id,n:String(x.n).slice(0,MAX_N),g:typeof x.g==='string'?x.g.slice(0,MAX_G):'Diğer',u:x.u,e:typeof x.e==='string'?x.e.slice(0,4):'📻',c:typeof x.c==='string'&&/^#[0-9a-f]{6}$/i.test(x.c)?x.c:COLORS[0],img:typeof x.img==='string'?cleanImageUrl(x.img):'',br:typeof x.br==='number'?x.br:0})):[];
+  ch=Array.isArray(rCh)?rCh.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&x.id).map(x=>normalizeStation(x,{colors:COLORS,makeId:mkId})).filter(Boolean):[];
   const ids=new Set(ch.map(x=>x.id));
   fv=Array.isArray(rFv)?[...new Set(rFv.filter(f=>typeof f==='string'&&ids.has(f)))]:[];
   const seen=new Set();
@@ -257,7 +210,7 @@ function dataSave(){
   const ok=lsSave(LS.CH,ch)&lsSave(LS.FV,fv)&lsSave(LS.RC,rc);
   return !!ok;
 }
-function backupData(){return{version:APP_VERSION,exportedAt:new Date().toISOString(),ch,fv,rc};}
+function backupData(){return createBackup({ch,fv,rc});}
 
 function getFiltered(list){
   let out=list;
@@ -270,6 +223,35 @@ function getFiltered(list){
   else if(_sortMode==='za') out=[...out].sort((a,b)=>b.n.localeCompare(a.n,'tr'));
   return out;
 }
+
+/* ═══ DİNLEME İSTATİSTİKLERİ (kanal başına toplam saniye) ═══ */
+const ST={
+  _pending:new Map(),_lastFlush:0,
+  load(){const raw=lsLoad(LS.ST,{});return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};},
+  add(id,sec){
+    if(!id||!(sec>0))return;
+    this._pending.set(id,(this._pending.get(id)||0)+sec);
+    if(Date.now()-this._lastFlush>60000)this.flush();
+  },
+  flush(){
+    if(!this._pending.size)return;
+    const o=this.load();
+    for(const [id,sec] of this._pending)o[id]=Math.round((o[id]||0)+sec);
+    this._pending.clear();this._lastFlush=Date.now();
+    // Silinen kanalların kayıtlarını düşür (depo şişmesin)
+    const ids=new Set(ch.map(x=>x.id));
+    for(const k of Object.keys(o))if(!ids.has(k))delete o[k];
+    lsSave(LS.ST,o);
+  },
+  of(id){return (this.load()[id]||0)+(this._pending.get(id)||0);},
+  total(){const o=this.load();let t=0;for(const k in o)t+=o[k];for(const s of this._pending.values())t+=s;return t;},
+  top(n){
+    const o=this.load();
+    for(const [id,sec] of this._pending)o[id]=(o[id]||0)+sec;
+    return Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,n);
+  },
+  format(sec){return formatListenTime(sec);}
+};
 
 /* ═══ DATA SAVER + DATA USAGE ═══ */
 const DS={enabled:false,warnedThisSession:false};
@@ -305,16 +287,12 @@ const DU={
       const br=(S.cur.br&&S.cur.br>0)?S.cur.br:96; // varsayılan 96 kbps tahmin
       const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
       this.add(bytes);
+      ST.add(S.cur.id,dt);
     },tickMs);
   },
-  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();},
+  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();ST.flush();},
   reset(){this._pendingBytes=0;this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
-  format(bytes){
-    if(bytes<1024)return bytes+' B';
-    if(bytes<1024*1024)return(bytes/1024).toFixed(1)+' KB';
-    if(bytes<1024*1024*1024)return(bytes/1024/1024).toFixed(1)+' MB';
-    return(bytes/1024/1024/1024).toFixed(2)+' GB';
-  },
+  format(bytes){return formatBytes(bytes);},
   render(){
     const el=g('dataUsageTxt');if(!el)return;
     const o=this.load();
@@ -350,38 +328,9 @@ function loadDS(){DS.enabled=!!lsLoad(LS.DS,false);setVisible('dsPill',DS.enable
 function saveDS(){lsSave(LS.DS,DS.enabled);setVisible('dsPill',DS.enabled,'inline-flex');}
 
 /* ═══ CLOUD / ANONYMOUS BACKUP ═══ */
-function loadSyncCfg(){
-  const cfg=lsLoad(LS.SYNC,{endpoint:''});
-  return cfg&&typeof cfg==='object'?{endpoint:typeof cfg.endpoint==='string'?cfg.endpoint:''}:{endpoint:''};
-}
-function saveSyncCfg(cfg){lsSave(LS.SYNC,{endpoint:cfg.endpoint||''});renderSyncStatus();}
-function renderSyncStatus(){
-  const el=g('syncStatusTxt');if(!el)return;
-  const ep=loadSyncCfg().endpoint;
-  if(!ep){el.textContent='Endpoint ayarlı değil';return;}
-  try{el.textContent='Endpoint: '+new URL(ep).host;}catch{el.textContent='Endpoint ayarlı';}
-}
-function validateSyncEndpoint(url){
-  try{
-    const u=new URL(url);
-    return u.protocol==='https:'||(u.protocol==='http:'&&/^(localhost|127\.0\.0\.1|\[::1\])$/.test(u.hostname));
-  }catch{return false;}
-}
-function askSyncEndpoint(){
-  const current=loadSyncCfg().endpoint;
-  const next=prompt('HTTPS sync endpoint URL girin. POST yedekler, GET geri yükler.',current);
-  if(next===null)return null;
-  const clean=next.trim();
-  if(!clean){saveSyncCfg({endpoint:''});toast('Sync endpoint temizlendi');return null;}
-  if(!validateSyncEndpoint(clean)){toast('Endpoint HTTPS olmalı veya localhost olmalı','err');return null;}
-  saveSyncCfg({endpoint:clean});toast('Sync endpoint kaydedildi','ok');return clean;
-}
-function getSyncEndpoint(){const ep=loadSyncCfg().endpoint;return ep||askSyncEndpoint();}
 async function doCloudBackup(){
-  const storage=window.TurkRadyoStorage;
-  if(!storage){toast('Yedek modülü yüklenemedi','err');return;}
   let token;
-  try{token=storage.encodeBackup(backupData());}
+  try{token=encodeBackup(backupData());}
   catch{toast('Yedek çok büyük; JSON dosyası indiriliyor','warn');doExport();return;}
   const link=location.origin+location.pathname+'#backup='+encodeURIComponent(token);
   if(link.length>60000){toast('Yedek link için büyük; JSON dosyası indiriliyor','warn');doExport();return;}
@@ -389,19 +338,17 @@ async function doCloudBackup(){
     try{await navigator.share({title:'Pulse Radio yedeği',text:'Pulse Radio anonim yedek linki',url:link});toast('Yedek linki paylaşıldı','ok');return;}catch{}
   }
   try{
-    const copied=await storage.copyText(link);
+    const copied=await copyText(link);
     if(copied){toast('Yedek linki kopyalandı','ok');return;}
   }catch{}
-  prompt('Yedek linki:',link);
+  await prompt2('Yedek linki','Linki kopyalayıp güvenli bir yerde saklayın.',{value:link,okLbl:'Kapat',selectAll:true});
 }
 async function doCloudRestore(input){
-  const storage=window.TurkRadyoStorage;
-  if(!storage){toast('Yedek modülü yüklenemedi','err');return;}
-  const raw=input||prompt('Anonim yedek linki veya kodu yapıştırın:','');
+  const raw=input||await prompt2('Linkten geri yükle','Anonim yedek linkini veya kodunu yapıştırın.',{placeholder:'#backup=... veya kod',okLbl:'Devam'});
   if(!raw)return;
   if(String(raw).length>MAX_BACKUP_TOKEN){toast('Yedek linki çok büyük','err');return;}
   try{
-    const d=storage.decodeBackup(raw);
+    const d=decodeBackup(raw);
     const ok=await confirm2('Yedeği geri yükle','Linkteki kanallar mevcut listeye eklenecek; aynı URL’ler eşlenecek.','Yükle');
     if(!ok)return;
     const res=importData(d);
@@ -409,28 +356,95 @@ async function doCloudRestore(input){
     if(location.hash.includes('backup='))history.replaceState(null,'',location.pathname+location.search);
   }catch{toast('Yedek linki okunamadı','err');}
 }
-async function syncPush(){
-  const ep=getSyncEndpoint();if(!ep)return;
-  const ok=await confirm2('Buluta yedekle','Kanal, favori ve geçmiş yedeği ayarlı endpoint’e JSON olarak gönderilecek.','Gönder');
-  if(!ok)return;
-  try{
-    const r=await fetchWithTimeout(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(backupData()),cache:'no-store'},15000);
-    if(!r.ok)throw new Error(r.status);
-    toast('Bulut yedeği gönderildi','ok');
-  }catch{toast('Bulut yedeği gönderilemedi','err');}
-}
-async function syncPull(){
-  const ep=getSyncEndpoint();if(!ep)return;
-  const ok=await confirm2('Buluttan geri yükle','Endpoint’ten gelen yedek mevcut listeye eklenecek; aynı URL’ler eşlenecek.','Yükle');
-  if(!ok)return;
-  try{
-    const r=await fetchWithTimeout(ep,{cache:'no-store'},15000);
-    if(!r.ok)throw new Error(r.status);
-    const res=importData(await r.json());
-    toast(res.mapped?`${res.added} yeni, ${res.mapped} mevcut kanal eşlendi`:`${res.added} kanal yüklendi`,'ok');
-  }catch{toast('Bulut yedeği alınamadı','err');}
-}
 function maybeRestoreHashBackup(){if(location.hash.includes('backup='))setTimeout(()=>doCloudRestore(location.href),800);}
+function maybeAddSharedStation(){
+  if(!location.hash.includes('add='))return;
+  setTimeout(async()=>{
+    let d;
+    try{d=decodeStation(location.href);}catch{toast('Kanal linki okunamadı','err');return;}
+    const name=typeof d.n==='string'?d.n.trim():'';
+    const url=typeof d.u==='string'?d.u.trim():'';
+    if(!name||!isUrl(url)){toast('Kanal linki geçersiz','err');return;}
+    const clearHash=()=>{if(location.hash.includes('add='))history.replaceState(null,'',location.pathname+location.search);};
+    if(ch.some(x=>x.u===url)){toast('Bu kanal zaten ekli','warn');clearHash();return;}
+    const ok=await confirm2('Paylaşılan radyoyu ekle',`"${name}" kanalınıza eklenecek.`,'Ekle');
+    if(!ok){clearHash();return;}
+    if(addCh(name,url,typeof d.g==='string'?d.g:'Diğer',typeof d.e==='string'&&d.e?d.e:'📻',typeof d.img==='string'?d.img:'',typeof d.br==='number'?d.br:0))clearHash();
+  },600);
+}
+
+/* ═══ TEMA (Sistem/Koyu/Açık) ═══
+   index.html'deki inline bootstrap ilk boyamada aynı mantıkla attr atar. */
+const THEME={
+  mode:'auto',
+  _mq:null,
+  load(){
+    const raw=lsLoad(LS.TH,'auto');
+    this.mode=(raw==='dark'||raw==='light')?raw:'auto';
+    this._mq=matchMedia('(prefers-color-scheme: light)');
+    this._mq.addEventListener?.('change',()=>{if(this.mode==='auto')this.apply();});
+    this.apply();
+  },
+  resolved(){return this.mode==='auto'?(this._mq?.matches?'light':'dark'):this.mode;},
+  apply(){
+    const t=this.resolved();
+    document.documentElement.dataset.theme=t;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',t==='light'?'#f4f5fb':'#06070f');
+    this.syncUI();
+  },
+  set(mode){
+    this.mode=(mode==='dark'||mode==='light')?mode:'auto';
+    lsSave(LS.TH,this.mode);
+    this.apply();
+  },
+  syncUI(){
+    document.querySelectorAll('#themeSeg button').forEach(b=>{
+      const on=b.dataset.th===this.mode;
+      b.classList.toggle('a',on);
+      b.setAttribute('aria-pressed',String(on));
+    });
+  }
+};
+
+/* ═══ BAŞLANGIÇ PAKETİ (ilk açılış onboarding'i) ═══ */
+let _starterLoading=false;
+function starterDismissed(){return !!lsLoad(LS.OB,false);}
+async function loadStarterPack(btn){
+  if(_starterLoading)return;_starterLoading=true;
+  if(btn){btn.disabled=true;btn.textContent='Ekleniyor...';}
+  try{
+    const r=await fetchWithTimeout('data/starter-stations.json',{},8000);
+    if(!r.ok)throw new Error(r.status);
+    const list=await r.json();
+    if(!Array.isArray(list))throw new Error('format');
+    const prev=ch.slice();
+    let added=0;
+    for(const item of list){
+      const s=normalizeStation({...item,id:mkId()},{colors:COLORS,makeId:mkId});
+      if(!s||ch.some(x=>x.u===s.u))continue;
+      ch.push(s);added++;
+    }
+    if(added&&!dataSave()){ch=prev;toast('Kanallar kaydedilemedi','err');return;}
+    lsSave(LS.OB,true);
+    renderCards();renderSettings();updateSearchVisibility();updateNavBadge();
+    toast(added?`${added} radyo eklendi — iyi dinlemeler!`:'Kanallar zaten ekli','ok');
+    scheduleAutoFetchLogos(1500,10);
+  }catch{
+    toast('Hazır liste yüklenemedi','err');
+    if(btn){btn.disabled=false;btn.textContent='Popüler radyoları ekle';}
+  }finally{_starterLoading=false;}
+}
+function makeStarterBox(){
+  const box=document.createElement('section');box.className='starter-box';
+  box.innerHTML=`<h3>${_ic('radio')}Hazır listeyle başla</h3><p>Türkiye'nin popüler radyolarını tek dokunuşla ekle. Sonradan istediğini silebilir veya düzenleyebilirsin.</p>`;
+  const row=document.createElement('div');row.className='starter-btns';
+  const b1=document.createElement('button');b1.type='button';b1.className='fbtn fk';b1.textContent='Popüler radyoları ekle';
+  b1.addEventListener('click',()=>loadStarterPack(b1));
+  const b2=document.createElement('button');b2.type='button';b2.className='fbtn fc';b2.textContent='Kendim ekleyeceğim';
+  b2.addEventListener('click',()=>{lsSave(LS.OB,true);renderCards();openMod();});
+  row.appendChild(b1);row.appendChild(b2);box.appendChild(row);
+  return box;
+}
 
 /* ═══ NOW PLAYING (Icecast/Shoutcast metadata best-effort) ═══ */
 const NP={
@@ -631,16 +645,16 @@ const IM={
     // aşağıdaki denemeler aud'a dokunmadan sessizce vazgeçer.
     const token=++_resumeToken;_resumePromise=null;
     if(this._actx&&this._actx.state==='suspended'){try{this._actx.resume().catch(()=>{});}catch(e){}}
-    aud.loop=false;aud.volume=0.01;aud.src=S.cur.u;aud.load();
+    aud.loop=false;aud.volume=0.01;
     const attempt=(n)=>{
       if(!S.cur||this._uStop||token!==_resumeToken)return;
       aud.play().then(()=>{if(token!==_resumeToken)return;setPlaying(true);S.retries=0;setStatus('live');renderCards();IOS._startRecovery();if(cb)cb();}).catch(()=>{
         if(token!==_resumeToken)return;
-        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop&&token===_resumeToken){aud.src=S.cur.u;aud.load();aud.volume=0.01;attempt(n+1);}},1000*(n+1));}
+        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop&&token===_resumeToken){aud.volume=0.01;attachStream(S.cur.u,true).then(ok=>{if(ok&&token===_resumeToken)attempt(n+1);});}},1000*(n+1));}
         else{setStatus('retry');toast('Bağlantı yeniden deneniyor...','warn');if(cb)cb();}
       });
     };
-    attempt(0);
+    attachStream(S.cur.u,true).then(ok=>{if(ok)attempt(0);});
   },
   initAudioContext(){
     if(DS.enabled||this._actx)return;
@@ -729,7 +743,7 @@ const IOS={
   },
   _stopRecovery(){if(this._recoveryTimer){clearInterval(this._recoveryTimer);this._recoveryTimer=null;}},
   resume(delay){clearTimeout(this._rt);this._rt=setTimeout(()=>{if(!S.cur||IM._uStop||!S.should||IM._interrupted)return;resumeCurrentStation({source:'ios-recovery'}).finally(()=>IM._hideBanner());},Math.max(0,delay));},
-  reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;try{aud.removeAttribute('src');aud.load();}catch{}resumeCurrentStation({source:'ios-reload'}).finally(()=>{this._rel=false;});}
+  reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;destroyHls();try{aud.removeAttribute('src');aud.load();}catch{}resumeCurrentStation({source:'ios-reload'}).finally(()=>{this._rel=false;});}
 };
 
 /* ── MEDIA SESSION ──
@@ -843,6 +857,72 @@ const _httpWarned=new Set();
 let _resumePromise=null,_resumeToken=0,_lastAutoResumeAt=0;
 const AUTO_RESUME_MIN_GAP_MS=1500;
 let _iosPauseHoldPromise=null,_lastSoftPauseAt=0,_iosHoldSrc='',_iosHoldSwitching=false,_iosHoldReleaseTimer=null,_suppressIOSPauseHold=false;
+/* ── HLS (m3u8) ──
+   Safari HLS'i native çalar; diğer tarayıcılarda hls.js (yerelde vendorlanmış,
+   yalnızca gerektiğinde yüklenir) MSE üzerinden çalar. */
+let _hlsLibPromise=null,_hlsInstance=null,_hlsUrl='';
+function isHlsUrl(u){return /\.m3u8(\?|#|$)/i.test(String(u||''));}
+function nativeHlsSupported(){return !!aud.canPlayType('application/vnd.apple.mpegurl');}
+function needsHlsJs(u){return isHlsUrl(u)&&!nativeHlsSupported();}
+function loadHlsLib(){
+  if(window.Hls)return Promise.resolve(window.Hls);
+  if(_hlsLibPromise)return _hlsLibPromise;
+  _hlsLibPromise=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='js/vendor/hls.light.min.js';
+    s.onload=()=>window.Hls?res(window.Hls):rej(new Error('hls-lib'));
+    s.onerror=()=>{_hlsLibPromise=null;s.remove();rej(new Error('hls-lib'));};
+    document.head.appendChild(s);
+  });
+  return _hlsLibPromise;
+}
+function destroyHls(){
+  if(!_hlsInstance)return;
+  try{_hlsInstance.destroy();}catch{}
+  _hlsInstance=null;_hlsUrl='';
+}
+function _onHlsFatal(){
+  // Native <audio> error backoff'unun HLS karşılığı (aynı gecikme merdiveni).
+  if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+  const n=Math.min(S.retries,6);
+  const delay=Math.min(60000,2000*Math.pow(2,n));
+  S.retries++;
+  setStatus('retry');
+  if(S.retries<=5)toast(`Bağlantı yeniden deneniyor (${S.retries})`,'warn');
+  else if(S.retries===6)toast('Bağlantı düşük, denemeye devam ediliyor...','warn');
+  setTimeout(()=>{
+    if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+    if(!navigator.onLine)return;
+    resumeCurrentStation({source:'audio-error'});
+  },delay);
+}
+/* Yayını <audio>'ya bağlar; m3u8 + MSE gerektiren tarayıcıda hls.js kullanır.
+   false dönerse yayın bu tarayıcıda oynatılamaz (kullanıcı bilgilendirildi). */
+async function attachStream(url,force=false){
+  if(needsHlsJs(url)){
+    let Hls;
+    try{Hls=await loadHlsLib();}catch{toast('HLS bileşeni yüklenemedi; bağlantıyı kontrol edin','err');return false;}
+    if(!Hls.isSupported()){toast('Bu tarayıcı HLS (m3u8) yayınını desteklemiyor','err');return false;}
+    if(_hlsInstance&&_hlsUrl===url&&!force&&!aud.error)return true;
+    destroyHls();
+    try{aud.removeAttribute('src');}catch{}
+    const h=new Hls({enableWorker:false});
+    _hlsInstance=h;_hlsUrl=url;
+    h.on(Hls.Events.ERROR,(_e,data)=>{
+      if(_hlsInstance!==h||!data||!data.fatal)return;
+      if(data.type===Hls.ErrorTypes.MEDIA_ERROR){try{h.recoverMediaError();return;}catch{}}
+      destroyHls();
+      _onHlsFatal();
+    });
+    h.loadSource(url);
+    h.attachMedia(aud);
+    return true;
+  }
+  destroyHls();
+  aud.src=url;
+  aud.load();
+  return true;
+}
 function warnHttpStream(s){
   if(!s||!isHttpUrl(s.u)||_httpWarned.has(s.id))return;
   _httpWarned.add(s.id);
@@ -967,6 +1047,7 @@ async function startIOSHoldAudio(){
   _iosHoldSwitching=true;
   try{
     try{aud.pause();}catch{}
+    destroyHls();
     aud.loop=true;aud.muted=false;aud.src=getIOSHoldSrc();aud.load();
     await aud.play();
     return true;
@@ -1042,6 +1123,7 @@ function stopSession(reason,opts={}){
   IOS._stopRecovery();DU.stopTick();NP.stop();IM.releaseAudioContext();releaseIOSHoldAudio();
   try{aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;pauseAudioWithoutIOSHold();}catch{}
   if(clearCurrent){
+    destroyHls();
     try{aud.removeAttribute('src');aud.load();}catch{}S.cur=null;
     // Tam durdurmada sessiz-hold blob URL'ini serbest bırak (gerekirse tekrar üretilir).
     if(_iosHoldSrc){try{URL.revokeObjectURL(_iosHoldSrc);}catch{}_iosHoldSrc='';}
@@ -1059,14 +1141,14 @@ function _sameAudioSrc(url){
 }
 function _needsStreamReload(){
   if(!S.cur)return false;
+  if(_hlsInstance)return _hlsUrl!==S.cur.u||aud.ended||!!aud.error;
   return isIOSHoldAudioActive()||!aud.src||!aud.currentSrc||!_sameAudioSrc(S.cur.u)||aud.ended||!!aud.error||aud.readyState===0;
 }
-function prepareCurrentStreamForResume(forceReload=false){
+async function prepareCurrentStreamForResume(forceReload=false){
   if(!S.cur)return false;
   aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;
   if(forceReload||_needsStreamReload()){
-    aud.src=S.cur.u;
-    aud.load();
+    return attachStream(S.cur.u,forceReload);
   }
   return true;
 }
@@ -1100,14 +1182,15 @@ async function resumeCurrentStation(opts={}){
     if(token!==_resumeToken||!S.cur)return false;
     try{
       if(S.softPaused)S.softPaused=false;
-      prepareCurrentStreamForResume(source==='media-session');
+      if(!(await prepareCurrentStreamForResume(source==='media-session')))throw new Error('attach-failed');
       await aud.play();
       if(token===_resumeToken){setPlaying(true);S.retries=0;setStatus('live');IOS._startRecovery();NP.start(S.cur);renderCards();}
       return true;
     }catch(firstErr){
       if(token!==_resumeToken||!S.cur)return false;
       try{
-        S.softPaused=false;prepareCurrentStreamForResume(true);
+        S.softPaused=false;
+        if(!(await prepareCurrentStreamForResume(true)))throw new Error('attach-failed');
         await _delay(source==='media-session'?350:600);
         await _resumeAudioContext();
         await aud.play();
@@ -1153,9 +1236,12 @@ function syncSliders(){const v=Math.round(IM._baseVol*100);g('volM').value=v;g('
 /* ── SHARE ── */
 function shareStation(){
   if(!S.cur)return;
-  const text=`${S.cur.n} - ${S.cur.g||'Radyo'} dinliyorum! 📻\n${S.cur.u}`;
-  if(navigator.share){navigator.share({title:S.cur.n,text}).catch(()=>{});}
-  else{navigator.clipboard?.writeText(text).then(()=>toast('Link kopyalandı','ok')).catch(()=>{});}
+  const s=S.cur;
+  let link='';
+  try{link=location.origin+location.pathname+'#add='+encodeURIComponent(encodeStation(s));}catch{}
+  const text=`${s.n} - ${s.g||'Radyo'} dinliyorum! 📻`+(link?'':`\n${s.u}`);
+  if(navigator.share){navigator.share(link?{title:s.n,text,url:link}:{title:s.n,text}).catch(()=>{});}
+  else{navigator.clipboard?.writeText(link||`${text}\n${s.u}`).then(()=>toast(link?'Kanal linki kopyalandı':'Link kopyalandı','ok')).catch(()=>{});}
 }
 
 /* ── INT OPTS ── */
@@ -1342,6 +1428,10 @@ function renderHome(){
   }
   hero.appendChild(now);w.appendChild(hero);
 
+  if(!ch.length&&!starterDismissed()){
+    w.appendChild(makeStarterBox());
+  }
+
   const quick=document.createElement('div');quick.className='quick-grid';
   quick.appendChild(quickButton('heart','Favoriler',`${fv.length} kayıt`,()=>goPage('f')));
   quick.appendChild(quickButton('shuffle','Karıştır',ch.length>1?'Rastgele çal':'Kanal ekle',()=>{if(ch.length<2){openMod();return;}shufflePlay();}));
@@ -1353,16 +1443,20 @@ function renderHome(){
   const recentStations=rc.map(r=>ch.find(x=>x.id===r.id)).filter(Boolean).slice(0,6);
   const suggested=getFiltered(ch).filter(x=>!fv.includes(x.id)).slice(0,6);
 
+  const chMap=new Map(ch.map(x=>[x.id,x]));
+  const topStations=ST.top(6).filter(([,sec])=>sec>=60).map(([id])=>chMap.get(id)).filter(Boolean);
   const sections=[
     ['Hızlı Favoriler',favStations,'Favori'],
+    ['En Çok Dinlenenler',topStations,'⏱'],
     ['Son Dinlenenler',recentStations,'Son'],
     ['Önerilen',suggested,'Keşfet']
   ];
   sections.forEach(([title,list,label])=>{
+    if(title==='En Çok Dinlenenler'&&!list.length)return; // istatistik birikince görünür
     const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`${title} <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
     if(list.length){
       const strip=document.createElement('div');strip.className='home-strip';
-      list.forEach(s=>strip.appendChild(makeHomePill(s,label)));
+      list.forEach(s=>strip.appendChild(makeHomePill(s,title==='En Çok Dinlenenler'?ST.format(ST.of(s.id)):label)));
       w.appendChild(strip);
     }else{
       const note=document.createElement('div');note.className='home-empty-note';note.textContent=title==='Önerilen'?'Henüz önerilecek kanal yok. Radyo ekleyerek başla.':'Bu bölüm dinleme alışkanlığına göre dolacak.';
@@ -1489,6 +1583,7 @@ function renderRecent(){
 function renderSettings(){
   const w=g('chList');g('chCount').textContent=ch.length;w.innerHTML='';
   g('statCh').textContent=ch.length;g('statFav').textContent=fv.length;g('statRec').textContent=rc.length;
+  const stTime=g('statTime');if(stTime){const t=ST.total();stTime.textContent=t<60?'0 dk':ST.format(t);}
   if(!ch.length){const r=document.createElement('div');r.className='set-row is-static';r.innerHTML=`<div class="set-ic ic-muted">${_ic('broadcast')}</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
   const f=document.createDocumentFragment();
   ch.forEach(s=>{
@@ -1499,11 +1594,18 @@ function renderSettings(){
     const lb=document.createElement('div');lb.className='set-lb';
     const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=(s.g||'Radyo')+(s.br?' · '+s.br+'kbps':'');
     lb.appendChild(h4);lb.appendChild(p);
+    const acts=document.createElement('div');acts.className='set-row-acts';
+    const eb=document.createElement('button');eb.className='edit-b';eb.dataset.action='edit';eb.dataset.id=s.id;eb.innerHTML=_ic('edit');eb.setAttribute('aria-label',`${s.n} kanalını düzenle`);
     const btn=document.createElement('button');btn.className='del-b';btn.dataset.action='del';btn.dataset.id=s.id;btn.innerHTML=_ic('trash');btn.setAttribute('aria-label',`${s.n} kanalını sil`);
-    r.appendChild(ic);r.appendChild(lb);r.appendChild(btn);f.appendChild(r);
+    acts.appendChild(eb);acts.appendChild(btn);
+    r.appendChild(ic);r.appendChild(lb);r.appendChild(acts);f.appendChild(r);
   });
   w.appendChild(f);
-  if(!_delegated.has(w)){_delegated.add(w);w.addEventListener('click',e=>{const b=e.target.closest('[data-action="del"]');if(b){e.stopPropagation();delCh(b.dataset.id);}});}
+  if(!_delegated.has(w)){_delegated.add(w);w.addEventListener('click',e=>{
+    const eb=e.target.closest('[data-action="edit"]');
+    if(eb){e.stopPropagation();openEditCh(eb.dataset.id);return;}
+    const b=e.target.closest('[data-action="del"]');if(b){e.stopPropagation();delCh(b.dataset.id);}
+  });}
 }
 
 /* ── CHIPS (genre filter) ── */
@@ -1657,8 +1759,35 @@ function updateSearchVisibility(){
 }
 
 /* ── MODAL ── */
+let _editId=null;
 function openMod(){setDialogOpen('addMod',true);}
-function closeMod(){if(_deferDialogClose('addMod'))return;setDialogOpen('addMod',false);['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');}
+function closeMod(){
+  if(_deferDialogClose('addMod'))return;
+  setDialogOpen('addMod',false);
+  ['rTR','rGL','rTG'].forEach(id=>g(id).innerHTML='');
+  g('inN').value='';g('inU').value='';g('inE').value='📻';g('inImg').value='';
+  g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');
+  if(_editId){
+    _editId=null;
+    g('addModalTitle').innerHTML=`${_ic('radio')}Radyo Ekle`;
+    g('btnMAdd').textContent='Ekle';
+    document.querySelector('.add-tabs').classList.remove('is-hidden');
+    _activateAddTab('tr');
+  }
+}
+function openEditCh(id){
+  const s=ch.find(x=>x.id===id);if(!s)return;
+  _editId=id;
+  g('addModalTitle').innerHTML=`${_ic('edit')}Radyoyu Düzenle`;
+  g('btnMAdd').textContent='Kaydet';
+  document.querySelector('.add-tabs').classList.add('is-hidden');
+  _activateAddTab('manual');
+  g('inN').value=s.n;g('inU').value=s.u;
+  const inC=g('inC');inC.value=s.g||'Diğer';if(inC.value!==s.g)inC.value='Diğer';
+  g('inE').value=s.e||'📻';g('inImg').value=s.img||'';
+  g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');
+  setDialogOpen('addMod',true);
+}
 function setupAddSheetKeyboard(){
   const modal=g('addMod');
   const sheet=modal?.querySelector('.modal-c');
@@ -1674,6 +1803,7 @@ function setupAddSheetKeyboard(){
     sync();
   }
 }
+let _activateAddTab=()=>{};
 function setupAddTabs(){
   const tabs=[...document.querySelectorAll('[data-add-tab]')];
   const panels=[...document.querySelectorAll('[data-add-panel]')];
@@ -1681,53 +1811,85 @@ function setupAddTabs(){
     tabs.forEach(tab=>{const on=tab.dataset.addTab===name;tab.classList.toggle('a',on);tab.setAttribute('aria-selected',String(on));});
     panels.forEach(panel=>panel.classList.toggle('a',panel.dataset.addPanel===name));
   };
+  _activateAddTab=activate;
   tabs.forEach(tab=>tab.addEventListener('click',()=>activate(tab.dataset.addTab)));
 }
 function doManualAdd(){
   const name=g('inN').value.trim(),url=g('inU').value.trim();let ok=true;
   if(!name){g('fgN').classList.add('bad');ok=false;}else g('fgN').classList.remove('bad');
   if(!isUrl(url)){g('fgU').classList.add('bad');ok=false;}else g('fgU').classList.remove('bad');
-  if(!ok)return;if(addCh(name,url,g('inC').value,g('inE').value||'📻',g('inImg').value.trim()))closeMod();
+  if(!ok)return;
+  if(_editId){if(applyEditCh(_editId,name,url))closeMod();return;}
+  if(addCh(name,url,g('inC').value,g('inE').value||'📻',g('inImg').value.trim()))closeMod();
+}
+function applyEditCh(id,name,url){
+  const s=ch.find(x=>x.id===id);
+  if(!s){toast('Kanal bulunamadı','err');return true;}
+  if(ch.some(x=>x.id!==id&&x.u===url)){toast('Bu URL başka bir kanalda kayıtlı','warn');return false;}
+  const prev={...s};
+  const urlChanged=s.u!==url;
+  s.n=name.slice(0,MAX_N);s.g=(g('inC').value||'Diğer').slice(0,MAX_G);s.u=url;
+  s.e=(g('inE').value||'📻').slice(0,4);s.img=cleanImageUrl(g('inImg').value.trim());
+  if(!dataSave()){Object.assign(s,prev);toast('Değişiklik kaydedilemedi','err');return false;}
+  renderCards();renderSettings();
+  if(S.cur?.id===s.id){
+    g('mName').textContent=s.n;g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
+    updatePlayerArt();
+    // URL değiştiyse ve yayın niyeti sürüyorsa yeni adresle yeniden başlat
+    if(urlChanged&&(S.playing||S.should))play(s.id);
+  }
+  toast('Kanal güncellendi','ok');
+  if(!s.img)scheduleAutoFetchLogos(500,3);
+  return true;
 }
 
 /* ── SEARCH API ── */
 const _sr=new Map();
 const _searchSeq={};
 function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.delete(first);}_sr.set(k,v);}
-async function apiCall(ep){
-  const ctrls=typeof AbortController!=='undefined'?APIS.map(()=>new AbortController()):[];
-  const reqs=APIS.map((h,i)=>fetchWithTimeout(`https://${h}.api.radio-browser.info/json/${ep}`,{cache:'no-store',signal:ctrls[i]?.signal},6000).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}));
-  try{return await firstFulfilled(reqs);}catch{return null;}
-  finally{ctrls.forEach(c=>{try{c.abort();}catch{}});}
-}
-async function doSearch(q,extra,targetId,key){
+const SEARCH_PAGE=30;
+const _srchState={}; // targetId -> {key,base,fallbackTag,seen,list,offset,done}
+async function runSearch(targetId,key,base,opts={}){
   const el=g(targetId);
+  const append=!!opts.append;
+  const st=append&&_srchState[targetId]?_srchState[targetId]:
+    {key,base,fallbackTag:opts.fallbackTag||'',seen:new Set(),list:[],offset:0,done:false};
+  _srchState[targetId]=st;
   const seq=(_searchSeq[targetId]||0)+1;_searchSeq[targetId]=seq;
   try{
-    el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
-    const seen=new Set(),all=[];
-    const d1=await apiCall(`stations/search?name=${encodeURIComponent(q)}${extra}&limit=35&hidebroken=true&order=clickcount&reverse=true`);
-    if(d1)d1.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});
-    if(all.length<8){const d2=await apiCall(`stations/search?tag=${encodeURIComponent(q)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);if(d2)d2.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});}
+    if(!append)el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
+    const d=await apiCall(`stations/search?${st.base}&limit=${SEARCH_PAGE}&offset=${st.offset}&hidebroken=true&order=clickcount&reverse=true`);
     if(_searchSeq[targetId]!==seq)return;
-    if(!all.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return;}
-    _srSet(key,all);renderSR(all,el,key);
-  }catch{if(_searchSeq[targetId]===seq)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';}
+    const got=Array.isArray(d)?d:[];
+    got.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
+    st.offset+=SEARCH_PAGE;
+    if(got.length<SEARCH_PAGE)st.done=true;
+    // İlk sayfa zayıfsa tür araması ile tamamla (yalnız ad aramalarında)
+    if(!append&&st.fallbackTag&&st.list.length<8){
+      const extra=st.base.includes('countrycode=')?'&'+st.base.split('&').filter(p=>p.startsWith('countrycode=')).join(''):'';
+      const d2=await apiCall(`stations/search?tag=${encodeURIComponent(st.fallbackTag)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);
+      if(_searchSeq[targetId]!==seq)return;
+      if(d2)d2.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
+    }
+    if(!st.list.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return false;}
+    _srSet(key,st.list);
+    renderSR(st.list,el,key);
+    return true;
+  }catch{
+    if(_searchSeq[targetId]===seq&&!append)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';
+    return false;
+  }
 }
 async function doTagSearch(q){
-  const targetId='rTG',el=g(targetId);
-  const seq=(_searchSeq[targetId]||0)+1;_searchSeq[targetId]=seq;
-  try{
-    el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
-    let d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&countrycode=TR&limit=30&hidebroken=true&order=clickcount&reverse=true`);
-    if(!d?.length)d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&limit=30&hidebroken=true&order=clickcount&reverse=true`);
-    if(_searchSeq[targetId]!==seq)return;
-    if(!d?.length){el.innerHTML='<div class="sr-msg">Bulunamadı.</div>';return;}
-    _srSet('tag',d);renderSR(d,el,'tag');
-  }catch{if(_searchSeq[targetId]===seq)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';}
+  // Önce Türkiye içinde ara; sonuç yoksa tüm dünyada dene.
+  const found=await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}&countrycode=TR`);
+  if(found===false&&_srchState.rTG&&!_srchState.rTG.list.length){
+    await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}`);
+  }
 }
 function renderSR(data,container,key){
   const wrap=document.createElement('div');wrap.className='srch-res';
+  const st=_srchState[container.id];
   data.forEach((x,i)=>{
     const url=x.url_resolved||x.url,added=ch.some(a=>a.u===url);
     const item=document.createElement('div');item.className='sr-item';
@@ -1741,13 +1903,17 @@ function renderSR(data,container,key){
     wrap.appendChild(item);
   });
   wrap.addEventListener('click',e=>{const btn=e.target.closest('.sr-add');if(!btn)return;pickSR(btn.dataset.key,parseInt(btn.dataset.i,10),container,key);});
+  if(st&&!st.done){
+    const more=document.createElement('button');more.type='button';more.className='sr-more';more.textContent='Daha fazla yükle';
+    more.addEventListener('click',()=>{more.disabled=true;more.textContent='Yükleniyor...';runSearch(container.id,st.key,st.base,{append:true});});
+    wrap.appendChild(more);
+  }
   container.innerHTML='';container.appendChild(wrap);
 }
 function pickSR(cacheKey,i,container,origKey){
   const data=_sr.get(cacheKey);if(!data?.[i])return;
   const x=data[i],url=x.url_resolved||x.url;if(!isUrl(url)){toast('Geçersiz URL','err');return;}
-  const t=(x.tags||'').toLowerCase();let genre='Diğer';
-  if(t.includes('pop'))genre='Pop';else if(t.includes('rock'))genre='Rock';else if(/jazz/.test(t))genre='Caz';else if(/news|haber|talk/.test(t))genre='Haber';else if(/türk|turkish|folk/.test(t))genre='THM';else if(/islam|quran|dini/.test(t))genre='Dini';else if(/electro|dance|edm|house|techno/.test(t))genre='Elektronik';else if(/classic/.test(t))genre='TSM';else if(/sport/.test(t))genre='Spor';else if(/child|kid|çocuk/.test(t))genre='Çocuk';
+  const genre=genreFromTags(x.tags);
   const favicon=cleanImageUrl(x.favicon);
   if(addCh(x.name,url,genre,'📻',favicon,x.bitrate||0)){const fresh=_sr.get(origKey);if(fresh)renderSR(fresh,container,origKey);}
 }
@@ -1820,27 +1986,13 @@ function doExport(){
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='pulse_radio_yedek.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Yedek indirildi','ok');
 }
 function importData(d){
-  if(!d||typeof d!=='object'||!Array.isArray(d.ch))throw new Error('format');
-  if(d.ch.length>MAX_IMPORT_STATIONS)throw new Error('too-many-stations');
-  const prev={ch:ch.slice(),fv:fv.slice(),rc:rc.slice()};
-  let added=0,mapped=0;
-  const idMap=new Map();
-  try{
-    d.ch.forEach(x=>{
-      if(!x||typeof x.id!=='string'||!x.id)return;if(typeof x.n!=='string'||!x.n.trim())return;if(typeof x.u!=='string'||!isUrl(x.u))return;
-      const existing=ch.find(c=>c.u===x.u);
-      if(existing){idMap.set(x.id,existing.id);mapped++;return;}
-      const newId=mkId();
-      ch.push({id:newId,n:String(x.n).slice(0,MAX_N),g:typeof x.g==='string'?x.g.slice(0,MAX_G):'Diğer',u:x.u,e:typeof x.e==='string'?x.e.slice(0,4):'\uD83D\uDCFB',c:typeof x.c==='string'&&/^#[0-9a-f]{6}$/i.test(x.c)?x.c:COLORS[Math.floor(Math.random()*COLORS.length)],img:typeof x.img==='string'?cleanImageUrl(x.img):'',br:typeof x.br==='number'?x.br:0});
-      idMap.set(x.id,newId);added++;
-    });
-    const ids=new Set(ch.map(x=>x.id));
-    if(Array.isArray(d.fv))d.fv.forEach(f=>{if(typeof f!=='string')return;const id=idMap.get(f)||f;if(ids.has(id)&&!fv.includes(id))fv.push(id);});
-    if(Array.isArray(d.rc)){d.rc.forEach(r=>{if(!r||typeof r.id!=='string'||typeof r.t!=='number')return;const id=idMap.get(r.id)||r.id;if(ids.has(id)&&!rc.find(h=>h.id===id))rc.push({id,t:r.t});});rc.sort((a,b)=>b.t-a.t);rc=rc.slice(0,MAX_H);}
-    if(!dataSave())throw new Error('save-failed');
-  }catch(err){ch=prev.ch;fv=prev.fv;rc=prev.rc;throw err;}
-  renderCards();renderSettings();updateSearchVisibility();updateNavBadge();renderSyncStatus();
-  return{added,mapped};
+  // Birleştirme mantığı tek kaynaktan: src/lib/core.js:mergeImportedBackup.
+  const res=mergeImportedBackup({current:{ch,fv,rc},incoming:d,makeId:mkId,colors:COLORS});
+  const prev={ch,fv,rc};
+  ch=res.ch;fv=res.fv;rc=res.rc;
+  if(!dataSave()){ch=prev.ch;fv=prev.fv;rc=prev.rc;throw new Error('save-failed');}
+  renderCards();renderSettings();updateSearchVisibility();updateNavBadge();
+  return{added:res.added,mapped:res.mapped};
 }
 function doImport(e){
   const f=e.target.files[0];if(!f)return;
@@ -1872,6 +2024,7 @@ function handleKeyboard(e){
   if(trapDialogFocus(e))return;
   if(e.code==='Escape'){
     if(_activeDialog?.id==='cfmOv'){e.preventDefault();_cfmClose(false);return;}
+    if(_activeDialog?.id==='inpOv'){e.preventDefault();_inpClose(null);return;}
     if(_activeDialog?.id==='addMod'){e.preventDefault();closeMod();return;}
     if(_activeDialog?.id==='iosInstallOv'){e.preventDefault();closeIOSInstall();return;}
     closeFP();if(_carOpen)closeCar();return;
@@ -1895,7 +2048,7 @@ function handleKeyboard(e){
 
 /* ── PWA INSTALL ── */
 let _deferredPrompt=null;
-function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;}
+function _isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
 /* iOS Chrome (CriOS), Firefox (FxiOS), Edge (EdgiOS), Opera (OPiOS) UA'ları da
    "Safari/" içerir; onları dışlamazsak Chrome kullanıcısına "Safari'de Paylaş"
    talimatı gösterilir. */
@@ -1977,7 +2130,7 @@ function setupOfflineDetection(){
   update();
 }
 function setupAccessibleRows(){
-  const ids=['btnOpenCar','btnInstallApp','btnExport','btnImport','btnCloudBackup','btnCloudRestore','btnSyncEndpoint','btnSyncPush','btnSyncPull','btnFetchLogos','btnReset'];
+  const ids=['btnOpenCar','btnInstallApp','btnExport','btnImport','btnCloudBackup','btnCloudRestore','btnFetchLogos','btnReset'];
   ids.forEach(id=>{
     const el=g(id);if(!el)return;
     el.tabIndex=0;el.setAttribute('role','button');
@@ -1990,11 +2143,15 @@ function setupAccessibleRows(){
 /* ═══ INIT ═══ */
 function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
-  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
+  window.addEventListener('pagehide',()=>{DU.flush();ST.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
 
+  try{localStorage.removeItem('trsync1');}catch{} // kaldırılan Özel Sync Endpoint özelliğinin eski kaydı
+  THEME.load();
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
-  renderSyncStatus();maybeRestoreHashBackup();
+  maybeRestoreHashBackup();maybeAddSharedStation();
+  // Uygulama açıkken gelen paylaşım linkleri (aynı belge içi hash değişimi)
+  window.addEventListener('hashchange',()=>{maybeAddSharedStation();});
   // Auto-fetch missing logos after a short delay
   scheduleAutoFetchLogos(2500,5);
 
@@ -2077,6 +2234,16 @@ function init(){
   g('cfmNo').addEventListener('click',()=>_cfmClose(false));
   g('cfmOv').addEventListener('click',e=>{if(e.target===g('cfmOv'))_cfmClose(false);});
 
+  /* input modal */
+  g('inpYes').addEventListener('click',()=>_inpClose(g('inpField').value.trim()||null));
+  g('inpNo').addEventListener('click',()=>_inpClose(null));
+  g('inpOv').addEventListener('click',e=>{if(e.target===g('inpOv'))_inpClose(null);});
+  g('inpField').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();_inpClose(g('inpField').value.trim()||null);}});
+
+  /* manuel ekleme kategori seçenekleri — GENRES tek kaynak ('Tümü' filtre etiketi hariç) */
+  const inC=g('inC');
+  GENRES.filter(x=>x!=='Tümü').forEach(genre=>{const o=document.createElement('option');o.textContent=genre;inC.appendChild(o);});
+
   /* mini player */
   g('mplay').addEventListener('click',openFP);
   // Yalnız mini oynatıcının kendisi odaktayken (içindeki butonlar değil) çalış;
@@ -2136,11 +2303,18 @@ function init(){
     toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');
   });
   g('btnResetData').addEventListener('click',()=>DU.reset());
+  g('themeSeg')?.addEventListener('click',e=>{const b=e.target.closest('button[data-th]');if(!b)return;THEME.set(b.dataset.th);toast(b.dataset.th==='auto'?'Tema: sistem tercihi':b.dataset.th==='dark'?'Koyu tema':'Açık tema');});
   /* search API */
-  g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'&countrycode=TR','rTR','tr');});
-  g('bGL').addEventListener('click',()=>{const q=g('qGL').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'','rGL','gl');});
+  g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}runSearch('rTR','tr',`name=${encodeURIComponent(q)}&countrycode=TR`,{fallbackTag:q});});
+  g('bGL').addEventListener('click',()=>{const q=g('qGL').value.trim();if(!q){toast('Arama yazın','warn');return;}const cc=g('glCountry').value;runSearch('rGL','gl',`name=${encodeURIComponent(q)}`+(cc?`&countrycode=${cc}`:''),{fallbackTag:q});});
   g('bTG').addEventListener('click',()=>{const q=g('qTG').value.trim();if(!q){toast('Tür yazın','warn');return;}doTagSearch(q);});
-  [['qTR','bTR'],['qGL','bGL'],['qTG','bTG']].forEach(([inp,btn])=>{g(inp).addEventListener('keydown',e=>{if(e.key==='Enter')g(btn).click();});});
+  [['qTR','bTR'],['qGL','bGL'],['qTG','bTG']].forEach(([inp,btn])=>{
+    g(inp).addEventListener('keydown',e=>{if(e.key==='Enter')g(btn).click();});
+    // Yazarken arama: 450ms durakla ve en az 2 karakterle otomatik ara
+    const deb=debounce(()=>{if(g(inp).value.trim().length>=2)g(btn).click();},450);
+    g(inp).addEventListener('input',deb);
+  });
+  g('glCountry').addEventListener('change',()=>{if(g('qGL').value.trim().length>=2)g('bGL').click();});
   g('inN').addEventListener('input',()=>g('fgN').classList.remove('bad'));
   g('inU').addEventListener('input',()=>g('fgU').classList.remove('bad'));
 
@@ -2160,9 +2334,6 @@ function init(){
   g('fileIn').addEventListener('change',doImport);
   g('btnCloudBackup').addEventListener('click',doCloudBackup);
   g('btnCloudRestore').addEventListener('click',()=>doCloudRestore());
-  g('btnSyncEndpoint').addEventListener('click',askSyncEndpoint);
-  g('btnSyncPush').addEventListener('click',syncPush);
-  g('btnSyncPull').addEventListener('click',syncPull);
   g('btnReset').addEventListener('click',doReset);
   g('btnFetchLogos').addEventListener('click',()=>{
     const missing=ch.filter(s=>!s.img).length;
@@ -2180,11 +2351,11 @@ function init(){
   syncIntUI();
   updateSearchVisibility();
 
-  const route=initialRoute();
+  const route=initialRoute(location.search);
   goPage(route.page);
   if(route.openAdd)setTimeout(openMod,0);
 }
 
-window.TurkRadyo={version:APP_VERSION,exportData:backupData,importData,syncPush,syncPull};
+window.TurkRadyo={version:APP_VERSION,exportData:backupData,importData};
 init();
 })();

@@ -1,6 +1,7 @@
 {
   "name": "Pulse Radio - Canlı Radyo",
   "short_name": "Pulse Radio",
+  "id": "./",
   "description": "Modern, iPhone-first canlı radyo dinleme uygulaması. Favori radyo kanallarını ve yayınlarını hızlıca dinleyin.",
   "start_url": "./",
   "scope": "./",
@@ -8,7 +9,10 @@
   "orientation": "portrait",
   "background_color": "#06070f",
   "theme_color": "#06070f",
-  "categories": ["music", "entertainment"],
+  "categories": [
+    "music",
+    "entertainment"
+  ],
   "lang": "tr",
   "dir": "ltr",
   "prefer_related_applications": false,
@@ -17,19 +21,37 @@
       "name": "Favoriler",
       "short_name": "Favoriler",
       "url": "./?page=fav",
-      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Radyo Ekle",
       "short_name": "Ekle",
       "url": "./?page=add",
-      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Son Dinlenen",
       "short_name": "Son",
       "url": "./?page=recent",
-      "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "icons": [
@@ -62,6 +84,22 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/home.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ana sayfa: hızlı favoriler ve tek dokunuş oynatma"
+    },
+    {
+      "src": "screenshots/channels.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Kanallarım: tür filtreleri ve sıralama"
     }
   ]
 }
