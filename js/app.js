@@ -1808,34 +1808,49 @@ async function apiCall(ep){
   try{return await Promise.any(reqs);}catch{return null;}
   finally{ctrls.forEach(c=>{try{c.abort();}catch{}});}
 }
-async function doSearch(q,extra,targetId,key){
+const SEARCH_PAGE=30;
+const _srchState={}; // targetId -> {key,base,fallbackTag,seen,list,offset,done}
+async function runSearch(targetId,key,base,opts={}){
   const el=g(targetId);
+  const append=!!opts.append;
+  const st=append&&_srchState[targetId]?_srchState[targetId]:
+    {key,base,fallbackTag:opts.fallbackTag||'',seen:new Set(),list:[],offset:0,done:false};
+  _srchState[targetId]=st;
   const seq=(_searchSeq[targetId]||0)+1;_searchSeq[targetId]=seq;
   try{
-    el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
-    const seen=new Set(),all=[];
-    const d1=await apiCall(`stations/search?name=${encodeURIComponent(q)}${extra}&limit=35&hidebroken=true&order=clickcount&reverse=true`);
-    if(d1)d1.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});
-    if(all.length<8){const d2=await apiCall(`stations/search?tag=${encodeURIComponent(q)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);if(d2)d2.forEach(x=>{if(!seen.has(x.stationuuid)){seen.add(x.stationuuid);all.push(x);}});}
+    if(!append)el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
+    const d=await apiCall(`stations/search?${st.base}&limit=${SEARCH_PAGE}&offset=${st.offset}&hidebroken=true&order=clickcount&reverse=true`);
     if(_searchSeq[targetId]!==seq)return;
-    if(!all.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return;}
-    _srSet(key,all);renderSR(all,el,key);
-  }catch{if(_searchSeq[targetId]===seq)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';}
+    const got=Array.isArray(d)?d:[];
+    got.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
+    st.offset+=SEARCH_PAGE;
+    if(got.length<SEARCH_PAGE)st.done=true;
+    // İlk sayfa zayıfsa tür araması ile tamamla (yalnız ad aramalarında)
+    if(!append&&st.fallbackTag&&st.list.length<8){
+      const extra=st.base.includes('countrycode=')?'&'+st.base.split('&').filter(p=>p.startsWith('countrycode=')).join(''):'';
+      const d2=await apiCall(`stations/search?tag=${encodeURIComponent(st.fallbackTag)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);
+      if(_searchSeq[targetId]!==seq)return;
+      if(d2)d2.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
+    }
+    if(!st.list.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return false;}
+    _srSet(key,st.list);
+    renderSR(st.list,el,key);
+    return true;
+  }catch{
+    if(_searchSeq[targetId]===seq&&!append)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';
+    return false;
+  }
 }
 async function doTagSearch(q){
-  const targetId='rTG',el=g(targetId);
-  const seq=(_searchSeq[targetId]||0)+1;_searchSeq[targetId]=seq;
-  try{
-    el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
-    let d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&countrycode=TR&limit=30&hidebroken=true&order=clickcount&reverse=true`);
-    if(!d?.length)d=await apiCall(`stations/search?tag=${encodeURIComponent(q)}&limit=30&hidebroken=true&order=clickcount&reverse=true`);
-    if(_searchSeq[targetId]!==seq)return;
-    if(!d?.length){el.innerHTML='<div class="sr-msg">Bulunamadı.</div>';return;}
-    _srSet('tag',d);renderSR(d,el,'tag');
-  }catch{if(_searchSeq[targetId]===seq)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';}
+  // Önce Türkiye içinde ara; sonuç yoksa tüm dünyada dene.
+  const found=await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}&countrycode=TR`);
+  if(found===false&&_srchState.rTG&&!_srchState.rTG.list.length){
+    await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}`);
+  }
 }
 function renderSR(data,container,key){
   const wrap=document.createElement('div');wrap.className='srch-res';
+  const st=_srchState[container.id];
   data.forEach((x,i)=>{
     const url=x.url_resolved||x.url,added=ch.some(a=>a.u===url);
     const item=document.createElement('div');item.className='sr-item';
@@ -1849,6 +1864,11 @@ function renderSR(data,container,key){
     wrap.appendChild(item);
   });
   wrap.addEventListener('click',e=>{const btn=e.target.closest('.sr-add');if(!btn)return;pickSR(btn.dataset.key,parseInt(btn.dataset.i,10),container,key);});
+  if(st&&!st.done){
+    const more=document.createElement('button');more.type='button';more.className='sr-more';more.textContent='Daha fazla yükle';
+    more.addEventListener('click',()=>{more.disabled=true;more.textContent='Yükleniyor...';runSearch(container.id,st.key,st.base,{append:true});});
+    wrap.appendChild(more);
+  }
   container.innerHTML='';container.appendChild(wrap);
 }
 function pickSR(cacheKey,i,container,origKey){
@@ -2243,10 +2263,16 @@ function init(){
   });
   g('btnResetData').addEventListener('click',()=>DU.reset());
   /* search API */
-  g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'&countrycode=TR','rTR','tr');});
-  g('bGL').addEventListener('click',()=>{const q=g('qGL').value.trim();if(!q){toast('Arama yazın','warn');return;}doSearch(q,'','rGL','gl');});
+  g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}runSearch('rTR','tr',`name=${encodeURIComponent(q)}&countrycode=TR`,{fallbackTag:q});});
+  g('bGL').addEventListener('click',()=>{const q=g('qGL').value.trim();if(!q){toast('Arama yazın','warn');return;}const cc=g('glCountry').value;runSearch('rGL','gl',`name=${encodeURIComponent(q)}`+(cc?`&countrycode=${cc}`:''),{fallbackTag:q});});
   g('bTG').addEventListener('click',()=>{const q=g('qTG').value.trim();if(!q){toast('Tür yazın','warn');return;}doTagSearch(q);});
-  [['qTR','bTR'],['qGL','bGL'],['qTG','bTG']].forEach(([inp,btn])=>{g(inp).addEventListener('keydown',e=>{if(e.key==='Enter')g(btn).click();});});
+  [['qTR','bTR'],['qGL','bGL'],['qTG','bTG']].forEach(([inp,btn])=>{
+    g(inp).addEventListener('keydown',e=>{if(e.key==='Enter')g(btn).click();});
+    // Yazarken arama: 450ms durakla ve en az 2 karakterle otomatik ara
+    const deb=debounce(()=>{if(g(inp).value.trim().length>=2)g(btn).click();},450);
+    g(inp).addEventListener('input',deb);
+  });
+  g('glCountry').addEventListener('change',()=>{if(g('qGL').value.trim().length>=2)g('bGL').click();});
   g('inN').addEventListener('input',()=>g('fgN').classList.remove('bad'));
   g('inU').addEventListener('input',()=>g('fgU').classList.remove('bad'));
 
