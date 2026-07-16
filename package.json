@@ -7,9 +7,11 @@
     "dev": "node scripts/static-server.mjs",
     "lint": "node scripts/lint.mjs",
     "test": "node --test tests/unit.test.mjs",
-    "test:e2e": "node tests/e2e.smoke.mjs"
+    "test:e2e": "node tests/e2e.smoke.mjs",
+    "vendor:hls": "node scripts/vendor-hls.mjs"
   },
   "devDependencies": {
+    "hls.js": "^1.6.16",
     "playwright": "^1.56.1"
   }
 }

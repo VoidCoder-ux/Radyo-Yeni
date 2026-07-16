@@ -8,6 +8,7 @@ const required = [
   'css/styles.css',
   'js/app.js',
   'js/storage.js',
+  'js/vendor/hls.light.min.js',
   'src/lib/core.js',
   'icons/icon.svg',
   'icons/apple-touch-icon-180.png',

@@ -608,16 +608,16 @@ const IM={
     // aşağıdaki denemeler aud'a dokunmadan sessizce vazgeçer.
     const token=++_resumeToken;_resumePromise=null;
     if(this._actx&&this._actx.state==='suspended'){try{this._actx.resume().catch(()=>{});}catch(e){}}
-    aud.loop=false;aud.volume=0.01;aud.src=S.cur.u;aud.load();
+    aud.loop=false;aud.volume=0.01;
     const attempt=(n)=>{
       if(!S.cur||this._uStop||token!==_resumeToken)return;
       aud.play().then(()=>{if(token!==_resumeToken)return;setPlaying(true);S.retries=0;setStatus('live');renderCards();IOS._startRecovery();if(cb)cb();}).catch(()=>{
         if(token!==_resumeToken)return;
-        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop&&token===_resumeToken){aud.src=S.cur.u;aud.load();aud.volume=0.01;attempt(n+1);}},1000*(n+1));}
+        if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop&&token===_resumeToken){aud.volume=0.01;attachStream(S.cur.u,true).then(ok=>{if(ok&&token===_resumeToken)attempt(n+1);});}},1000*(n+1));}
         else{setStatus('retry');toast('Bağlantı yeniden deneniyor...','warn');if(cb)cb();}
       });
     };
-    attempt(0);
+    attachStream(S.cur.u,true).then(ok=>{if(ok)attempt(0);});
   },
   initAudioContext(){
     if(DS.enabled||this._actx)return;
@@ -706,7 +706,7 @@ const IOS={
   },
   _stopRecovery(){if(this._recoveryTimer){clearInterval(this._recoveryTimer);this._recoveryTimer=null;}},
   resume(delay){clearTimeout(this._rt);this._rt=setTimeout(()=>{if(!S.cur||IM._uStop||!S.should||IM._interrupted)return;resumeCurrentStation({source:'ios-recovery'}).finally(()=>IM._hideBanner());},Math.max(0,delay));},
-  reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;try{aud.removeAttribute('src');aud.load();}catch{}resumeCurrentStation({source:'ios-reload'}).finally(()=>{this._rel=false;});}
+  reload(){if(!S.cur||this._rel||IM._uStop)return;this._rel=true;destroyHls();try{aud.removeAttribute('src');aud.load();}catch{}resumeCurrentStation({source:'ios-reload'}).finally(()=>{this._rel=false;});}
 };
 
 /* ── MEDIA SESSION ──
@@ -820,6 +820,72 @@ const _httpWarned=new Set();
 let _resumePromise=null,_resumeToken=0,_lastAutoResumeAt=0;
 const AUTO_RESUME_MIN_GAP_MS=1500;
 let _iosPauseHoldPromise=null,_lastSoftPauseAt=0,_iosHoldSrc='',_iosHoldSwitching=false,_iosHoldReleaseTimer=null,_suppressIOSPauseHold=false;
+/* ── HLS (m3u8) ──
+   Safari HLS'i native çalar; diğer tarayıcılarda hls.js (yerelde vendorlanmış,
+   yalnızca gerektiğinde yüklenir) MSE üzerinden çalar. */
+let _hlsLibPromise=null,_hlsInstance=null,_hlsUrl='';
+function isHlsUrl(u){return /\.m3u8(\?|#|$)/i.test(String(u||''));}
+function nativeHlsSupported(){return !!aud.canPlayType('application/vnd.apple.mpegurl');}
+function needsHlsJs(u){return isHlsUrl(u)&&!nativeHlsSupported();}
+function loadHlsLib(){
+  if(window.Hls)return Promise.resolve(window.Hls);
+  if(_hlsLibPromise)return _hlsLibPromise;
+  _hlsLibPromise=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='js/vendor/hls.light.min.js';
+    s.onload=()=>window.Hls?res(window.Hls):rej(new Error('hls-lib'));
+    s.onerror=()=>{_hlsLibPromise=null;s.remove();rej(new Error('hls-lib'));};
+    document.head.appendChild(s);
+  });
+  return _hlsLibPromise;
+}
+function destroyHls(){
+  if(!_hlsInstance)return;
+  try{_hlsInstance.destroy();}catch{}
+  _hlsInstance=null;_hlsUrl='';
+}
+function _onHlsFatal(){
+  // Native <audio> error backoff'unun HLS karşılığı (aynı gecikme merdiveni).
+  if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+  const n=Math.min(S.retries,6);
+  const delay=Math.min(60000,2000*Math.pow(2,n));
+  S.retries++;
+  setStatus('retry');
+  if(S.retries<=5)toast(`Bağlantı yeniden deneniyor (${S.retries})`,'warn');
+  else if(S.retries===6)toast('Bağlantı düşük, denemeye devam ediliyor...','warn');
+  setTimeout(()=>{
+    if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
+    if(!navigator.onLine)return;
+    resumeCurrentStation({source:'audio-error'});
+  },delay);
+}
+/* Yayını <audio>'ya bağlar; m3u8 + MSE gerektiren tarayıcıda hls.js kullanır.
+   false dönerse yayın bu tarayıcıda oynatılamaz (kullanıcı bilgilendirildi). */
+async function attachStream(url,force=false){
+  if(needsHlsJs(url)){
+    let Hls;
+    try{Hls=await loadHlsLib();}catch{toast('HLS bileşeni yüklenemedi; bağlantıyı kontrol edin','err');return false;}
+    if(!Hls.isSupported()){toast('Bu tarayıcı HLS (m3u8) yayınını desteklemiyor','err');return false;}
+    if(_hlsInstance&&_hlsUrl===url&&!force&&!aud.error)return true;
+    destroyHls();
+    try{aud.removeAttribute('src');}catch{}
+    const h=new Hls({enableWorker:false});
+    _hlsInstance=h;_hlsUrl=url;
+    h.on(Hls.Events.ERROR,(_e,data)=>{
+      if(_hlsInstance!==h||!data||!data.fatal)return;
+      if(data.type===Hls.ErrorTypes.MEDIA_ERROR){try{h.recoverMediaError();return;}catch{}}
+      destroyHls();
+      _onHlsFatal();
+    });
+    h.loadSource(url);
+    h.attachMedia(aud);
+    return true;
+  }
+  destroyHls();
+  aud.src=url;
+  aud.load();
+  return true;
+}
 function warnHttpStream(s){
   if(!s||!isHttpUrl(s.u)||_httpWarned.has(s.id))return;
   _httpWarned.add(s.id);
@@ -944,6 +1010,7 @@ async function startIOSHoldAudio(){
   _iosHoldSwitching=true;
   try{
     try{aud.pause();}catch{}
+    destroyHls();
     aud.loop=true;aud.muted=false;aud.src=getIOSHoldSrc();aud.load();
     await aud.play();
     return true;
@@ -1019,6 +1086,7 @@ function stopSession(reason,opts={}){
   IOS._stopRecovery();DU.stopTick();NP.stop();IM.releaseAudioContext();releaseIOSHoldAudio();
   try{aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;pauseAudioWithoutIOSHold();}catch{}
   if(clearCurrent){
+    destroyHls();
     try{aud.removeAttribute('src');aud.load();}catch{}S.cur=null;
     // Tam durdurmada sessiz-hold blob URL'ini serbest bırak (gerekirse tekrar üretilir).
     if(_iosHoldSrc){try{URL.revokeObjectURL(_iosHoldSrc);}catch{}_iosHoldSrc='';}
@@ -1036,14 +1104,14 @@ function _sameAudioSrc(url){
 }
 function _needsStreamReload(){
   if(!S.cur)return false;
+  if(_hlsInstance)return _hlsUrl!==S.cur.u||aud.ended||!!aud.error;
   return isIOSHoldAudioActive()||!aud.src||!aud.currentSrc||!_sameAudioSrc(S.cur.u)||aud.ended||!!aud.error||aud.readyState===0;
 }
-function prepareCurrentStreamForResume(forceReload=false){
+async function prepareCurrentStreamForResume(forceReload=false){
   if(!S.cur)return false;
   aud.loop=false;aud.muted=false;aud.volume=IM._baseVol;
   if(forceReload||_needsStreamReload()){
-    aud.src=S.cur.u;
-    aud.load();
+    return attachStream(S.cur.u,forceReload);
   }
   return true;
 }
@@ -1077,14 +1145,15 @@ async function resumeCurrentStation(opts={}){
     if(token!==_resumeToken||!S.cur)return false;
     try{
       if(S.softPaused)S.softPaused=false;
-      prepareCurrentStreamForResume(source==='media-session');
+      if(!(await prepareCurrentStreamForResume(source==='media-session')))throw new Error('attach-failed');
       await aud.play();
       if(token===_resumeToken){setPlaying(true);S.retries=0;setStatus('live');IOS._startRecovery();NP.start(S.cur);renderCards();}
       return true;
     }catch(firstErr){
       if(token!==_resumeToken||!S.cur)return false;
       try{
-        S.softPaused=false;prepareCurrentStreamForResume(true);
+        S.softPaused=false;
+        if(!(await prepareCurrentStreamForResume(true)))throw new Error('attach-failed');
         await _delay(source==='media-session'?350:600);
         await _resumeAudioContext();
         await aud.play();
