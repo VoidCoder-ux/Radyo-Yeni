@@ -9,6 +9,20 @@ import {
   mergeImportedBackup
 } from '../src/lib/core.js';
 import { encodeBackup, decodeBackup, encodeStation, decodeStation, copyText } from './storage.js';
+import {
+  mkId,
+  isHttpUrl,
+  debounce,
+  relTime,
+  darken,
+  icon as _ic,
+  fetchWithTimeout,
+  initialRoute,
+  trMatchRange,
+  formatBytes,
+  formatListenTime
+} from './utils.js';
+import { apiCall, genreFromTags } from './api.js';
 
 (function(){
 'use strict';
@@ -16,44 +30,17 @@ import { encodeBackup, decodeBackup, encodeStation, decodeStation, copyText } fr
 const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1',ST:'trst1'};
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
-const APIS=['de1','nl1','at1','de2'];
 const MAX_N=LIMITS.name,MAX_G=LIMITS.genre,MAX_H=LIMITS.history,MAX_IMPORT_BYTES=LIMITS.importBytes,MAX_BACKUP_TOKEN=1400000;
 const IOS_RECOVERY_INTERVAL_MS=30000,NP_POLL_MS=60000,NP_IOS_POLL_MS=120000,DATA_USAGE_TICK_MS=15000,DATA_USAGE_LOW_POWER_TICK_MS=60000;
 const _corruptStorage=new Map();
 
 function esc(s){const d=document.createElement('div');d.textContent=(s==null)?'':String(s);return d.innerHTML;}
-function mkId(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function isHttpUrl(u){try{return new URL(u).protocol==='http:';}catch{return false;}}
 function setImageSrc(img,value){
   const clean=cleanImageUrl(value);
   if(!clean)return false;
   img.referrerPolicy='no-referrer';
   img.src=clean;
   return true;
-}
-function fetchWithTimeout(url,opts={},ms=6000){
-  const ctrl=new AbortController();
-  const onAbort=()=>ctrl.abort();
-  const t=setTimeout(()=>ctrl.abort(),ms);
-  if(opts.signal){
-    if(opts.signal.aborted)ctrl.abort();
-    else opts.signal.addEventListener('abort',onAbort,{once:true});
-  }
-  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>{
-    clearTimeout(t);
-    if(opts.signal)opts.signal.removeEventListener('abort',onAbort);
-  });
-}
-function initialRoute(){
-  try{
-    const page=new URLSearchParams(location.search).get('page');
-    if(page==='fav'||page==='favorites'||page==='f')return{page:'f'};
-    if(page==='add')return{page:'a',openAdd:true};
-    if(page==='all'||page==='channels'||page==='a')return{page:'a'};
-    if(page==='recent'||page==='history'||page==='r')return{page:'r'};
-    if(page==='settings'||page==='s')return{page:'s'};
-  }catch{}
-  return{page:'h'};
 }
 function backupCorruptValue(k,raw){
   if(!raw||_corruptStorage.has(k))return;
@@ -85,26 +72,6 @@ function lsLoad(k,d){
 }
 function g(id){return document.getElementById(id);}
 function setVisible(target,on,display='block'){const el=typeof target==='string'?g(target):target;if(!el)return;if(on){el.classList.remove('is-hidden');el.style.display=display;}else{el.classList.add('is-hidden');el.style.display='none';}}
-function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
-/* SVG icon helper — references symbols defined in the index.html sprite */
-function _ic(name,opts){const o=opts||{};const cls='svg-i'+(o.fill?' fill':'')+(o.cls?' '+o.cls:'');return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
-/* trNormalize eşleşmesinin orijinal metindeki [başlangıç,bitiş) aralığını bulur.
-   Filtre trNormalize kullandığı için vurgu da aynı kuralla yapılmalı; ayrıca
-   'İ'.toLowerCase() gibi çok-karakterli dönüşümlerde indeks kayması olmaz. */
-function trMatchRange(name,query){
-  const qn=trNormalize(query);
-  if(!qn)return null;
-  const chars=Array.from(name);
-  let norm='';const idxMap=[];
-  for(let i=0;i<chars.length;i++){
-    const cn=trNormalize(chars[i]);
-    for(let k=0;k<cn.length;k++){norm+=cn[k];idxMap.push(i);}
-  }
-  const pos=norm.indexOf(qn);
-  if(pos<0)return null;
-  const sc=idxMap[pos],ec=idxMap[pos+qn.length-1];
-  return [chars.slice(0,sc).join('').length,chars.slice(0,ec+1).join('').length];
-}
 
 /* ── TOAST v2 ── */
 let _toastT=null;
@@ -169,9 +136,6 @@ function trapDialogFocus(e){
   if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();return true;}
   return false;
 }
-function relTime(ts){const m=Math.floor((Date.now()-ts)/60000);if(m<1)return'Az önce';if(m<60)return m+'dk';const h=Math.floor(m/60);if(h<24)return h+'sa';return Math.floor(h/24)+'g';}
-/* Koyulaştırırken maviyi artırır: logo zeminlerinde gece-moru gölge tonu bilinçli tasarım tercihi */
-function darken(h){try{return`rgb(${Math.max(0,parseInt(h.slice(1,3),16)-50)},${Math.max(0,parseInt(h.slice(3,5),16)-30)},${Math.min(255,parseInt(h.slice(5,7),16)+40)})`;}catch{return'#4a3ab5';}}
 
 /* ── RIPPLE EFFECT ── */
 function addRipple(e,el){
@@ -286,13 +250,7 @@ const ST={
     for(const [id,sec] of this._pending)o[id]=(o[id]||0)+sec;
     return Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,n);
   },
-  format(sec){
-    if(sec<60)return '<1 dk';
-    const m=Math.floor(sec/60);
-    if(m<60)return m+' dk';
-    const h=Math.floor(m/60);
-    return h+' sa '+(m%60?(m%60)+' dk':'').trim();
-  }
+  format(sec){return formatListenTime(sec);}
 };
 
 /* ═══ DATA SAVER + DATA USAGE ═══ */
@@ -334,12 +292,7 @@ const DU={
   },
   stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();ST.flush();},
   reset(){this._pendingBytes=0;this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
-  format(bytes){
-    if(bytes<1024)return bytes+' B';
-    if(bytes<1024*1024)return(bytes/1024).toFixed(1)+' KB';
-    if(bytes<1024*1024*1024)return(bytes/1024/1024).toFixed(1)+' MB';
-    return(bytes/1024/1024/1024).toFixed(2)+' GB';
-  },
+  format(bytes){return formatBytes(bytes);},
   render(){
     const el=g('dataUsageTxt');if(!el)return;
     const o=this.load();
@@ -1861,12 +1814,6 @@ function applyEditCh(id,name,url){
 const _sr=new Map();
 const _searchSeq={};
 function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.delete(first);}_sr.set(k,v);}
-async function apiCall(ep){
-  const ctrls=typeof AbortController!=='undefined'?APIS.map(()=>new AbortController()):[];
-  const reqs=APIS.map((h,i)=>fetchWithTimeout(`https://${h}.api.radio-browser.info/json/${ep}`,{cache:'no-store',signal:ctrls[i]?.signal},6000).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}));
-  try{return await Promise.any(reqs);}catch{return null;}
-  finally{ctrls.forEach(c=>{try{c.abort();}catch{}});}
-}
 const SEARCH_PAGE=30;
 const _srchState={}; // targetId -> {key,base,fallbackTag,seen,list,offset,done}
 async function runSearch(targetId,key,base,opts={}){
@@ -1933,8 +1880,7 @@ function renderSR(data,container,key){
 function pickSR(cacheKey,i,container,origKey){
   const data=_sr.get(cacheKey);if(!data?.[i])return;
   const x=data[i],url=x.url_resolved||x.url;if(!isUrl(url)){toast('Geçersiz URL','err');return;}
-  const t=(x.tags||'').toLowerCase();let genre='Diğer';
-  if(t.includes('pop'))genre='Pop';else if(t.includes('rock'))genre='Rock';else if(/jazz/.test(t))genre='Caz';else if(/news|haber|talk/.test(t))genre='Haber';else if(/türk|turkish|folk/.test(t))genre='THM';else if(/islam|quran|dini/.test(t))genre='Dini';else if(/electro|dance|edm|house|techno/.test(t))genre='Elektronik';else if(/classic/.test(t))genre='TSM';else if(/sport/.test(t))genre='Spor';else if(/child|kid|çocuk/.test(t))genre='Çocuk';
+  const genre=genreFromTags(x.tags);
   const favicon=cleanImageUrl(x.favicon);
   if(addCh(x.name,url,genre,'📻',favicon,x.bitrate||0)){const fresh=_sr.get(origKey);if(fresh)renderSR(fresh,container,origKey);}
 }
@@ -2370,7 +2316,7 @@ function init(){
   syncIntUI();
   updateSearchVisibility();
 
-  const route=initialRoute();
+  const route=initialRoute(location.search);
   goPage(route.page);
   if(route.openAdd)setTimeout(openMod,0);
 }

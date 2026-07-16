@@ -8,6 +8,8 @@ const required = [
   'css/styles.css',
   'js/app.js',
   'js/storage.js',
+  'js/utils.js',
+  'js/api.js',
   'js/vendor/hls.light.min.js',
   'src/lib/core.js',
   'icons/icon.svg',
@@ -63,7 +65,7 @@ for (const marker of ["'[::1]'", "'0.0.0.0'", 'localhost']) {
 }
 
 // SW precache, uygulamanın modül grafiğindeki tüm dosyaları içermeli.
-for (const file of ['js/app.js', 'js/storage.js', 'src/lib/core.js']) {
+for (const file of ['js/app.js', 'js/storage.js', 'js/utils.js', 'js/api.js', 'src/lib/core.js']) {
   if (!sw.includes(`'${file}'`)) failures.push(`sw.js PRECACHE is missing ${file}`);
 }
 
@@ -72,8 +74,8 @@ const open = (css.match(/{/g) || []).length;
 const close = (css.match(/}/g) || []).length;
 if (open !== close) failures.push(`CSS brace mismatch: ${open} != ${close}`);
 
-const moduleFiles = new Set(['js/app.js', 'js/storage.js', 'src/lib/core.js']);
-for (const file of ['sw.js', 'js/app.js', 'js/storage.js', 'src/lib/core.js', 'scripts/static-server.mjs', 'tests/unit.test.mjs', 'tests/e2e.smoke.mjs']) {
+const moduleFiles = new Set(['js/app.js', 'js/storage.js', 'js/utils.js', 'js/api.js', 'src/lib/core.js']);
+for (const file of ['sw.js', 'js/app.js', 'js/storage.js', 'js/utils.js', 'js/api.js', 'src/lib/core.js', 'scripts/static-server.mjs', 'tests/unit.test.mjs', 'tests/e2e.smoke.mjs']) {
   try {
     if (moduleFiles.has(file)) {
       // .js uzantılı ES modülleri stdin + --input-type=module ile denetle;

@@ -116,3 +116,120 @@ test('mergeImportedBackup enforces the same station limit as importData', () => 
     /too-many-stations/
   );
 });
+
+/* ── js/utils.js ── */
+import {
+  trMatchRange,
+  initialRoute,
+  formatBytes,
+  formatListenTime,
+  relTime,
+  darken,
+  isHttpUrl
+} from '../js/utils.js';
+import { genreFromTags } from '../js/api.js';
+
+test('trMatchRange finds Turkish-normalized match ranges in original text', () => {
+  // 'İ'.toLocaleLowerCase('tr') tek karaktere iner; indeks kayması olmamalı
+  assert.deepEqual(trMatchRange('İstanbul FM', 'ist'), [0, 3]);
+  assert.deepEqual(trMatchRange('Radyo Şarkı', 'sarki'), [6, 11]);
+  // Noktalama/boşluk normalize edilir: 'power fm' sorgusu 'Power-FM' ile eşleşir
+  assert.deepEqual(trMatchRange('Power-FM', 'powerfm'), [0, 8]);
+  assert.equal(trMatchRange('Metro FM', 'jazz'), null);
+  assert.equal(trMatchRange('Metro FM', ''), null);
+});
+
+test('initialRoute maps page aliases and defaults to home', () => {
+  assert.deepEqual(initialRoute('?page=fav'), { page: 'f' });
+  assert.deepEqual(initialRoute('?page=favorites'), { page: 'f' });
+  assert.deepEqual(initialRoute('?page=add'), { page: 'a', openAdd: true });
+  assert.deepEqual(initialRoute('?page=channels'), { page: 'a' });
+  assert.deepEqual(initialRoute('?page=recent'), { page: 'r' });
+  assert.deepEqual(initialRoute('?page=settings'), { page: 's' });
+  assert.deepEqual(initialRoute('?page=unknown'), { page: 'h' });
+  assert.deepEqual(initialRoute(''), { page: 'h' });
+});
+
+test('formatBytes and formatListenTime produce human-readable Turkish output', () => {
+  assert.equal(formatBytes(512), '512 B');
+  assert.equal(formatBytes(2048), '2.0 KB');
+  assert.equal(formatBytes(5 * 1024 * 1024), '5.0 MB');
+  assert.equal(formatBytes(2.5 * 1024 * 1024 * 1024), '2.50 GB');
+  assert.equal(formatListenTime(30), '<1 dk');
+  assert.equal(formatListenTime(300), '5 dk');
+  assert.equal(formatListenTime(3600), '1 sa');
+  assert.equal(formatListenTime(4260), '1 sa 11 dk');
+});
+
+test('relTime buckets relative timestamps', () => {
+  const now = 1_000_000_000_000;
+  assert.equal(relTime(now - 30_000, now), 'Az önce');
+  assert.equal(relTime(now - 5 * 60_000, now), '5dk');
+  assert.equal(relTime(now - 3 * 3_600_000, now), '3sa');
+  assert.equal(relTime(now - 2 * 86_400_000, now), '2g');
+});
+
+test('darken shifts hex colors toward night-purple and falls back safely', () => {
+  assert.equal(darken('#7c5cff'), 'rgb(74,62,255)');
+  assert.equal(darken(null), '#4a3ab5');
+});
+
+test('isHttpUrl flags only plain http URLs', () => {
+  assert.equal(isHttpUrl('http://example.com/s'), true);
+  assert.equal(isHttpUrl('https://example.com/s'), false);
+  assert.equal(isHttpUrl('not a url'), false);
+});
+
+test('genreFromTags maps Radio Browser tags to app genres', () => {
+  assert.equal(genreFromTags('pop,dance'), 'Pop');
+  assert.equal(genreFromTags('indie rock'), 'Rock');
+  assert.equal(genreFromTags('smooth jazz'), 'Caz');
+  assert.equal(genreFromTags('news,talk'), 'Haber');
+  assert.equal(genreFromTags('turkish folk'), 'THM');
+  assert.equal(genreFromTags('quran'), 'Dini');
+  assert.equal(genreFromTags('techno,house'), 'Elektronik');
+  assert.equal(genreFromTags('classical'), 'TSM');
+  assert.equal(genreFromTags('sports'), 'Spor');
+  assert.equal(genreFromTags('kids'), 'Çocuk');
+  assert.equal(genreFromTags(''), 'Diğer');
+  assert.equal(genreFromTags(null), 'Diğer');
+});
+
+/* ── js/storage.js (yedek/paylaşım token'ları) ── */
+import {
+  encodeBackup,
+  decodeBackup,
+  extractBackupToken,
+  encodeStation,
+  decodeStation
+} from '../js/storage.js';
+
+test('backup token roundtrips through base64url encoding', () => {
+  const data = { version: '1', ch: [{ id: 'a', n: 'Ünlü Radyo 📻', u: 'https://a.test' }], fv: ['a'], rc: [] };
+  const token = encodeBackup(data);
+  assert.match(token, /^[A-Za-z0-9_-]+$/); // padding'siz base64url
+  assert.deepEqual(decodeBackup(token), data);
+});
+
+test('extractBackupToken handles URLs, hashes and raw tokens', () => {
+  assert.equal(extractBackupToken('https://x.test/app#backup=abc123'), 'abc123');
+  assert.equal(extractBackupToken('https://x.test/app?backup=q1'), 'q1');
+  assert.equal(extractBackupToken('#backup=zzz'), 'zzz');
+  assert.equal(extractBackupToken('rawtoken'), 'rawtoken');
+  assert.equal(extractBackupToken(''), '');
+});
+
+test('decodeBackup accepts raw JSON but enforces the 1MB limit', () => {
+  assert.deepEqual(decodeBackup('{"ch":[]}'), { ch: [] });
+  const big = '{"pad":"' + 'x'.repeat(1048576) + '"}';
+  assert.throws(() => decodeBackup(big), /backup-too-large/);
+});
+
+test('station share token roundtrips and validates shape', () => {
+  const s = { n: 'Çağrı FM', u: 'https://cagri.test/live', g: 'THM', e: '📻', c: '#7c5cff', img: '', br: 128 };
+  const d = decodeStation(encodeStation(s));
+  assert.deepEqual(d, s);
+  const viaUrl = decodeStation('https://x.test/app#add=' + encodeURIComponent(encodeStation(s)));
+  assert.equal(viaUrl.n, 'Çağrı FM');
+  assert.throws(() => decodeStation(''), /empty-station/);
+});
