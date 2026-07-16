@@ -9,6 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="Pulse Radio">
 <meta name="theme-color" content="#06070f">
 <meta name="description" content="Türkiye'nin en iyi canlı radyo dinleme uygulaması. Yüzlerce radyo kanalını ücretsiz dinleyin.">
+<script>
+/* Tema, CSS yüklenmeden atanır ki açık temada koyu flaş olmasın (tam mantık js/app.js'te). */
+try{var _t=JSON.parse(localStorage.getItem('trth1')||'"auto"');document.documentElement.dataset.theme=(_t==='light'||(_t!=='dark'&&matchMedia('(prefers-color-scheme: light)').matches))?'light':'dark';}catch(e){document.documentElement.dataset.theme='dark';}
+</script>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" sizes="180x180">
@@ -184,6 +188,7 @@
         <div class="set-row is-static"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-leaf"/></svg></div><div class="set-lb"><h4>Ekonomi Modu <span class="ds-pill is-hidden" id="dsPill">Aktif</span></h4><p>Mobil veri tasarrufu ve uyarılar</p></div><label class="sw"><input type="checkbox" id="swDataSaver"><span class="sw-sl"></span></label></div>
         <div class="set-row is-static is-wrap"><div class="set-ic ic-cyan"><svg class="svg-i" aria-hidden="true"><use href="#i-signal"/></svg></div><div class="set-lb"><h4>Tahmini Veri Kullanımı</h4><p id="dataUsageTxt">—</p></div><button class="del-b quiet" id="btnResetData" title="Sıfırla" aria-label="Veri kullanım tahminini sıfırla">Sıfırla</button></div>
         <div class="set-t">Uygulama</div>
+        <div class="set-row is-static is-wrap"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-settings"/></svg></div><div class="set-lb"><h4>Görünüm</h4><p>Sistem tercihini izle veya sabitle</p></div><div class="seg" id="themeSeg" role="group" aria-label="Tema seçimi"><button type="button" data-th="auto">Sistem</button><button type="button" data-th="dark">Koyu</button><button type="button" data-th="light">Açık</button></div></div>
         <div class="set-row is-hidden" id="btnInstallApp"><div class="set-ic ic-violet"><svg class="svg-i" aria-hidden="true"><use href="#i-download"/></svg></div><div class="set-lb"><h4>Ana Ekrana Ekle</h4><p>Uygulamayı cihazına yükle, daha hızlı aç</p></div><span class="chevron"><svg class="svg-i" aria-hidden="true"><use href="#i-chevron-right"/></svg></span></div>
         <div class="set-row is-static is-hidden" id="btnAlreadyInstalled"><div class="set-ic ic-green"><svg class="svg-i" aria-hidden="true"><use href="#i-check"/></svg></div><div class="set-lb"><h4>Uygulama Yüklü</h4><p>Uygulama zaten ana ekranınıza eklenmiş</p></div></div>
         <div class="set-t">Veriler</div>

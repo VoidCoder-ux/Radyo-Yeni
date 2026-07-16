@@ -27,7 +27,7 @@ import { apiCall, genreFromTags } from './api.js';
 (function(){
 'use strict';
 
-const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1',ST:'trst1'};
+const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1',ST:'trst1',TH:'trth1'};
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const MAX_N=LIMITS.name,MAX_G=LIMITS.genre,MAX_H=LIMITS.history,MAX_IMPORT_BYTES=LIMITS.importBytes,MAX_BACKUP_TOKEN=1400000;
@@ -372,6 +372,39 @@ function maybeAddSharedStation(){
     if(addCh(name,url,typeof d.g==='string'?d.g:'Diğer',typeof d.e==='string'&&d.e?d.e:'📻',typeof d.img==='string'?d.img:'',typeof d.br==='number'?d.br:0))clearHash();
   },600);
 }
+
+/* ═══ TEMA (Sistem/Koyu/Açık) ═══
+   index.html'deki inline bootstrap ilk boyamada aynı mantıkla attr atar. */
+const THEME={
+  mode:'auto',
+  _mq:null,
+  load(){
+    const raw=lsLoad(LS.TH,'auto');
+    this.mode=(raw==='dark'||raw==='light')?raw:'auto';
+    this._mq=matchMedia('(prefers-color-scheme: light)');
+    this._mq.addEventListener?.('change',()=>{if(this.mode==='auto')this.apply();});
+    this.apply();
+  },
+  resolved(){return this.mode==='auto'?(this._mq?.matches?'light':'dark'):this.mode;},
+  apply(){
+    const t=this.resolved();
+    document.documentElement.dataset.theme=t;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',t==='light'?'#f4f5fb':'#06070f');
+    this.syncUI();
+  },
+  set(mode){
+    this.mode=(mode==='dark'||mode==='light')?mode:'auto';
+    lsSave(LS.TH,this.mode);
+    this.apply();
+  },
+  syncUI(){
+    document.querySelectorAll('#themeSeg button').forEach(b=>{
+      const on=b.dataset.th===this.mode;
+      b.classList.toggle('a',on);
+      b.setAttribute('aria-pressed',String(on));
+    });
+  }
+};
 
 /* ═══ BAŞLANGIÇ PAKETİ (ilk açılış onboarding'i) ═══ */
 let _starterLoading=false;
@@ -2113,6 +2146,7 @@ function init(){
   window.addEventListener('pagehide',()=>{DU.flush();ST.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
 
   try{localStorage.removeItem('trsync1');}catch{} // kaldırılan Özel Sync Endpoint özelliğinin eski kaydı
+  THEME.load();
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
   maybeRestoreHashBackup();maybeAddSharedStation();
@@ -2269,6 +2303,7 @@ function init(){
     toast(DS.enabled?'Ekonomi modu açık':'Ekonomi modu kapalı');
   });
   g('btnResetData').addEventListener('click',()=>DU.reset());
+  g('themeSeg')?.addEventListener('click',e=>{const b=e.target.closest('button[data-th]');if(!b)return;THEME.set(b.dataset.th);toast(b.dataset.th==='auto'?'Tema: sistem tercihi':b.dataset.th==='dark'?'Koyu tema':'Açık tema');});
   /* search API */
   g('bTR').addEventListener('click',()=>{const q=g('qTR').value.trim();if(!q){toast('Arama yazın','warn');return;}runSearch('rTR','tr',`name=${encodeURIComponent(q)}&countrycode=TR`,{fallbackTag:q});});
   g('bGL').addEventListener('click',()=>{const q=g('qGL').value.trim();if(!q){toast('Arama yazın','warn');return;}const cc=g('glCountry').value;runSearch('rGL','gl',`name=${encodeURIComponent(q)}`+(cc?`&countrycode=${cc}`:''),{fallbackTag:q});});
