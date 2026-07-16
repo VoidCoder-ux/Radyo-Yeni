@@ -1,6 +1,5 @@
 const CACHE='pulse-radio-v16.0.0';
-const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','js/vendor/hls.light.min.js','src/lib/core.js','data/starter-stations.json','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
-const FONT_CACHE='pulse-radio-fonts-v3';
+const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/app.js','js/vendor/hls.light.min.js','src/lib/core.js','data/starter-stations.json','fonts/plus-jakarta-sans-latin-wght-normal.woff2','fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2','fonts/outfit-latin-wght-normal.woff2','fonts/outfit-latin-ext-wght-normal.woff2','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 
 self.addEventListener('install',e=>{
   e.waitUntil(
@@ -11,7 +10,7 @@ self.addEventListener('install',e=>{
 self.addEventListener('activate',e=>{
   e.waitUntil(
     caches.keys().then(keys=>Promise.all(
-      keys.filter(k=>k!==CACHE&&k!==FONT_CACHE).map(k=>caches.delete(k))
+      keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
     )).then(()=>self.clients.claim())
   );
 });
@@ -32,23 +31,6 @@ self.addEventListener('fetch',e=>{
     return;
   }
 
-  // Cache Google Fonts separately with long TTL.
-  if(url.hostname.includes('fonts.googleapis.com')||url.hostname.includes('fonts.gstatic.com')){
-    e.respondWith(
-      caches.open(FONT_CACHE).then(c=>
-        c.match(e.request).then(r=>{
-          if(r)return r;
-          return fetch(e.request).then(res=>{
-            // Opaque (no-cors) yanıtı da kabul et: eski önbellekteki HTML
-            // crossorigin'siz istek atarsa fontlar yine çevrimdışı çalışsın.
-            if(res.ok||res.type==='opaque')c.put(e.request,res.clone());
-            return res;
-          }).catch(()=>new Response('',{status:408}));
-        })
-      )
-    );
-    return;
-  }
 
   // App shell: network-first, query-safe fallback for PWA shortcuts.
   if(url.origin===location.origin){

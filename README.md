@@ -44,6 +44,9 @@ Uygulama statik dosyalarla çalışır. GitHub Pages veya herhangi bir statik ho
 - `css/`
 - `js/`
 - `src/`
+- `data/`
+- `fonts/`
+- `screenshots/`
 - `icons/`
 
 Build adımı zorunlu değildir.
