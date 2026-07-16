@@ -8,12 +8,12 @@ import {
   createBackup,
   mergeImportedBackup
 } from '../src/lib/core.js';
-import { encodeBackup, decodeBackup, copyText } from './storage.js';
+import { encodeBackup, decodeBackup, encodeStation, decodeStation, copyText } from './storage.js';
 
 (function(){
 'use strict';
 
-const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1'};
+const LS={CH:'trch8',FV:'trfv8',RC:'trrc8',INT:'trint9',CAR:'trcar1',DS:'trds1',DU:'trdu1',OB:'trob1',ST:'trst1'};
 const COLORS=['#7c5cff','#22d3ee','#34d399','#60a5fa','#a855f7','#14b8a6','#818cf8','#38bdf8','#ec4899','#2dd4bf','#93c5fd','#c084fc'];
 const GENRES=['Tümü','Pop','Rock','Haber','THM','TSM','Arabesk','Caz','Elektronik','Karma','Dini','Çocuk','Spor','Diğer'];
 const APIS=['de1','nl1','at1','de2'];
@@ -260,6 +260,41 @@ function getFiltered(list){
   return out;
 }
 
+/* ═══ DİNLEME İSTATİSTİKLERİ (kanal başına toplam saniye) ═══ */
+const ST={
+  _pending:new Map(),_lastFlush:0,
+  load(){const raw=lsLoad(LS.ST,{});return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};},
+  add(id,sec){
+    if(!id||!(sec>0))return;
+    this._pending.set(id,(this._pending.get(id)||0)+sec);
+    if(Date.now()-this._lastFlush>60000)this.flush();
+  },
+  flush(){
+    if(!this._pending.size)return;
+    const o=this.load();
+    for(const [id,sec] of this._pending)o[id]=Math.round((o[id]||0)+sec);
+    this._pending.clear();this._lastFlush=Date.now();
+    // Silinen kanalların kayıtlarını düşür (depo şişmesin)
+    const ids=new Set(ch.map(x=>x.id));
+    for(const k of Object.keys(o))if(!ids.has(k))delete o[k];
+    lsSave(LS.ST,o);
+  },
+  of(id){return (this.load()[id]||0)+(this._pending.get(id)||0);},
+  total(){const o=this.load();let t=0;for(const k in o)t+=o[k];for(const s of this._pending.values())t+=s;return t;},
+  top(n){
+    const o=this.load();
+    for(const [id,sec] of this._pending)o[id]=(o[id]||0)+sec;
+    return Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,n);
+  },
+  format(sec){
+    if(sec<60)return '<1 dk';
+    const m=Math.floor(sec/60);
+    if(m<60)return m+' dk';
+    const h=Math.floor(m/60);
+    return h+' sa '+(m%60?(m%60)+' dk':'').trim();
+  }
+};
+
 /* ═══ DATA SAVER + DATA USAGE ═══ */
 const DS={enabled:false,warnedThisSession:false};
 const DU={
@@ -294,9 +329,10 @@ const DU={
       const br=(S.cur.br&&S.cur.br>0)?S.cur.br:96; // varsayılan 96 kbps tahmin
       const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
       this.add(bytes);
+      ST.add(S.cur.id,dt);
     },tickMs);
   },
-  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();},
+  stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();ST.flush();},
   reset(){this._pendingBytes=0;this.save({month:this._monthKey(),bytes:0});this.render();toast('Veri sayacı sıfırlandı','ok');},
   format(bytes){
     if(bytes<1024)return bytes+' B';
@@ -368,6 +404,21 @@ async function doCloudRestore(input){
   }catch{toast('Yedek linki okunamadı','err');}
 }
 function maybeRestoreHashBackup(){if(location.hash.includes('backup='))setTimeout(()=>doCloudRestore(location.href),800);}
+function maybeAddSharedStation(){
+  if(!location.hash.includes('add='))return;
+  setTimeout(async()=>{
+    let d;
+    try{d=decodeStation(location.href);}catch{toast('Kanal linki okunamadı','err');return;}
+    const name=typeof d.n==='string'?d.n.trim():'';
+    const url=typeof d.u==='string'?d.u.trim():'';
+    if(!name||!isUrl(url)){toast('Kanal linki geçersiz','err');return;}
+    const clearHash=()=>{if(location.hash.includes('add='))history.replaceState(null,'',location.pathname+location.search);};
+    if(ch.some(x=>x.u===url)){toast('Bu kanal zaten ekli','warn');clearHash();return;}
+    const ok=await confirm2('Paylaşılan radyoyu ekle',`"${name}" kanalınıza eklenecek.`,'Ekle');
+    if(!ok){clearHash();return;}
+    if(addCh(name,url,typeof d.g==='string'?d.g:'Diğer',typeof d.e==='string'&&d.e?d.e:'📻',typeof d.img==='string'?d.img:'',typeof d.br==='number'?d.br:0))clearHash();
+  },600);
+}
 
 /* ═══ BAŞLANGIÇ PAKETİ (ilk açılış onboarding'i) ═══ */
 let _starterLoading=false;
@@ -1199,9 +1250,12 @@ function syncSliders(){const v=Math.round(IM._baseVol*100);g('volM').value=v;g('
 /* ── SHARE ── */
 function shareStation(){
   if(!S.cur)return;
-  const text=`${S.cur.n} - ${S.cur.g||'Radyo'} dinliyorum! 📻\n${S.cur.u}`;
-  if(navigator.share){navigator.share({title:S.cur.n,text}).catch(()=>{});}
-  else{navigator.clipboard?.writeText(text).then(()=>toast('Link kopyalandı','ok')).catch(()=>{});}
+  const s=S.cur;
+  let link='';
+  try{link=location.origin+location.pathname+'#add='+encodeURIComponent(encodeStation(s));}catch{}
+  const text=`${s.n} - ${s.g||'Radyo'} dinliyorum! 📻`+(link?'':`\n${s.u}`);
+  if(navigator.share){navigator.share(link?{title:s.n,text,url:link}:{title:s.n,text}).catch(()=>{});}
+  else{navigator.clipboard?.writeText(link||`${text}\n${s.u}`).then(()=>toast(link?'Kanal linki kopyalandı':'Link kopyalandı','ok')).catch(()=>{});}
 }
 
 /* ── INT OPTS ── */
@@ -1403,16 +1457,20 @@ function renderHome(){
   const recentStations=rc.map(r=>ch.find(x=>x.id===r.id)).filter(Boolean).slice(0,6);
   const suggested=getFiltered(ch).filter(x=>!fv.includes(x.id)).slice(0,6);
 
+  const chMap=new Map(ch.map(x=>[x.id,x]));
+  const topStations=ST.top(6).filter(([,sec])=>sec>=60).map(([id])=>chMap.get(id)).filter(Boolean);
   const sections=[
     ['Hızlı Favoriler',favStations,'Favori'],
+    ['En Çok Dinlenenler',topStations,'⏱'],
     ['Son Dinlenenler',recentStations,'Son'],
     ['Önerilen',suggested,'Keşfet']
   ];
   sections.forEach(([title,list,label])=>{
+    if(title==='En Çok Dinlenenler'&&!list.length)return; // istatistik birikince görünür
     const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`${title} <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
     if(list.length){
       const strip=document.createElement('div');strip.className='home-strip';
-      list.forEach(s=>strip.appendChild(makeHomePill(s,label)));
+      list.forEach(s=>strip.appendChild(makeHomePill(s,title==='En Çok Dinlenenler'?ST.format(ST.of(s.id)):label)));
       w.appendChild(strip);
     }else{
       const note=document.createElement('div');note.className='home-empty-note';note.textContent=title==='Önerilen'?'Henüz önerilecek kanal yok. Radyo ekleyerek başla.':'Bu bölüm dinleme alışkanlığına göre dolacak.';
@@ -1539,6 +1597,7 @@ function renderRecent(){
 function renderSettings(){
   const w=g('chList');g('chCount').textContent=ch.length;w.innerHTML='';
   g('statCh').textContent=ch.length;g('statFav').textContent=fv.length;g('statRec').textContent=rc.length;
+  const stTime=g('statTime');if(stTime){const t=ST.total();stTime.textContent=t<60?'0 dk':ST.format(t);}
   if(!ch.length){const r=document.createElement('div');r.className='set-row is-static';r.innerHTML=`<div class="set-ic ic-muted">${_ic('broadcast')}</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
   const f=document.createDocumentFragment();
   ch.forEach(s=>{
@@ -2105,12 +2164,14 @@ function setupAccessibleRows(){
 /* ═══ INIT ═══ */
 function init(){
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
-  window.addEventListener('pagehide',()=>{DU.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
+  window.addEventListener('pagehide',()=>{DU.flush();ST.flush();IOS._stopRecovery();IM.suspendAudioContext();releaseIOSHoldAudio();releaseCarWakeLock();});
 
   try{localStorage.removeItem('trsync1');}catch{} // kaldırılan Özel Sync Endpoint özelliğinin eski kaydı
   dataLoad();loadIntOpts();renderChips();renderCards();renderSettings();updateNavBadge();
   g('appVersionLabel').textContent=`Pulse Radio v${APP_VERSION}`;
-  maybeRestoreHashBackup();
+  maybeRestoreHashBackup();maybeAddSharedStation();
+  // Uygulama açıkken gelen paylaşım linkleri (aynı belge içi hash değişimi)
+  window.addEventListener('hashchange',()=>{maybeAddSharedStation();});
   // Auto-fetch missing logos after a short delay
   scheduleAutoFetchLogos(2500,5);
 
