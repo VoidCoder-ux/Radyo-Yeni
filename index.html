@@ -249,11 +249,15 @@ try{var _t=JSON.parse(localStorage.getItem('trth1')||'"auto"');document.document
     <span class="fp-t">Şimdi Çalınıyor</span>
     <button class="fp-x" id="btnFpFav" aria-label="Favori"><svg class="svg-i" aria-hidden="true"><use href="#i-heart"/></svg></button>
   </div>
-  <div class="fp-body">
-    <div class="fp-art" id="fpArt"><svg class="svg-i fp-art-placeholder" aria-hidden="true"><use href="#i-radio"/></svg></div>
-    <div class="fp-name" id="fpName">—</div>
-    <div class="fp-genre" id="fpGenre">—</div>
-    <div class="fp-bitrate is-hidden" id="fpBitrate"></div>
+  <div class="fp-body" id="fpBody">
+    <!-- Kimlik bloğu: dikeyde display:contents ile şeffaftır (tek sütun akışı
+         korunur), yatayda sol sütun olur — bkz. styles.css landscape bloğu. -->
+    <div class="fp-id">
+      <div class="fp-art" id="fpArt"><svg class="svg-i fp-art-placeholder" aria-hidden="true"><use href="#i-radio"/></svg></div>
+      <div class="fp-name" id="fpName">—</div>
+      <div class="fp-genre" id="fpGenre">—</div>
+      <div class="fp-bitrate is-hidden" id="fpBitrate"></div>
+    </div>
     <div class="np-pill" id="npPill"><span class="np-ic"><svg class="svg-i" aria-hidden="true"><use href="#i-music"/></svg></span><span class="np-txt" id="npTxt">—</span></div>
     <div class="fp-vis paused" id="fpVis"><i></i><i></i><i></i><i></i><i></i></div>
     <div class="fp-ctrls">

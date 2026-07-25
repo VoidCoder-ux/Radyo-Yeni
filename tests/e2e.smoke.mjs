@@ -100,6 +100,25 @@ await withServer(async baseUrl => {
   await page.click('.card [data-action="fav"]');
   await page.click('#navF');
   await page.waitForSelector('.card[data-id]');
+
+  // Tam ekran oynatıcı düzeni: kapak dikey flex kabında 0 yüksekliğe çökmemeli
+  // ve oynat düğmesi kaydırmadan görünür kalmalı (iPhone 13: 390×844).
+  await page.click('.card [data-action="play"]');
+  await page.waitForSelector('#mplay.s');
+  await page.click('#mplay');
+  await page.waitForSelector('#fplay.s');
+  const fpLayout = await page.evaluate(() => {
+    const art = document.getElementById('fpArt').getBoundingClientRect();
+    const ctrls = document.querySelector('.fp-ctrls').getBoundingClientRect();
+    const fold = document.getElementById('fpBody').getBoundingClientRect();
+    return { artW: art.width, artH: art.height, playFits: ctrls.bottom <= fold.bottom + 1 };
+  });
+  assert.ok(fpLayout.artH > 80, `fp-art collapsed (height ${fpLayout.artH})`);
+  assert.ok(Math.abs(fpLayout.artW - fpLayout.artH) < 2, 'fp-art should stay square');
+  assert.ok(fpLayout.playFits, 'fp play controls should be visible without scrolling');
+  await page.click('#btnFpClose');
+  await page.waitForFunction(() => !document.querySelector('#fplay')?.classList.contains('s'));
+
   await page.click('#navS');
   await assertVisible(page, '#btnExport');
   await assertVisible(page, '#btnImport');
