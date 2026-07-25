@@ -9,6 +9,8 @@ Pulse Radio, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır
 - İlk açılışta popüler Türk radyolarından oluşan başlangıç paketi
 - HLS (m3u8) desteği: Safari native, diğer tarayıcılarda vendorlanmış hls.js lazy yüklenir
 - Media Session kontrolleri, tam ekran oynatıcı ve araba modu
+- Dokunmatik jestler: tam ekran oynatıcıyı ve alt sayfaları aşağı sürükleyip kapatma, mini oynatıcıda yatay kaydırarak istasyon değiştirme, yukarı kaydırarak tam ekranı açma
+- Aktif sekmeye yeniden dokunma listeyi en üste kaydırır (iOS'ta durum çubuğuna dokunma bu düzende çalışmadığı için)
 - Sistem/Koyu/Açık tema seçimi
 - PWA kurulumu, service worker cache ve offline fallback (fontlar dahil self-host)
 - JSON yedek dışa/içe aktarma, anonim yedek linki ve tek istasyonluk paylaşım linki

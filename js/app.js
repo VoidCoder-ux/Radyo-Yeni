@@ -154,6 +154,99 @@ try{_reduceMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
 }catch{}
 function haptic(ms=10){if(_reduceMotion)return;try{navigator.vibrate?.(ms);}catch{}}
 
+/* ── JEST: AŞAĞI SÜRÜKLEYİP KAPATMA ──
+   Tam ekran oynatıcı ve alt sayfaların tek kapatma yolu ekranın en üstündeki
+   düğmeydi; 6.1"lik iPhone'da tek elle en zor ulaşılan nokta orası. Aşağı
+   sürükleme iOS'ta beklenen kapatma jestidir.
+
+   scroller: verilirse yalnızca o alan en üstteyken (scrollTop<=0) jest başlar,
+   böylece içerik kaydırma ile çakışmaz. */
+function attachSheetDrag(el,{scroller,onClose,threshold=96}={}){
+  if(!el||el.dataset.sheetDrag)return;
+  el.dataset.sheetDrag='1';
+  const IGNORE='input[type=range],select,textarea,.sw,.rng,.rng-lg';
+  let y0=0,x0=0,dy=0,t0=0,tracking=false,dragging=false;
+  const sc=()=>typeof scroller==='function'?scroller():scroller;
+  const atTop=()=>{const s=sc();return !s||s.scrollTop<=0;};
+  const reset=()=>{dragging=false;tracking=false;el.classList.remove('dragging');el.style.transform='';el.style.opacity='';};
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||!atTop()||e.target.closest(IGNORE))return;
+    y0=e.touches[0].clientY;x0=e.touches[0].clientX;dy=0;t0=performance.now();
+    tracking=true;dragging=false;
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    if(!tracking)return;
+    const y=e.touches[0].clientY-y0,x=e.touches[0].clientX-x0;
+    if(!dragging){
+      if(Math.abs(y)<8&&Math.abs(x)<8)return;
+      // Yukarı ya da yatay hareket bizim değil: kaydırmaya bırak.
+      if(y<=0||Math.abs(x)>Math.abs(y)){tracking=false;return;}
+      if(!atTop()){tracking=false;return;}
+      dragging=true;el.classList.add('dragging');
+    }
+    dy=Math.max(0,y);
+    e.preventDefault();
+    el.style.transform=`translateY(${dy}px)`;
+    el.style.opacity=String(Math.max(.5,1-dy/640));
+  },{passive:false});
+  const end=()=>{
+    if(!dragging){reset();return;}
+    // Hızlı bir "fırlatma" da kısa mesafede kapatmayı tetikler.
+    const fast=dy/Math.max(1,performance.now()-t0)>.5;
+    const close=dy>threshold||(fast&&dy>32);
+    reset();
+    if(close){haptic(8);onClose();}
+  };
+  el.addEventListener('touchend',end);
+  el.addEventListener('touchcancel',end);
+}
+
+/* ── JEST: MİNİ OYNATICI ──
+   Yatay kaydırma istasyon değiştirir, yukarı kaydırma tam ekranı açar.
+   Dokunma (tap) davranışı değişmez; jest sonrası oluşan click yutulur. */
+let _mpSwiped=false,_mpSwipeT=null;
+// Jestten sonra gelen click'i yut. Parmak mini oynatıcının dışında kalkarsa
+// click hiç gelmeyebilir; bayrak takılı kalmasın diye kısa süre sonra düşer.
+function _markMpSwipe(){_mpSwiped=true;clearTimeout(_mpSwipeT);_mpSwipeT=setTimeout(()=>{_mpSwiped=false;},450);}
+function attachMiniPlayerGestures(mp){
+  if(!mp||mp.dataset.swipe)return;
+  mp.dataset.swipe='1';
+  let x0=0,y0=0,t0=0,tracking=false,horiz=false,dx=0,dy=0;
+  const reset=()=>{tracking=false;horiz=false;mp.classList.remove('dragging');mp.style.transform='';mp.style.opacity='';};
+  mp.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||e.target.closest('#btnPP,#mpVol'))return;
+    x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=dy=0;t0=performance.now();
+    tracking=true;horiz=false;
+  },{passive:true});
+  mp.addEventListener('touchmove',e=>{
+    if(!tracking)return;
+    dx=e.touches[0].clientX-x0;dy=e.touches[0].clientY-y0;
+    if(!horiz){
+      if(Math.abs(dx)<10&&Math.abs(dy)<10)return;
+      if(Math.abs(dx)<=Math.abs(dy))return;      // dikey: yukarı açma jesti
+      horiz=true;mp.classList.add('dragging');
+    }
+    e.preventDefault();
+    mp.style.transform=`translateX(calc(-50% + ${dx*.4}px))`;
+    mp.style.opacity=String(Math.max(.55,1-Math.abs(dx)/380));
+  },{passive:false});
+  const end=()=>{
+    if(!tracking){reset();return;}
+    const dt=Math.max(1,performance.now()-t0);
+    const swipedH=horiz&&(Math.abs(dx)>64||Math.abs(dx)/dt>.5);
+    const swipedUp=!horiz&&dy<-56&&Math.abs(dy)>Math.abs(dx);
+    reset();
+    if(swipedH){
+      _markMpSwipe();haptic(8);
+      if(dx<0)nextSt();else prevSt();
+    }else if(swipedUp){
+      _markMpSwipe();openFP();
+    }
+  };
+  mp.addEventListener('touchend',end);
+  mp.addEventListener('touchcancel',end);
+}
+
 /* ── CONFIRM ── */
 let _cfmRes=null;
 function confirm2(title,msg,okLbl='Sil'){
@@ -2245,7 +2338,8 @@ function init(){
   GENRES.filter(x=>x!=='Tümü').forEach(genre=>{const o=document.createElement('option');o.textContent=genre;inC.appendChild(o);});
 
   /* mini player */
-  g('mplay').addEventListener('click',openFP);
+  g('mplay').addEventListener('click',()=>{if(_mpSwiped){_mpSwiped=false;return;}openFP();});
+  attachMiniPlayerGestures(g('mplay'));
   // Yalnız mini oynatıcının kendisi odaktayken (içindeki butonlar değil) çalış;
   // stopPropagation, document'taki global Space kısayolunun da tetiklenmesini önler.
   g('mplay').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target===e.currentTarget){e.preventDefault();e.stopPropagation();openFP();}});
@@ -2255,6 +2349,16 @@ function init(){
 
   /* full player */
   g('btnFpClose').addEventListener('click',closeFP);
+  attachSheetDrag(g('fplay'),{scroller:()=>g('fpBody'),onClose:closeFP,threshold:110});
+
+  /* alt sayfalar da aşağı sürüklenerek kapanır (kendi kaydırma alanları) */
+  [['addMod','.modal-c',closeMod],
+   ['iosInstallOv','.ios-box',closeIOSInstall],
+   ['cfmOv','.cfm-box',()=>_cfmClose(false)],
+   ['inpOv','.cfm-box',()=>_inpClose(null)]].forEach(([id,sel,onClose])=>{
+    const box=g(id)?.querySelector(sel);
+    attachSheetDrag(box,{scroller:box,onClose,threshold:80});
+  });
   g('btnFpPlay').addEventListener('click',togglePlay);
   g('btnFpPrev').addEventListener('click',prevSt);
   g('btnFpNext').addEventListener('click',nextSt);
@@ -2343,7 +2447,17 @@ function init(){
   });
 
   /* nav */
-  document.querySelectorAll('.bnav button[data-pg]').forEach(btn=>{btn.addEventListener('click',()=>goPage(btn.dataset.pg));});
+  // Gövde position:fixed olduğu için iOS'un "durum çubuğuna dokun → en üste git"
+  // davranışı bu uygulamada çalışmaz. Aktif sekmeye yeniden dokunmak onu telafi
+  // eder; zaten en üstteyse dokunuş sayfayı normal şekilde tazeler.
+  document.querySelectorAll('.bnav button[data-pg]').forEach(btn=>{btn.addEventListener('click',()=>{
+    const scr=g('scr');
+    if(btn.dataset.pg===_curPage&&scr.scrollTop>4){
+      try{scr.scrollTo({top:0,behavior:_reduceMotion?'auto':'smooth'});}catch{scr.scrollTop=0;}
+      return;
+    }
+    goPage(btn.dataset.pg);
+  });});
 
   /* keyboard */
   document.addEventListener('keydown',handleKeyboard);

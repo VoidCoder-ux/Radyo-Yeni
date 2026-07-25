@@ -26,7 +26,9 @@
    Premium iPhone-first redesign · Midnight ink + electric violet → cyan
    ========================================================================= */
 
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+/* -webkit-touch-callout: iOS'ta karta/logoya uzun basınca çıkan
+   "Resmi Kaydet / Kopyala" sistem menüsünü engeller. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 
 :root{
   color-scheme:dark;
@@ -160,7 +162,11 @@ body{
 button,input,select,textarea{font:inherit;color:inherit}
 input,select,textarea{font-size:16px}
 button{cursor:pointer;background:none;border:0}
-input,select,textarea{-webkit-user-select:text;user-select:text}
+/* Metin alanlarında uzun basma menüsü (yapıştır/seç) geri açılır. */
+input,select,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* touch-action:manipulation — iOS'ta çift dokunuşla yakınlaştırmayı kapatır;
+   hızlı art arda dokunuşlarda (oynat/favori) kazara zoom olmaz. */
+button,a,label,summary,[role=button],[data-action],.card,.chip,.set-row{touch-action:manipulation}
 ::selection{background:rgba(124,92,255,.32);color:var(--tx)}
 .is-hidden{display:none}
 
@@ -389,6 +395,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text}
 /* ---------------- Mini player ------------------ */
 .mplay{position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--sb) + 8px);transform:translateX(-50%) translateY(160%);width:calc(100% - 16px);max-width:484px;z-index:90;border:1px solid var(--bd2);border-radius:22px;background:var(--mini-grad);box-shadow:var(--sh-3),inset 0 1px 0 rgba(255,255,255,.08);backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);overflow:hidden;cursor:pointer;transition:transform var(--med) var(--ease)}
 .mplay.s{transform:translateX(-50%) translateY(0)}
+.mplay.dragging{transition:none}
 .mp-progress{height:2px;background:rgba(255,255,255,.08);overflow:hidden}
 .mp-progress-bar{height:100%;width:100%;transform:scaleX(0);transform-origin:left;background:var(--grad);border-radius:inherit}
 .mplay.s.playing .mp-progress-bar{animation:mpProgress 26s linear infinite}
@@ -427,7 +434,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .fplayer.s.playing .fp-bg-orb{opacity:.42;animation:orbDrift 22s ease-in-out infinite}
 .fplayer.s.playing .fp-bg-orb:nth-child(2){animation-delay:-10s}
 
-.fp-hdr{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:calc(var(--st) + 14px) max(22px,var(--sr)) 10px max(22px,var(--sl))}
+/* Aşağı sürükleyip kapatma sırasında geçiş kapalı olmalı ki panel parmağı
+   birebir takip etsin; bırakınca sınıf kalkar ve yaylanma geri gelir. */
+.fplayer.dragging{transition:none}
+.fp-hdr{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:calc(var(--st) + 20px) max(22px,var(--sr)) 10px max(22px,var(--sl))}
+/* Sürükleme tutamacı — "aşağı çekilebilir" olduğunu görsel olarak bildirir. */
+.fp-hdr::before{content:'';position:absolute;top:calc(var(--st) + 8px);left:50%;transform:translateX(-50%);width:38px;height:5px;border-radius:99px;background:var(--gl-4);pointer-events:none}
 .fp-t{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--tx3)}
 .fp-x{width:44px;height:44px;border:1px solid var(--bd);border-radius:14px;background:var(--gl-1);color:var(--tx2);display:grid;place-items:center;transition:background var(--fast),color var(--fast)}
 .fp-x .svg-i{width:18px;height:18px}
@@ -436,8 +448,14 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .fp-x[data-fav="on"] .svg-i{fill:currentColor}
 
 .fp-body{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 22px calc(var(--sb) + 26px);display:flex;flex-direction:column;align-items:center}
+/* Dikeyde sarmalayıcı yok sayılır; çocukları doğrudan .fp-body akışına girer. */
+.fp-id{display:contents}
 
-.fp-art{position:relative;width:min(70vw,280px);aspect-ratio:1;border-radius:36px;display:grid;place-items:center;margin:14px auto 26px;overflow:hidden;font-size:96px;color:#fff;box-shadow:0 36px 110px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.12),inset 0 1px 0 rgba(255,255,255,.22),0 0 70px rgba(124,92,255,.32)}
+/* flex-shrink:0 şart: .fp-body dikey bir flex kabı ve içerik taşıyor; varsayılan
+   shrink ile aspect-ratio'lu kapak 0 yüksekliğe çöküyordu (kapak hiç görünmüyordu).
+   Yükseklik ayrıca vh ile sınırlanır ki iPhone'da oynat düğmesi ekranda kalsın. */
+.fp-art{position:relative;width:min(70vw,260px,26vh);aspect-ratio:1;flex-shrink:0;border-radius:36px;display:grid;place-items:center;margin:14px auto 22px;overflow:hidden;font-size:min(96px,9vh);color:#fff;box-shadow:0 36px 110px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.12),inset 0 1px 0 rgba(255,255,255,.22),0 0 70px rgba(124,92,255,.32)}
+.np-pill,.fp-vis,.fp-ctrls,.fp-vol,.fp-timer{flex-shrink:0}
 .fp-art-placeholder{width:96px;height:96px;stroke-width:1.4}
 .fplayer.s.playing .fp-art{animation:fpArtFloat 6s ease-in-out infinite}
 .fp-art::before{content:'';position:absolute;inset:16px;border-radius:24px;border:1px solid rgba(255,255,255,.14);pointer-events:none;z-index:3}
@@ -556,7 +574,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 .ib-text{flex:1;min-width:0}
 .ib-text h4{font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:-.01em}
 .ib-text p{margin-top:3px;color:var(--tx3);font-size:12px;font-weight:500}
-.ib-btn{border:0;border-radius:13px;background:var(--grad);color:#fff;font-size:13px;font-weight:700;padding:0 16px;min-height:38px;box-shadow:0 8px 18px rgba(124,92,255,.32);transition:filter var(--fast)}
+.ib-btn{border:0;border-radius:13px;background:var(--grad);color:#fff;font-size:13px;font-weight:700;padding:0 16px;min-height:var(--tap);box-shadow:0 8px 18px rgba(124,92,255,.32);transition:filter var(--fast)}
 .ib-btn:hover{filter:brightness(1.1)}
 .ib-close{border:0;border-radius:999px;background:var(--gl-3);color:var(--tx2);width:44px;height:44px;display:grid;place-items:center;min-width:44px;min-height:44px}
 .ib-close .svg-i{width:14px;height:14px}
@@ -567,6 +585,8 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 .modal-c,.ios-box,.cfm-box{width:100%;max-width:500px;border:1px solid var(--bd2);background:var(--sheet-grad);box-shadow:var(--sh-3);animation:sheetUp var(--med) var(--ease);outline:0}
 .modal-c{max-height:min(90vh,calc(var(--vvh,100vh) - var(--st) - 12px));overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:28px 28px 0 0;padding:8px 22px calc(var(--sb) + 24px)}
 .modal-bar,.ios-drag{width:44px;height:5px;margin:8px auto 18px;border-radius:99px;background:var(--gl-4)}
+/* Alt sayfalar da aşağı sürüklenerek kapatılabilir (bkz. attachSheetDrag). */
+.modal-c.dragging,.ios-box.dragging,.cfm-box.dragging{transition:none;animation:none}
 .modal-c h2{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:18px;display:flex;align-items:center;gap:10px}
 .modal-c h2 .svg-i{width:24px;height:24px;color:var(--ac2)}
 .add-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 16px}
@@ -721,6 +741,36 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
   .pad.card-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
   .pad.card-grid>.card{min-height:142px}
   .pad.card-grid .card-shell{min-height:140px}
+}
+/* ── Yatay tam ekran oynatıcı (iPhone 13 yatay: 844×390) ──
+   Tek sütun akışında kapak + ad + şimdi çalınıyor birleşince oynat düğmesi
+   ekranın altına taşıyordu; yatayda kimlik solda, kumandalar sağda iki sütun. */
+@media (orientation:landscape) and (max-height:500px){
+  .fp-hdr{padding-top:calc(var(--st) + 16px);padding-bottom:6px}
+  .fp-hdr::before{top:calc(var(--st) + 6px)}
+  .fp-body{
+    display:grid;
+    grid-template-columns:minmax(120px,168px) minmax(0,1fr);
+    align-items:start;
+    column-gap:22px;
+    padding:4px max(20px,var(--sr)) calc(var(--sb) + 14px) max(20px,var(--sl));
+  }
+  /* Sol sütunu tüm satırlar boyunca rezerve et; kalan çocuklar sağ sütuna
+     sırayla otomatik yerleşsin (satır atlaması olmadan). */
+  .fp-id{display:flex;flex-direction:column;align-items:center;grid-column:1;grid-row:1 / span 20;align-self:start}
+  .fp-body>:not(.fp-id){grid-column:2}
+  .fp-art{width:min(38vh,140px);margin:0 auto 10px;border-radius:24px;font-size:54px}
+  .fp-art-placeholder{width:54px;height:54px}
+  .fp-name{font-size:clamp(18px,2.6vw,22px)}
+  .fp-genre{margin-top:6px}
+  .fp-bitrate{margin-top:8px}
+  .np-pill{margin:0 0 12px;padding:11px 14px}
+  .fp-vis{height:34px;margin:0 0 12px}
+  .fp-ctrls{margin-bottom:14px;gap:12px}
+  .fp-pb{width:68px;height:68px;border-radius:24px}
+  .fp-pb .svg-i{width:26px;height:26px}
+  .fp-sb{width:50px;height:50px;border-radius:16px}
+  .fp-vol{margin-bottom:12px}
 }
 @media (orientation:landscape) and (max-height:560px){
   .car-mode{padding:calc(var(--st) + 12px) 20px calc(var(--sb) + 12px)}
