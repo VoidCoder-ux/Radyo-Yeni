@@ -128,6 +128,49 @@ await withServer(async baseUrl => {
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('#addMod')?.classList.contains('s'));
 
+  // Radio Browser'a ulaşılamadığında arama "Bulunamadı" dememeli: kullanıcı
+  // aksi halde terimi değiştirerek çözemeyeceği bir hatayı kovalıyordu.
+  let apiUp = false;
+  const isApi = url => url.hostname.endsWith('radio-browser.info');
+  await page.route(isApi, async route => {
+    if (!apiUp) return route.abort();
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        stationuuid: 'uuid-smoke-1',
+        name: 'Arama FM',
+        url_resolved: 'https://example.com/arama.mp3',
+        country: 'Turkey',
+        tags: 'pop',
+        bitrate: 128,
+        favicon: ''
+      }])
+    });
+  });
+
+  await page.click('#btnAdd');
+  await page.waitForSelector('#addMod.s');
+  await page.click('[data-add-tab="tr"]');
+  // Yalnızca yazarken-arama debounce'ına bırak: ek bir "Ara" tıklaması ikinci
+  // bir render tetikleyip aşağıdaki düğmeyi tıklanma anında DOM'dan koparıyor.
+  await page.fill('#qTR', 'arama');
+  await page.waitForSelector('#rTR .sr-err-t');
+  assert.match(await page.textContent('#rTR .sr-err-t'), /ulaşılamadı/);
+  assert.ok(
+    !(await page.textContent('#rTR')).includes('Bulunamadı'),
+    'network failure must not be reported as "Bulunamadı"'
+  );
+
+  // "Tekrar dene" aynı aramayı yineler; API dönünce istasyon eklenebilmeli.
+  apiUp = true;
+  await page.click('#rTR .sr-more');
+  await page.waitForSelector('#rTR .sr-add');
+  await page.click('#rTR .sr-add');
+  await page.waitForSelector('#rTR .sr-ok');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('#addMod')?.classList.contains('s'));
+  await page.unroute(isApi);
+
   await page.goto(`${baseUrl}/?page=fav`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#navF[aria-current="page"]');
   await assertVisible(page, '#pF.a');

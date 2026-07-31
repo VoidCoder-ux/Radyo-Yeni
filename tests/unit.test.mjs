@@ -127,7 +127,7 @@ import {
   darken,
   isHttpUrl
 } from '../js/utils.js';
-import { genreFromTags } from '../js/api.js';
+import { genreFromTags, normalizeHosts, FALLBACK_HOSTS, apiCall, apiCallSafe } from '../js/api.js';
 
 test('trMatchRange finds Turkish-normalized match ranges in original text', () => {
   // 'İ'.toLocaleLowerCase('tr') tek karaktere iner; indeks kayması olmamalı
@@ -193,6 +193,53 @@ test('genreFromTags maps Radio Browser tags to app genres', () => {
   assert.equal(genreFromTags('kids'), 'Çocuk');
   assert.equal(genreFromTags(''), 'Diğer');
   assert.equal(genreFromTags(null), 'Diğer');
+});
+
+test('FALLBACK_HOSTS only lists reachable radio-browser mirrors', () => {
+  assert.ok(FALLBACK_HOSTS.length > 0);
+  for (const host of FALLBACK_HOSTS) assert.match(host, /\.api\.radio-browser\.info$/);
+  // nl1 ve at1 kapandı (DNS'te çözülmüyor); listeye geri sızmamalı
+  assert.ok(!FALLBACK_HOSTS.some(h => h.startsWith('nl1.') || h.startsWith('at1.')));
+});
+
+test('normalizeHosts keeps only radio-browser mirrors and dedupes', () => {
+  assert.deepEqual(
+    normalizeHosts([{ name: 'de1.api.radio-browser.info' }, 'DE2.api.radio-browser.info ', { name: 'de1.api.radio-browser.info' }]),
+    ['de1.api.radio-browser.info', 'de2.api.radio-browser.info']
+  );
+  // Ele geçmiş/bozuk bir sunucu listesi istekleri başka bir alan adına taşıyamaz
+  assert.deepEqual(normalizeHosts([{ name: 'evil.example.com' }, { name: 'radio-browser.info.evil.com' }, 'de1.api.radio-browser.info.evil']), []);
+  assert.deepEqual(normalizeHosts(null), []);
+  assert.deepEqual(normalizeHosts([null, 42, {}]), []);
+});
+
+test('apiCall rejects when every mirror fails so callers can tell it from "no results"', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = () => Promise.reject(new Error('offline'));
+  try {
+    await assert.rejects(() => apiCall('stations/search?name=x'));
+    assert.equal(await apiCallSafe('stations/search?name=x'), null);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('apiCall resolves with the first successful mirror response', async () => {
+  const realFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = url => {
+    const href = String(url);
+    if (href.includes('/json/servers')) return Promise.reject(new Error('no server list'));
+    seen.push(href);
+    return Promise.resolve({ ok: true, json: async () => [{ name: 'Test FM' }] });
+  };
+  try {
+    assert.deepEqual(await apiCall('stations/byurl?url=x'), [{ name: 'Test FM' }]);
+    assert.ok(seen.length > 0);
+    for (const href of seen) assert.match(href, /^https:\/\/[a-z0-9.-]+\.api\.radio-browser\.info\/json\//);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 /* ── js/storage.js (yedek/paylaşım token'ları) ── */

@@ -635,6 +635,8 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 .sr-more:hover{background:var(--gl-2);color:var(--tx)}
 .sr-more:disabled{opacity:.6}
 .sr-msg{text-align:center;color:var(--tx3);padding:18px;font-size:12px;font-weight:500}
+.sr-err-t{color:var(--tx2);font-size:13px;line-height:1.5}
+.sr-msg .sr-more{max-width:220px;margin:12px auto 0}
 .skeleton{border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.12),rgba(255,255,255,.05));background-size:240% 100%;animation:skeleton 1.2s linear infinite}
 .skel-wide{width:60%;height:12px;margin:0 auto 6px}
 .skel-narrow{width:40%;height:10px;margin:0 auto}

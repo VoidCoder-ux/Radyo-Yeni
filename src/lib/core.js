@@ -2,7 +2,7 @@
 // doğrudan import eder; birim testler de aynı modülü test eder
 // (bkz. tests/unit.test.mjs). Burada yapılan her değişiklik uygulamada da,
 // testlerde de aynı anda geçerli olur.
-export const APP_VERSION = '16.1.0';
+export const APP_VERSION = '16.1.1';
 export const EXPORT_VERSION = APP_VERSION;
 
 export const LIMITS = {
