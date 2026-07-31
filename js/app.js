@@ -22,7 +22,7 @@ import {
   formatBytes,
   formatListenTime
 } from './utils.js';
-import { apiCall, genreFromTags } from './api.js';
+import { apiCall, apiCallSafe, genreFromTags } from './api.js';
 
 (function(){
 'use strict';
@@ -1941,7 +1941,22 @@ const _sr=new Map();
 const _searchSeq={};
 function _srSet(k,v){if(_sr.size>10){const first=_sr.keys().next().value;_sr.delete(first);}_sr.set(k,v);}
 const SEARCH_PAGE=30;
+const SR_OK='ok',SR_EMPTY='empty',SR_ERROR='error',SR_STALE='stale';
 const _srchState={}; // targetId -> {key,base,fallbackTag,seen,list,offset,done}
+
+/* Ağ hatası "Bulunamadı" ile karıştırılmamalı: kullanıcı terimi değiştirerek
+   çözemeyeceği bir durumda doğru mesajı ve yeniden deneme düğmesini görür. */
+function srError(el,targetId,st){
+  el.innerHTML='';
+  const box=document.createElement('div');box.className='sr-msg';
+  const p=document.createElement('p');p.className='sr-err-t';
+  p.textContent='Radyo listesine ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.';
+  const again=document.createElement('button');
+  again.type='button';again.className='sr-more';again.textContent='Tekrar dene';
+  again.addEventListener('click',()=>runSearch(targetId,st.key,st.base,{fallbackTag:st.fallbackTag}));
+  box.appendChild(p);box.appendChild(again);el.appendChild(box);
+}
+
 async function runSearch(targetId,key,base,opts={}){
   const el=g(targetId);
   const append=!!opts.append;
@@ -1949,36 +1964,45 @@ async function runSearch(targetId,key,base,opts={}){
     {key,base,fallbackTag:opts.fallbackTag||'',seen:new Set(),list:[],offset:0,done:false};
   _srchState[targetId]=st;
   const seq=(_searchSeq[targetId]||0)+1;_searchSeq[targetId]=seq;
+  let got;
   try{
     if(!append)el.innerHTML='<div class="sr-msg"><div class="skeleton skel-wide"></div><div class="skeleton skel-narrow"></div></div>';
     const d=await apiCall(`stations/search?${st.base}&limit=${SEARCH_PAGE}&offset=${st.offset}&hidebroken=true&order=clickcount&reverse=true`);
-    if(_searchSeq[targetId]!==seq)return;
-    const got=Array.isArray(d)?d:[];
-    got.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
-    st.offset+=SEARCH_PAGE;
-    if(got.length<SEARCH_PAGE)st.done=true;
-    // İlk sayfa zayıfsa tür araması ile tamamla (yalnız ad aramalarında)
-    if(!append&&st.fallbackTag&&st.list.length<8){
-      const extra=st.base.includes('countrycode=')?'&'+st.base.split('&').filter(p=>p.startsWith('countrycode=')).join(''):'';
-      const d2=await apiCall(`stations/search?tag=${encodeURIComponent(st.fallbackTag)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);
-      if(_searchSeq[targetId]!==seq)return;
-      if(d2)d2.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
-    }
-    if(!st.list.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return false;}
-    _srSet(key,st.list);
-    renderSR(st.list,el,key);
-    return true;
+    if(_searchSeq[targetId]!==seq)return SR_STALE;
+    got=Array.isArray(d)?d:[];
   }catch{
-    if(_searchSeq[targetId]===seq&&!append)el.innerHTML='<div class="sr-msg">Arama sırasında hata oluştu.</div>';
-    return false;
+    if(_searchSeq[targetId]!==seq)return SR_STALE;
+    // Sayfalama hatasında eldeki sonuçlar korunur; liste yeniden çizilince
+    // "Daha fazla yükle" düğmesi de 'Yükleniyor...' halinde kilitli kalmaz.
+    if(append&&st.list.length){renderSR(st.list,el,st.key);toast('Daha fazlası yüklenemedi','err');}
+    else srError(el,targetId,st);
+    return SR_ERROR;
   }
+  got.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
+  st.offset+=SEARCH_PAGE;
+  if(got.length<SEARCH_PAGE)st.done=true;
+  // İlk sayfa zayıfsa tür araması ile tamamla (yalnız ad aramalarında).
+  // Bu ek istek başarısız olursa ana sonuçlar yine de gösterilir.
+  if(!append&&st.fallbackTag&&st.list.length<8){
+    const extra=st.base.includes('countrycode=')?'&'+st.base.split('&').filter(p=>p.startsWith('countrycode=')).join(''):'';
+    try{
+      const d2=await apiCall(`stations/search?tag=${encodeURIComponent(st.fallbackTag)}${extra}&limit=20&hidebroken=true&order=clickcount&reverse=true`);
+      if(_searchSeq[targetId]!==seq)return SR_STALE;
+      if(Array.isArray(d2))d2.forEach(x=>{if(!st.seen.has(x.stationuuid)){st.seen.add(x.stationuuid);st.list.push(x);}});
+    }catch{
+      if(_searchSeq[targetId]!==seq)return SR_STALE;
+    }
+  }
+  if(!st.list.length){el.innerHTML='<div class="sr-msg">Bulunamadı. Farklı terim deneyin.</div>';return SR_EMPTY;}
+  _srSet(st.key,st.list);
+  renderSR(st.list,el,st.key);
+  return SR_OK;
 }
 async function doTagSearch(q){
-  // Önce Türkiye içinde ara; sonuç yoksa tüm dünyada dene.
-  const found=await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}&countrycode=TR`);
-  if(found===false&&_srchState.rTG&&!_srchState.rTG.list.length){
-    await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}`);
-  }
+  // Önce Türkiye içinde ara; sonuç yoksa tüm dünyada dene. Ağ hatasında dünya
+  // araması denenmez, aksi halde hata mesajının yerini ikinci bir hata alırdı.
+  const res=await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}&countrycode=TR`);
+  if(res===SR_EMPTY)await runSearch('rTG','tag',`tag=${encodeURIComponent(q)}`);
 }
 function renderSR(data,container,key){
   const wrap=document.createElement('div');wrap.className='srch-res';
@@ -2026,25 +2050,28 @@ async function autoFetchLogos(limit=20){
   let updated=0;
   const prevImgs=new Map(missing.map(s=>[s.id,s.img]));
   const curHadImg=!!S.cur?.img;
+  let failStreak=0;
   try{
   // Batch: search by URL for each station without logo
   for(const s of missing){
-    try{
-      // Try exact URL match first
-      let d=await apiCall(`stations/byurl?url=${encodeURIComponent(s.u)}`);
-      if(!d?.length){
-        // Fallback: search by name
-        d=await apiCall(`stations/search?name=${encodeURIComponent(s.n)}&limit=5&hidebroken=true&order=clickcount&reverse=true`);
+    // Try exact URL match first
+    let d=await apiCallSafe(`stations/byurl?url=${encodeURIComponent(s.u)}`);
+    if(!d?.length){
+      // Fallback: search by name
+      d=await apiCallSafe(`stations/search?name=${encodeURIComponent(s.n)}&limit=5&hidebroken=true&order=clickcount&reverse=true`);
+    }
+    // API tümden erişilemezse döngüyü sürdürmek anlamsız; her istek zaman
+    // aşımına kadar beklediği için 80 istasyonluk tarama dakikalarca sürerdi.
+    if(d===null){if(++failStreak>=3)break;}
+    else{
+      failStreak=0;
+      // Find best match with a valid favicon
+      const match=Array.isArray(d)?d.find(x=>cleanImageUrl(x.favicon)):null;
+      if(match){
+        const logo=cleanImageUrl(match.favicon);
+        if(logo){s.img=logo;updated++;}
       }
-      if(d?.length){
-        // Find best match with a valid favicon
-        const match=d.find(x=>cleanImageUrl(x.favicon));
-        if(match){
-          const logo=cleanImageUrl(match.favicon);
-          if(logo){s.img=logo;updated++;}
-        }
-      }
-    }catch{}
+    }
     // Small delay to avoid hammering the API
     await new Promise(r=>setTimeout(r,300));
   }
