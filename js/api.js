@@ -49,14 +49,31 @@ function activeHosts(){
   return _hosts&&_hosts.length?_hosts:FALLBACK_HOSTS;
 }
 
+/* Verilen aynalara paralel istek atar, ilk başarılı yanıtta diğerlerini iptal
+   eder. Hepsi düşerse reddeder. */
+function raceHosts(hosts,ep){
+  const ctrls=hosts.map(()=>new AbortController());
+  const reqs=hosts.map((h,i)=>fetchWithTimeout(`https://${h}/json/${ep}`,{cache:'no-store',signal:ctrls[i].signal},REQ_TIMEOUT).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}));
+  return Promise.any(reqs).finally(()=>{ctrls.forEach(c=>{try{c.abort();}catch{}});});
+}
+
 /* Tüm aynalar başarısız olduğunda hata fırlatır. Eskiden null dönüyordu ve
    arayüz bunu boş sonuçtan ayıramayıp ağ hatasına "Bulunamadı" diyordu. */
 export async function apiCall(ep){
   const hosts=activeHosts();
-  const ctrls=hosts.map(()=>new AbortController());
-  const reqs=hosts.map((h,i)=>fetchWithTimeout(`https://${h}/json/${ep}`,{cache:'no-store',signal:ctrls[i].signal},REQ_TIMEOUT).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}));
-  try{return await Promise.any(reqs);}
-  finally{ctrls.forEach(c=>{try{c.abort();}catch{}});}
+  try{return await raceHosts(hosts,ep);}
+  catch(err){
+    // Keşfedilen aynalar topluca düşerse önbelleği hemen düşür ve bilinen yedek
+    // listeyle bir kez daha dene. Aksi halde TTL dolana kadar (6 saat) çalışan
+    // aynalar dururken arama hata vermeyi sürdürürdü — bu PR'ın düzelttiği
+    // "liste eskidi, her şey durdu" hatasının aynısı.
+    if(hosts!==FALLBACK_HOSTS){
+      _hosts=null;_hostsAt=0;
+      const rest=FALLBACK_HOSTS.filter(h=>!hosts.includes(h));
+      if(rest.length)return await raceHosts(rest,ep);
+    }
+    throw err;
+  }
 }
 
 /* Hatanın kullanıcıya gösterilmesi gerekmeyen çağrılar için (arka plan logo

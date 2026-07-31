@@ -224,6 +224,36 @@ test('apiCall rejects when every mirror fails so callers can tell it from "no re
   }
 });
 
+test('apiCall falls back to the known mirrors when the discovered ones all fail', async () => {
+  const realFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = url => {
+    const href = String(url);
+    // Keşif listesi tek bir aynayı işaret etsin ve o ayna düşük olsun
+    if (href.includes('/json/servers')) {
+      return Promise.resolve({ ok: true, json: async () => [{ name: 'xx1.api.radio-browser.info' }] });
+    }
+    seen.push(href);
+    if (href.includes('//xx1.')) return Promise.reject(new Error('mirror down'));
+    return Promise.resolve({ ok: true, json: async () => [{ name: 'Fallback FM' }] });
+  };
+  try {
+    // İlk çağrı yedek listeyle çalışır ve keşfi tetikler; keşif önbelleğe
+    // düşene kadar (arka planda) yinele.
+    let last = null;
+    const deadline = Date.now() + 2000;
+    while (!seen.some(href => href.includes('//xx1.')) && Date.now() < deadline) {
+      last = await apiCall('stations/search?name=x');
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+    assert.ok(seen.some(href => href.includes('//xx1.')), 'keşfedilen ayna denenmiş olmalı');
+    // Keşfedilen ayna düşükken bile sonuç dönmeli: yedek listeye geçilir
+    assert.deepEqual(last, [{ name: 'Fallback FM' }]);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('apiCall resolves with the first successful mirror response', async () => {
   const realFetch = globalThis.fetch;
   const seen = [];
