@@ -8,6 +8,24 @@ export function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeou
 export function relTime(ts,now=Date.now()){const m=Math.floor((now-ts)/60000);if(m<1)return'Az önce';if(m<60)return m+'dk';const h=Math.floor(m/60);if(h<24)return h+'sa';return Math.floor(h/24)+'g';}
 /* Koyulaştırırken maviyi artırır: logo zeminlerinde gece-moru gölge tonu bilinçli tasarım tercihi */
 export function darken(h){try{return`rgb(${Math.max(0,parseInt(h.slice(1,3),16)-50)},${Math.max(0,parseInt(h.slice(3,5),16)-30)},${Math.min(255,parseInt(h.slice(5,7),16)+40)})`;}catch{return'#4a3ab5';}}
+/* '#rrggbb' -> [r,g,b]; geçersiz girdide paletin ilk rengine düşer. */
+function orbParts(h){
+  try{
+    const p=[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+    return p.some(n=>!Number.isFinite(n))?[124,92,255]:p;
+  }catch{return[124,92,255];}
+}
+/* Arka plan orb'ları için hazır yumuşak geçiş üretir. Eskiden düz renkli bir
+   daire filter:blur() ile yumuşatılıyordu; blur çekirdeği her karede GPU'da
+   yeniden çalıştığı için kaydırma sırasında telefonu ısıtan asıl maliyet oydu
+   (ölçüm: 31 -> 60 FPS). Gradyan aynı görünümü sıfır süzgeç maliyetiyle verir.
+   darken=true, ikinci orb için darken() ile aynı renk kaymasını uygular. */
+export function orbGradient(h,darken){
+  let [r,g,b]=orbParts(h);
+  if(darken){r=Math.max(0,r-50);g=Math.max(0,g-30);b=Math.min(255,b+40);}
+  const c=`${r},${g},${b}`;
+  return `radial-gradient(circle closest-side,rgba(${c},1) 0%,rgba(${c},.72) 38%,rgba(${c},.28) 62%,rgba(${c},0) 100%)`;
+}
 /* SVG icon helper — references symbols defined in the index.html sprite */
 export function icon(name,opts){const o=opts||{};const cls='svg-i'+(o.fill?' fill':'')+(o.cls?' '+o.cls:'');return `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
 

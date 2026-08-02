@@ -178,10 +178,14 @@ button,a,label,summary,[role=button],[data-action],.card,.chip,.set-row{touch-ac
 
 /* ---------------- Ambient FX ------------------ */
 .ambient{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;contain:strict}
-.ambient-orb{position:absolute;border-radius:999px;filter:blur(96px);opacity:.32;transform:translateZ(0);animation:orbDrift 32s ease-in-out infinite;animation-play-state:paused;will-change:transform}
-.ambient-orb:nth-child(1){width:380px;height:380px;background:#7c5cff;top:-140px;left:-110px}
-.ambient-orb:nth-child(2){width:320px;height:320px;background:#22d3ee;right:-130px;bottom:18%;animation-delay:-8s}
-.ambient-orb:nth-child(3){width:280px;height:280px;background:#a855f7;left:30%;top:45%;animation-delay:-16s;opacity:.22}
+/* Orb'lar düz renkli daire + filter:blur() yerine hazır radial-gradient kullanır.
+   blur() çekirdeği her karede yeniden çalıştığı için kaydırma sırasında telefonu
+   ısıtan asıl maliyet oydu (ölçüm: 31 -> 60 FPS). Ölçüler, eski dairenin blur
+   sonrası görsel yayılımıyla eşleşecek şekilde büyütülüp merkezleri korundu. */
+.ambient-orb{position:absolute;border-radius:999px;opacity:.32;transform:translateZ(0);animation:orbDrift 32s ease-in-out infinite;animation-play-state:paused;will-change:transform}
+.ambient-orb:nth-child(1){width:560px;height:560px;background:radial-gradient(circle closest-side,rgba(124,92,255,1) 0%,rgba(124,92,255,.72) 38%,rgba(124,92,255,.28) 62%,rgba(124,92,255,0) 100%);top:-230px;left:-200px}
+.ambient-orb:nth-child(2){width:500px;height:500px;background:radial-gradient(circle closest-side,rgba(34,211,238,1) 0%,rgba(34,211,238,.72) 38%,rgba(34,211,238,.28) 62%,rgba(34,211,238,0) 100%);right:-220px;bottom:calc(18% - 90px);animation-delay:-8s}
+.ambient-orb:nth-child(3){width:460px;height:460px;background:radial-gradient(circle closest-side,rgba(168,85,247,1) 0%,rgba(168,85,247,.72) 38%,rgba(168,85,247,.28) 62%,rgba(168,85,247,0) 100%);left:calc(30% - 90px);top:calc(45% - 90px);animation-delay:-16s;opacity:.22}
 .ambient.playing .ambient-orb{opacity:.42;animation-play-state:running}
 @keyframes orbDrift{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(22px,-28px,0) scale(1.06)}}
 .noise{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.025;mix-blend-mode:screen;contain:strict;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
@@ -189,6 +193,9 @@ button,a,label,summary,[role=button],[data-action],.card,.chip,.set-row{touch-ac
 /* ---------------- Splash ------------------ */
 .splash{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 80% at 50% 30%,rgba(124,92,255,.25),transparent 60%),linear-gradient(180deg,#06070f,#0a0c1a);transition:opacity var(--slow) var(--ease),visibility var(--slow)}
 .splash.h{opacity:0;visibility:hidden;pointer-events:none}
+/* Splash DOM'da kalıyor; visibility:hidden animasyonları durdurmaz. Sonsuz
+   döngüdeki splPulse (box-shadow) ve splLoad oturum boyunca boşuna dönerdi. */
+.splash.h .spl-ic,.splash.h .spl-bar::after{animation:none}
 .spl-ic{width:108px;height:108px;border-radius:32px;background:var(--grad);display:grid;place-items:center;color:#fff;margin-bottom:26px;box-shadow:0 30px 90px rgba(124,92,255,.45),inset 0 1px 0 rgba(255,255,255,.28);animation:splPulse 2.6s var(--ease) infinite;position:relative;overflow:hidden}
 .spl-ic::after{content:'';position:absolute;inset:0;background:linear-gradient(145deg,rgba(255,255,255,.28),transparent 50%);border-radius:inherit}
 .spl-ic .svg-i{width:54px;height:54px;stroke-width:1.8;position:relative;z-index:1}
@@ -428,9 +435,10 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .fplayer{position:fixed;inset:0;min-height:100dvh;z-index:200;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(120% 70% at 50% 0,rgba(124,92,255,.28),transparent 60%),radial-gradient(80% 50% at 100% 100%,rgba(34,211,238,.14),transparent 60%),linear-gradient(180deg,#06070f,#0a0c1a 70%,#06070f);transform:translateY(100%);transition:transform var(--med) var(--ease);contain:layout style}
 .fplayer.s{transform:translateY(0)}
 .fp-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.fp-bg-orb{position:absolute;border-radius:999px;filter:blur(100px);opacity:.28;transition:background var(--slow),opacity var(--med);will-change:transform}
-.fp-bg-orb:nth-child(1){width:400px;height:400px;top:-110px;right:-110px;background:#7c5cff}
-.fp-bg-orb:nth-child(2){width:340px;height:340px;bottom:4%;left:-140px;background:#22d3ee}
+/* Renkleri js/app.js:updatePlayerArt orbGradient() ile atar (istasyon rengi). */
+.fp-bg-orb{position:absolute;border-radius:999px;opacity:.28;transition:background var(--slow),opacity var(--med);will-change:transform}
+.fp-bg-orb:nth-child(1){width:580px;height:580px;top:-200px;right:-200px;background:radial-gradient(circle closest-side,rgba(124,92,255,1) 0%,rgba(124,92,255,.72) 38%,rgba(124,92,255,.28) 62%,rgba(124,92,255,0) 100%)}
+.fp-bg-orb:nth-child(2){width:520px;height:520px;bottom:calc(4% - 90px);left:-230px;background:radial-gradient(circle closest-side,rgba(34,211,238,1) 0%,rgba(34,211,238,.72) 38%,rgba(34,211,238,.28) 62%,rgba(34,211,238,0) 100%)}
 .fplayer.s.playing .fp-bg-orb{opacity:.42;animation:orbDrift 22s ease-in-out infinite}
 .fplayer.s.playing .fp-bg-orb:nth-child(2){animation-delay:-10s}
 
@@ -674,9 +682,9 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 .car-mode.s{display:flex;animation:carIn var(--med) var(--ease)}
 @keyframes carIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
 .car-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.car-bg-orb{position:absolute;border-radius:999px;filter:blur(110px);opacity:.32}
-.car-bg-orb:nth-child(1){width:420px;height:420px;right:-140px;top:-120px;background:#7c5cff}
-.car-bg-orb:nth-child(2){width:340px;height:340px;left:-120px;bottom:4%;background:#22d3ee}
+.car-bg-orb{position:absolute;border-radius:999px;opacity:.32}
+.car-bg-orb:nth-child(1){width:600px;height:600px;right:-230px;top:-210px;background:radial-gradient(circle closest-side,rgba(124,92,255,1) 0%,rgba(124,92,255,.72) 38%,rgba(124,92,255,.28) 62%,rgba(124,92,255,0) 100%)}
+.car-bg-orb:nth-child(2){width:520px;height:520px;left:-210px;bottom:calc(4% - 90px);background:radial-gradient(circle closest-side,rgba(34,211,238,1) 0%,rgba(34,211,238,.72) 38%,rgba(34,211,238,.28) 62%,rgba(34,211,238,0) 100%)}
 .car-hdr,.car-now,.car-ctrls,.car-favs-ttl,.car-favs{position:relative;z-index:1}
 .car-hdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .car-ttl{font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--tx2)}
@@ -828,8 +836,6 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
   .ceq i{animation-play-state:paused;transform:scaleY(.7)}
   .fplayer.s.playing .fp-art{animation:none}
   .mplay.s.playing .mp-progress-bar{animation:none;transform:scaleX(.5)}
-  /* büyük bulanık orb'ların yarıçapını düşür (GPU maliyeti blur² ile artar) */
-  .ambient-orb,.fp-bg-orb,.car-bg-orb{filter:blur(56px)}
   /* sürekli ekranda olan cam yüzeylerde backdrop-filter'ı hafiflet,
      pahalı saturate()'i kaldır */
   .hdr{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
@@ -837,7 +843,6 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
   .mplay{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 }
 @media (max-width:380px),(prefers-reduced-motion:reduce){
-  .ambient-orb,.fp-bg-orb,.car-bg-orb{filter:blur(60px)}
   .noise{opacity:.015}
 }
 

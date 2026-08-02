@@ -15,6 +15,7 @@ import {
   debounce,
   relTime,
   darken,
+  orbGradient,
   icon as _ic,
   fetchWithTimeout,
   initialRoute,
@@ -1081,8 +1082,8 @@ function play(id){
   const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
   if(s.img){const fi=document.createElement('img');setImageSrc(fi,s.img);fi.alt='';fi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};fpArt.appendChild(fi);}
   else{fpArt.textContent=s.e;}
-  g('fpOrb1').style.background=s.c||'#7c5cff';
-  g('fpOrb2').style.background=darken(s.c||'#7c5cff');
+  g('fpOrb1').style.background=orbGradient(s.c||'#7c5cff');
+  g('fpOrb2').style.background=orbGradient(s.c||'#7c5cff',true);
   g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
   // Bitrate
   if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;setVisible('fpBitrate',true,'inline-flex');}else{setVisible('fpBitrate',false);}
