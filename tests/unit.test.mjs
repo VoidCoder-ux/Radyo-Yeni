@@ -199,6 +199,21 @@ test('background orbs never use filter:blur (iPhone ısınma regresyonu)', () =>
   assert.match(css, /\.ambient-orb:nth-child\(1\)\{[^}]*radial-gradient/);
 });
 
+test('canlı nokta yalnızca görünürken ve masaüstünde canlanır (boşta ısınma)', () => {
+  // Sürekli dönen tek bir animasyon bile compositor'ı 60fps'te uyanık tutuyor:
+  // ölçümde uygulama boştayken 58.6 kare/sn çiziyordu, bu ayrımla 0.4'e indi.
+  const css = readFileSync('css/styles.css', 'utf8');
+  const base = css.match(/^\.itr-dot,\.cdot\{[^}]*\}/m);
+  assert.ok(base, '.itr-dot,.cdot temel kuralı bulunamadı');
+  assert.doesNotMatch(base[0], /animation/, 'temel kural animasyon içermemeli; nabız görünürlüğe bağlanmalı');
+  // Nabız yalnızca #itr şeridi açıkken (.itr.s) çalışmalı
+  assert.match(css, /\.cdot,\.itr\.s \.itr-dot\{animation:livePulse/);
+  // Dokunmatik cihazlarda tamamen kapalı
+  const coarse = css.match(/@media \(pointer:coarse\)\{[\s\S]*?\n\}/);
+  assert.ok(coarse, 'pointer:coarse bloğu bulunamadı');
+  assert.match(coarse[0], /\.cdot,\.itr\.s \.itr-dot\{animation:none\}/);
+});
+
 test('isHttpUrl flags only plain http URLs', () => {
   assert.equal(isHttpUrl('http://example.com/s'), true);
   assert.equal(isHttpUrl('https://example.com/s'), false);
