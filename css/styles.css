@@ -212,7 +212,11 @@ button,a,label,summary,[role=button],[data-action],.card,.chip,.set-row{touch-ac
 
 .itr{position:fixed;top:calc(var(--st) + 12px);left:50%;transform:translateX(-50%) translateY(-90px) scale(.96);z-index:600;display:flex;align-items:center;gap:9px;white-space:nowrap;pointer-events:none;opacity:0;padding:10px 16px;border-radius:999px;border:1px solid var(--bd2);background:var(--panel-soft);color:var(--tx);box-shadow:var(--sh-2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-size:12px;font-weight:700;transition:transform var(--med) var(--ease),opacity var(--med)}
 .itr.s{transform:translateX(-50%) translateY(0) scale(1);opacity:1}
-.itr-dot,.cdot{width:8px;height:8px;border-radius:999px;background:currentColor;box-shadow:0 0 12px currentColor;display:inline-block;flex-shrink:0;animation:livePulse 1.6s ease-in-out infinite}
+.itr-dot,.cdot{width:8px;height:8px;border-radius:999px;background:currentColor;box-shadow:0 0 12px currentColor;display:inline-block;flex-shrink:0}
+/* Nokta yalnızca görünürken canlansın. #itr şeridi kapalıyken (opacity:0) de
+   animasyon dönüyor, hiçbir şey göstermeden compositor'ı 60fps'te uyanık
+   tutuyordu — boştaki kare üretimi 58.6/sn idi, bu ayrımla 0.6/sn'ye düşüyor. */
+.cdot,.itr.s .itr-dot{animation:livePulse 1.6s ease-in-out infinite}
 .itr.type-call{color:var(--no)}.itr.type-notif{color:var(--warn)}.itr.type-resume{color:var(--ok)}.itr.type-bg{color:var(--info)}
 .itr-vol{font-size:10px;color:var(--tx3);font-weight:600}
 
@@ -834,6 +838,9 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
   .fplayer.s.playing .fp-bg-orb{animation-play-state:paused}
   /* kalan sürekli (infinite) animasyonlar */
   .ceq i{animation-play-state:paused;transform:scaleY(.7)}
+  /* Canlı nokta: uygulama boştayken bile dönen son animasyondu. Nokta ve
+     "Canlı Yayın" yazısı duruyor, yalnızca nabız atışı yok. */
+  .cdot,.itr.s .itr-dot{animation:none}
   .fplayer.s.playing .fp-art{animation:none}
   .mplay.s.playing .mp-progress-bar{animation:none;transform:scaleX(.5)}
   /* sürekli ekranda olan cam yüzeylerde backdrop-filter'ı hafiflet,
