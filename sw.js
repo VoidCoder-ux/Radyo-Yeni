@@ -1,4 +1,4 @@
-const CACHE='pulse-radio-v16.1.1';
+const CACHE='pulse-radio-v16.1.2';
 const PRECACHE=['./','index.html','css/styles.css','js/storage.js','js/utils.js','js/api.js','js/app.js','js/vendor/hls.light.min.js','src/lib/core.js','data/starter-stations.json','fonts/plus-jakarta-sans-latin-wght-normal.woff2','fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2','fonts/outfit-latin-wght-normal.woff2','fonts/outfit-latin-ext-wght-normal.woff2','manifest.json','icons/icon.svg','icons/apple-touch-icon-180.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png'];
 
 self.addEventListener('install',e=>{

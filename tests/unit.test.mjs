@@ -125,6 +125,7 @@ import {
   formatListenTime,
   relTime,
   darken,
+  orbGradient,
   isHttpUrl
 } from '../js/utils.js';
 import { genreFromTags, normalizeHosts, FALLBACK_HOSTS, apiCall, apiCallSafe } from '../js/api.js';
@@ -172,6 +173,30 @@ test('relTime buckets relative timestamps', () => {
 test('darken shifts hex colors toward night-purple and falls back safely', () => {
   assert.equal(darken('#7c5cff'), 'rgb(74,62,255)');
   assert.equal(darken(null), '#4a3ab5');
+});
+
+test('orbGradient builds a soft gradient and mirrors darken() for the second orb', () => {
+  const g = orbGradient('#7c5cff');
+  assert.match(g, /^radial-gradient\(circle closest-side,rgba\(124,92,255,1\) 0%/);
+  assert.match(g, /rgba\(124,92,255,0\) 100%\)$/);
+  // darken=true, darken() ile aynı kaymayı uygular: 124-50, 92-30, 255+40(sınırlı)
+  assert.match(orbGradient('#7c5cff', true), /rgba\(74,62,255,1\) 0%/);
+  // Geçersiz girdi paletin ilk rengine düşer, hiçbir zaman NaN üretmez
+  for (const bad of [null, undefined, '', 'mor', 42]) {
+    assert.match(orbGradient(bad), /rgba\(124,92,255,1\) 0%/);
+    assert.doesNotMatch(orbGradient(bad), /NaN/);
+  }
+});
+
+test('background orbs never use filter:blur (iPhone ısınma regresyonu)', () => {
+  // blur() çekirdeği her karede GPU'da yeniden çalışır; ölçümde kaydırma
+  // 30 FPS'e düşüyordu. Orb'lar hazır radial-gradient kullanmalı.
+  const css = readFileSync('css/styles.css', 'utf8');
+  for (const line of css.split('\n')) {
+    if (!/^\s*\.?[^{]*(ambient-orb|fp-bg-orb|car-bg-orb)/.test(line)) continue;
+    assert.doesNotMatch(line, /filter:\s*blur\(/, `orb kuralı filter:blur kullanmamalı: ${line.trim().slice(0, 90)}`);
+  }
+  assert.match(css, /\.ambient-orb:nth-child\(1\)\{[^}]*radial-gradient/);
 });
 
 test('isHttpUrl flags only plain http URLs', () => {
