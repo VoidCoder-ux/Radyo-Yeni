@@ -891,3 +891,14 @@ kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px
 .seg{display:flex;gap:4px;padding:4px;border:1px solid var(--bd);border-radius:14px;background:var(--gl-1)}
 .seg button{min-height:36px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--tx3);font-size:12px;font-weight:700;transition:background var(--fast),color var(--fast)}
 .seg button.a{background:var(--grad);color:#fff}
+
+/* Lyrics styling */
+.fp-lyrics{margin:18px 16px 22px;border-radius:18px;background:var(--gl-1);border:1px solid var(--gl-3);overflow:hidden}
+.fp-lyrics-hdr{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;background:var(--gl-2)}
+.fp-lyrics-hdr-lbl{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--tx)}
+.fp-lyrics-hdr-lbl .svg-i{width:18px;height:18px;color:var(--tx2)}
+.fp-lyrics .arr{color:var(--tx3);transition:transform var(--med)}
+.fp-lyrics.open .arr{transform:rotate(180deg)}
+.fp-lyrics-body{max-height:0;overflow:hidden;transition:max-height var(--med)}
+.fp-lyrics.open .fp-lyrics-body{max-height:50vh;overflow-y:auto;border-top:1px solid var(--gl-3)}
+.lyrics-text{padding:16px;font-size:14px;line-height:1.6;color:var(--tx2);white-space:pre-wrap;text-align:center}

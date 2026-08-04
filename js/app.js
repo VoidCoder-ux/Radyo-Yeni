@@ -622,9 +622,97 @@ const NP={
           artwork:navigator.mediaSession.metadata.artwork||[]
         });}catch{}
       }
+      this._fetchArtwork(clean);
     }else{
       np.classList.remove('s');mNow.classList.remove('s');mName?.classList.remove('has-np');
       if(carNp)carNp.textContent='';
+      this._resetArtwork();
+    }
+  },
+  _resetArtwork(){
+    if(!S.cur)return;
+    const fpArt=g('fpArt');
+    if(S.cur.img){
+      const mi=document.createElement('img');
+      setImageSrc(mi,S.cur.img);mi.alt='';mi.loading='lazy';
+      mi.onerror=function(){this.replaceWith(document.createTextNode(S.cur.e));};
+      fpArt.innerHTML='';fpArt.appendChild(mi);
+    }else{
+      fpArt.innerHTML=S.cur.e;
+    }
+    this._lastArtTitle=null;
+  },
+  _lastArtTitle:null,
+  async _fetchArtwork(title){
+    if(!title || this._lastArtTitle === title) return;
+    this._lastArtTitle = title;
+    g('lyricsText').textContent = 'Şarkı sözleri aranıyor...';
+    try {
+      const res=await fetchWithTimeout(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`, 4000);
+      let artistName = '', trackName = '';
+      if(res.ok) {
+        const data = await res.json();
+        if(data.results && data.results.length > 0 && this._lastArtTitle === title){
+          artistName = data.results[0].artistName;
+          trackName = data.results[0].trackName;
+          let artwork = data.results[0].artworkUrl100;
+          if(artwork) {
+            artwork = artwork.replace('100x100bb', '500x500bb');
+            const fpArt=g('fpArt');
+            const mi=document.createElement('img');
+            setImageSrc(mi,artwork);mi.alt='';
+            // Add a fade-in class for smooth transition
+            mi.style.opacity = '0';
+            mi.style.transition = 'opacity 0.4s ease';
+            fpArt.innerHTML='';
+            fpArt.appendChild(mi);
+            // Trigger reflow to ensure transition works
+            void mi.offsetWidth;
+            mi.style.opacity = '1';
+
+            if('mediaSession' in navigator&&navigator.mediaSession.metadata&&S.cur){
+               try {
+                  navigator.mediaSession.metadata.artwork=[{src: artwork, sizes: '500x500', type: 'image/jpeg'}];
+               } catch{}
+            }
+          }
+        }
+      }
+
+      // Fetch lyrics if we have artist and track name
+      if (artistName && trackName && this._lastArtTitle === title) {
+        const lyricsRes = await fetchWithTimeout(`https://api.lyrics.ovh/v1/${encodeURIComponent(artistName)}/${encodeURIComponent(trackName)}`, 5000);
+        if (lyricsRes.ok) {
+           const lyricsData = await lyricsRes.json();
+           if (lyricsData.lyrics && this._lastArtTitle === title) {
+              g('lyricsText').textContent = lyricsData.lyrics;
+           } else {
+              g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
+           }
+        } else {
+           g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
+        }
+      } else if (this._lastArtTitle === title) {
+         // Fallback if iTunes search fails or returns nothing: try direct query to lyrics.ovh with the title assuming it's "Artist - Track"
+         const parts = title.split('-');
+         if (parts.length === 2) {
+             const lyricsRes = await fetchWithTimeout(`https://api.lyrics.ovh/v1/${encodeURIComponent(parts[0].trim())}/${encodeURIComponent(parts[1].trim())}`, 5000);
+             if (lyricsRes.ok) {
+                 const lyricsData = await lyricsRes.json();
+                 if (lyricsData.lyrics && this._lastArtTitle === title) {
+                    g('lyricsText').textContent = lyricsData.lyrics;
+                 } else {
+                    g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
+                 }
+             } else {
+                 g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
+             }
+         } else {
+            g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
+         }
+      }
+    }catch{
+       if (this._lastArtTitle === title) g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
     }
   },
   stop(){clearTimeout(this._initialTimer);clearInterval(this._timer);this._initialTimer=null;this._timer=null;this._curId=null;this._setTitle('');},
@@ -2395,6 +2483,15 @@ function init(){
   g('btnFpShare').addEventListener('click',shareStation);
   g('volF').addEventListener('input',e=>setVol(e.target.value));
   g('sleepSel').addEventListener('change',e=>setSleep(Number(e.target.value)));
+
+  /* lyrics panel */
+  const lHdr = g('fpLyricsHdr');
+  if(lHdr) {
+    lHdr.addEventListener('click', ()=>{
+      const p = g('fpLyrics');
+      p.classList.toggle('open');
+    });
+  }
 
   /* interrupt panel */
   g('fpIntHdr').addEventListener('click',()=>{const open=g('fpIntBody').classList.toggle('open');g('fpIntHdr').classList.toggle('open',open);g('fpIntHdr').setAttribute('aria-expanded',String(open));});
