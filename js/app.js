@@ -647,6 +647,7 @@ const NP={
     if(!title || this._lastArtTitle === title) return;
     this._lastArtTitle = title;
     g('lyricsText').textContent = 'Şarkı sözleri aranıyor...';
+    this._resetArtwork();
     try {
       const res=await fetchWithTimeout(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`, 4000);
       let artistName = '', trackName = '';
