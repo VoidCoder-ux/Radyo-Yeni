@@ -937,43 +937,7 @@ function setupMS(){
   // Canlı yayında seek bar gözükmesin
   set('seekto',null);set('seekbackward',null);set('seekforward',null);
 }
-let _metaArtCache=new Map();
 let _lastMetaKey='';
-function _makeArtwork(s){
-  const cacheKey=s.id+'_'+s.c+'_'+s.e+'_'+s.n;
-  if(_metaArtCache.has(cacheKey))return _metaArtCache.get(cacheKey);
-  try{
-    const sz=512,cvs=document.createElement('canvas');cvs.width=sz;cvs.height=sz;
-    const ctx=cvs.getContext('2d');
-    // Gradient background
-    const grd=ctx.createLinearGradient(0,0,sz,sz);
-    grd.addColorStop(0,s.c||'#7c6cf0');grd.addColorStop(1,darken(s.c||'#7c6cf0'));
-    ctx.fillStyle=grd;ctx.beginPath();if(ctx.roundRect){ctx.roundRect(0,0,sz,sz,64);}else{ctx.rect(0,0,sz,sz);}ctx.fill();
-    // Subtle inner glow
-    const igrd=ctx.createRadialGradient(sz/2,sz*0.38,0,sz/2,sz*0.38,sz*0.45);
-    igrd.addColorStop(0,'rgba(255,255,255,0.08)');igrd.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=igrd;ctx.fillRect(0,0,sz,sz);
-    // Emoji icon - compact size
-    ctx.font='120px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(s.e,sz/2,sz*0.38);
-    // Station name
-    ctx.fillStyle='rgba(255,255,255,0.95)';
-    ctx.font='bold 36px -apple-system,system-ui,sans-serif';
-    const name=s.n.length>18?s.n.slice(0,17)+'…':s.n;
-    ctx.fillText(name,sz/2,sz*0.62);
-    // Genre subtitle
-    ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.font='24px -apple-system,system-ui,sans-serif';
-    ctx.fillText(s.g||'Radyo',sz/2,sz*0.72);
-    // Thin bottom accent line
-    ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(sz*0.25,sz*0.80);ctx.lineTo(sz*0.75,sz*0.80);ctx.stroke();
-    const dataUrl=cvs.toDataURL('image/png');
-    _metaArtCache.set(cacheKey,dataUrl);
-    if(_metaArtCache.size>20){const first=_metaArtCache.keys().next().value;_metaArtCache.delete(first);}
-    return dataUrl;
-  }catch{return null;}
-}
 function _artMime(src){
   try{
     const p=new URL(src,location.href).pathname.toLowerCase();
@@ -992,12 +956,9 @@ function updateMeta(s){
   if(artSrc&&!DS.enabled){
     // Station logo - primary artwork for lock screen
     const type=_artMime(artSrc);
-    artwork.push({src:artSrc,sizes:'512x512',type});
-  }else{
-    // Canvas fallback with station branding
-    const fallback=_makeArtwork(s);
-    if(fallback)artwork.push({src:fallback,sizes:'512x512',type:'image/png'});
+    artwork.push({src:artSrc,type});
   }
+  // No invented cover when a station has no logo. iOS owns the lock-screen layout.
   try{
     navigator.mediaSession.metadata=new MediaMetadata({
       title:s.n,
@@ -1008,7 +969,7 @@ function updateMeta(s){
   }catch{}
   syncMediaSessionState();
   // Canlı yayın - seek bar gösterme
-  try{navigator.mediaSession.setPositionState({duration:0,position:0,playbackRate:1});}catch{}
+  try{navigator.mediaSession.setPositionState();}catch{}
 }
 
 /* ── PLAY STATE ── */
