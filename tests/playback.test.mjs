@@ -8,7 +8,9 @@ const section=(start,end)=>src.slice(src.indexOf(start),src.indexOf(end,src.inde
 function npContext(){
   const timers=[],els=new Map(),requests=[];
   const c={S:{cur:{id:'A',u:'https://a.test/live',e:'radio'},playing:true},DS:{enabled:false},
-    document:{hidden:false,createElement:()=>({})},navigator:{},cleanImageUrl:u=>u,setImageSrc:(img,u)=>{img.src=u;},
+    document:{hidden:false,createElement:()=>({})},navigator:{mediaSession:{metadata:{title:'Radio',artist:'Live'}}},
+    minimalMediaArtwork:()=>[{src:'data:image/png;base64,minimal'}],MediaMetadata:class{constructor(value){Object.assign(this,value);}},
+    cleanImageUrl:u=>u,setImageSrc:(img,u)=>{img.src=u;},
     g:id=>{if(!els.has(id))els.set(id,{textContent:'',innerHTML:'',classList:{add:noop,remove:noop},appendChild(img){this.image=img;}});return els.get(id);},
     fetchWithTimeout:async(...args)=>{requests.push(args);return{ok:true,json:async()=>args[0].includes('itunes')?{results:[{artistName:'Artist',trackName:'Track',artworkUrl100:'https://art.test/100x100bb'}]}:{lyrics:'Test lyrics'}};},
     isPowerConstrained:()=>true,NP_IOS_POLL_MS:120000,NP_POLL_MS:60000,
@@ -23,6 +25,7 @@ test('artwork and lyrics complete with correct request timeouts',async()=>{
   assert.equal(els.get('fpArt').image.src,'https://art.test/500x500bb');
   assert.equal(els.get('lyricsText').textContent,'Test lyrics');
   assert.equal(requests[0][2],4000);assert.equal(requests[1][2],5000);
+  assert.equal(c.navigator.mediaSession.metadata.artwork[0].src,'data:image/png;base64,minimal');
 });
 test('unavailable artwork still allows direct artist-title lyrics lookup',async()=>{
   const {c,els}=npContext();c.fetchWithTimeout=async url=>{if(url.includes('itunes'))throw Error('offline');return{ok:true,json:async()=>({lyrics:'Fallback'})};};

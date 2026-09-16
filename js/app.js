@@ -620,7 +620,7 @@ const NP={
           title:clean,
           artist:S.cur.n,
           album:'Pulse Radio',
-          artwork:navigator.mediaSession.metadata.artwork||[]
+          artwork:minimalMediaArtwork()
         });}catch{}
       }
       this._fetchArtwork(clean);
@@ -669,7 +669,7 @@ const NP={
               const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.appendChild(mi);
               if(navigator.mediaSession?.metadata){
                 const old=navigator.mediaSession.metadata;
-                try{navigator.mediaSession.metadata=new MediaMetadata({title:old.title,artist:old.artist,album:old.album,artwork:[{src:artwork,sizes:'500x500',type:'image/jpeg'}]});}catch{}
+                try{navigator.mediaSession.metadata=new MediaMetadata({title:old.title,artist:old.artist,album:old.album,artwork:minimalMediaArtwork()});}catch{}
               }
             }
           }
@@ -938,27 +938,30 @@ function setupMS(){
   set('seekto',null);set('seekbackward',null);set('seekforward',null);
 }
 let _lastMetaKey='';
-function _artMime(src){
-  try{
-    const p=new URL(src,location.href).pathname.toLowerCase();
-    if(p.endsWith('.jpg')||p.endsWith('.jpeg'))return 'image/jpeg';
-    if(p.endsWith('.webp'))return 'image/webp';
-  }catch{}
-  return 'image/png';
+let _minimalArtSrc='';
+function minimalMediaArtwork(){
+  if(!_minimalArtSrc){
+    try{
+      const canvas=document.createElement('canvas');canvas.width=512;canvas.height=512;
+      const ctx=canvas.getContext('2d');
+      // Opaque edge-to-edge background: no white corners, gradients or large logo.
+      ctx.fillStyle='#121416';ctx.fillRect(0,0,512,512);
+      ctx.strokeStyle='#a6adb4';ctx.lineWidth=6;ctx.lineCap='round';
+      [12,24,40,24,12].forEach((height,i)=>{
+        const x=230+i*13;ctx.beginPath();ctx.moveTo(x,256-height/2);ctx.lineTo(x,256+height/2);ctx.stroke();
+      });
+      _minimalArtSrc=canvas.toDataURL('image/png');
+    }catch{return [];}
+  }
+  return [{src:_minimalArtSrc,sizes:'512x512',type:'image/png'}];
 }
 function updateMeta(s){
   if(!('mediaSession' in navigator))return;
-  const artwork=[];
-  const artSrc=cleanImageUrl(s.img);
-  const metaKey=`${s.id}|${s.n}|${s.g||''}|${artSrc}|${DS.enabled?'ds':'full'}`;
+  const artwork=minimalMediaArtwork();
+  const metaKey=`${s.id}|${s.n}|${s.g||''}|minimal-v1`;
   if(_lastMetaKey===metaKey&&navigator.mediaSession.metadata){syncMediaSessionState();return;}
   _lastMetaKey=metaKey;
-  if(artSrc&&!DS.enabled){
-    // Station logo - primary artwork for lock screen
-    const type=_artMime(artSrc);
-    artwork.push({src:artSrc,type});
-  }
-  // No invented cover when a station has no logo. iOS owns the lock-screen layout.
+  // iOS may still expand artwork; the app cannot force the compact system layout.
   try{
     navigator.mediaSession.metadata=new MediaMetadata({
       title:s.n,
