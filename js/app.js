@@ -542,7 +542,7 @@ function makeStarterBox(){
 
 /* ═══ NOW PLAYING (Icecast/Shoutcast metadata best-effort) ═══ */
 const NP={
-  _timer:null,_curId:null,_curTitle:'',_cooldown:new Map(),
+  _timer:null,_curId:null,_curTitle:'',_cooldown:new Map(),_generation:0,_request:null,_artRequest:null,
   _parseIcecast(d,streamUrl){
     try{
       const src=d?.icestats?.source;
@@ -570,7 +570,7 @@ const NP={
     }catch{}
     return null;
   },
-  async _fetchFor(stream){
+  async _fetchFor(stream,signal){
     const now=Date.now();
     const cd=this._cooldown.get(stream)||0;
     if(cd>now)return null;
@@ -579,7 +579,7 @@ const NP={
     const originKey='origin:'+origin;
     const originCd=this._cooldown.get(originKey)||0;
     if(originCd>now)return null;
-    const fetchNP=url=>fetchWithTimeout(url,{cache:'no-store'},3500);
+    const fetchNP=url=>{if(signal?.aborted)throw new DOMException('Aborted','AbortError');return fetchWithTimeout(url,{cache:'no-store',signal},3500);};
     // 1) Icecast status-json
     try{
       const r=await fetchNP(origin+'/status-json.xsl');
@@ -600,6 +600,7 @@ const NP={
       const r=await fetchNP(origin+path.replace(/\/?$/,'')+'.json');
       if(r.ok){const d=await r.json();const t=(d?.title||d?.now_playing||d?.song||'').trim();if(t)return t;}
     }catch{}
+    if(signal?.aborted)return null;
     // All failed — cooldown 10 min to avoid CORS spam
     this._cooldown.set(stream,now+10*60*1000);
     this._cooldown.set(originKey,now+10*60*1000);
@@ -644,88 +645,62 @@ const NP={
   },
   _lastArtTitle:null,
   async _fetchArtwork(title){
-    if(!title || this._lastArtTitle === title) return;
-    this._lastArtTitle = title;
-    g('lyricsText').textContent = 'Şarkı sözleri aranıyor...';
-    this._resetArtwork();
-    try {
-      const res=await fetchWithTimeout(`https://itunes.apple.com/search?term=${encodeURIComponent(title)}&media=music&limit=1`, 4000);
-      let artistName = '', trackName = '';
-      if(res.ok) {
-        const data = await res.json();
-        if(data.results && data.results.length > 0 && this._lastArtTitle === title){
-          artistName = data.results[0].artistName;
-          trackName = data.results[0].trackName;
-          let artwork = data.results[0].artworkUrl100;
-          if(artwork) {
-            artwork = artwork.replace('100x100bb', '500x500bb');
-            const fpArt=g('fpArt');
-            const mi=document.createElement('img');
-            setImageSrc(mi,artwork);mi.alt='';
-            // Add a fade-in class for smooth transition
-            mi.style.opacity = '0';
-            mi.style.transition = 'opacity 0.4s ease';
-            fpArt.innerHTML='';
-            fpArt.appendChild(mi);
-            // Trigger reflow to ensure transition works
-            void mi.offsetWidth;
-            mi.style.opacity = '1';
-
-            if('mediaSession' in navigator&&navigator.mediaSession.metadata&&S.cur){
-               try {
-                  navigator.mediaSession.metadata.artwork=[{src: artwork, sizes: '500x500', type: 'image/jpeg'}];
-               } catch{}
+    if(!title||this._lastArtTitle===title||document.hidden||DS.enabled)return;
+    this._artRequest?.abort();
+    const controller=new AbortController();this._artRequest=controller;
+    const generation=this._generation,stationId=S.cur?.id;
+    this._resetArtwork();this._lastArtTitle=title;
+    const current=()=>!controller.signal.aborted&&!document.hidden&&generation===this._generation&&S.cur?.id===stationId&&this._lastArtTitle===title;
+    const request=(url,ms)=>fetchWithTimeout(url,{signal:controller.signal},ms);
+    g('lyricsText').textContent='Şarkı sözleri aranıyor...';
+    try{
+      let artist='',track='';
+      try{
+        const res=await request('https://itunes.apple.com/search?term='+encodeURIComponent(title)+'&media=music&limit=1',4000);
+        if(!current())return;
+        if(res.ok){
+          const data=await res.json();if(!current())return;
+          const result=data.results?.[0];
+          if(result){
+            artist=result.artistName||'';track=result.trackName||'';
+            const artwork=cleanImageUrl((result.artworkUrl100||'').replace('100x100bb','500x500bb'));
+            if(artwork){
+              const mi=document.createElement('img');setImageSrc(mi,artwork);mi.alt='';
+              const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.appendChild(mi);
+              if(navigator.mediaSession?.metadata){
+                const old=navigator.mediaSession.metadata;
+                try{navigator.mediaSession.metadata=new MediaMetadata({title:old.title,artist:old.artist,album:old.album,artwork:[{src:artwork,sizes:'500x500',type:'image/jpeg'}]});}catch{}
+              }
             }
           }
         }
+      }catch{if(!current())return;}
+      if(!current())return;
+      if(!artist||!track){const parts=title.split(' - ');if(parts.length===2)[artist,track]=parts.map(p=>p.trim());}
+      let lyrics='';
+      if(artist&&track){
+        const res=await request('https://api.lyrics.ovh/v1/'+encodeURIComponent(artist)+'/'+encodeURIComponent(track),5000);
+        if(!current())return;
+        if(res.ok){const data=await res.json();if(!current())return;lyrics=typeof data.lyrics==='string'?data.lyrics:'';}
       }
-
-      // Fetch lyrics if we have artist and track name
-      if (artistName && trackName && this._lastArtTitle === title) {
-        const lyricsRes = await fetchWithTimeout(`https://api.lyrics.ovh/v1/${encodeURIComponent(artistName)}/${encodeURIComponent(trackName)}`, 5000);
-        if (lyricsRes.ok) {
-           const lyricsData = await lyricsRes.json();
-           if (lyricsData.lyrics && this._lastArtTitle === title) {
-              g('lyricsText').textContent = lyricsData.lyrics;
-           } else {
-              g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
-           }
-        } else {
-           g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
-        }
-      } else if (this._lastArtTitle === title) {
-         // Fallback if iTunes search fails or returns nothing: try direct query to lyrics.ovh with the title assuming it's "Artist - Track"
-         const parts = title.split('-');
-         if (parts.length === 2) {
-             const lyricsRes = await fetchWithTimeout(`https://api.lyrics.ovh/v1/${encodeURIComponent(parts[0].trim())}/${encodeURIComponent(parts[1].trim())}`, 5000);
-             if (lyricsRes.ok) {
-                 const lyricsData = await lyricsRes.json();
-                 if (lyricsData.lyrics && this._lastArtTitle === title) {
-                    g('lyricsText').textContent = lyricsData.lyrics;
-                 } else {
-                    g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
-                 }
-             } else {
-                 g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
-             }
-         } else {
-            g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
-         }
-      }
-    }catch{
-       if (this._lastArtTitle === title) g('lyricsText').textContent = 'Şarkı sözü bulunamadı.';
-    }
+      if(current())g('lyricsText').textContent=lyrics||'Şarkı sözü bulunamadı.';
+    }catch{if(current())g('lyricsText').textContent='Şarkı sözü bulunamadı.';}
+    finally{if(this._artRequest===controller)this._artRequest=null;}
   },
-  stop(){clearTimeout(this._initialTimer);clearInterval(this._timer);this._initialTimer=null;this._timer=null;this._curId=null;this._setTitle('');},
+  stop(){this._generation++;this._request?.abort();this._artRequest?.abort();this._request=null;this._artRequest=null;clearTimeout(this._initialTimer);clearInterval(this._timer);this._initialTimer=null;this._timer=null;this._curId=null;this._setTitle('');},
   start(station){
     this.stop();
     if(!station)return;
     this._curId=station.id;
     if(DS.enabled)return;
+    const generation=this._generation;
     const run=async()=>{
-      if(!S.cur||S.cur.id!==this._curId)return;
-      const t=await this._fetchFor(station.u);
-      if(S.cur&&S.cur.id===this._curId&&t&&t!==this._curTitle)this._setTitle(t);
+      if(document.hidden||!S.playing||DS.enabled||generation!==this._generation||S.cur?.id!==station.id||this._request)return;
+      const controller=new AbortController();this._request=controller;
+      try{
+        const t=await this._fetchFor(station.u,controller.signal);
+        if(!controller.signal.aborted&&!document.hidden&&S.playing&&generation===this._generation&&S.cur?.id===station.id&&t&&t!==this._curTitle)this._setTitle(t);
+      }finally{if(this._request===controller)this._request=null;}
     };
     const conservative=isPowerConstrained();
     if(conservative)this._initialTimer=setTimeout(run,15000);
@@ -827,10 +802,10 @@ const IM={
     // bu çağrıdan sonra kullanıcı istasyon değiştirirse (play() token'ı artırır)
     // aşağıdaki denemeler aud'a dokunmadan sessizce vazgeçer.
     const token=++_resumeToken;_resumePromise=null;
-    if(this._actx&&this._actx.state==='suspended'){try{this._actx.resume().catch(()=>{});}catch(e){}}
+    this.resumeAudioContext();
     aud.loop=false;aud.volume=0.01;
     const attempt=(n)=>{
-      if(!S.cur||this._uStop||token!==_resumeToken)return;
+      if(!S.cur||!S.should||this._uStop||token!==_resumeToken)return;
       aud.play().then(()=>{if(token!==_resumeToken)return;setPlaying(true);S.retries=0;setStatus('live');renderCards();IOS._startRecovery();if(cb)cb();}).catch(()=>{
         if(token!==_resumeToken)return;
         if(n<3){setTimeout(()=>{if(S.cur&&S.should&&!this._uStop&&token===_resumeToken){aud.volume=0.01;attachStream(S.cur.u,true).then(ok=>{if(ok&&token===_resumeToken)attempt(n+1);});}},1000*(n+1));}
@@ -843,16 +818,17 @@ const IM={
     if(DS.enabled||this._actx)return;
     const Ctx=window.AudioContext||window.webkitAudioContext;
     if(!Ctx)return;
-    try{this._actx=new Ctx();
-    this._actx.addEventListener('statechange',()=>{
-      const st=this._actx.state;
+    try{const ctx=new Ctx();this._actx=ctx;
+    ctx.addEventListener('statechange',()=>{
+      if(this._actx!==ctx)return;
+      const st=ctx.state;
       if(st==='interrupted'){
         this._actxState='interrupted';
         this.interruptCall();
       }
       else if(st==='suspended'&&this._actxState!=='suspended'){
         this._actxState='suspended';
-        if(!document.hidden&&!this._interrupted)this.interruptNotif();
+        if(!this._suspending&&!document.hidden&&S.should&&!this._interrupted)this.interruptNotif();
       }
       else if(st==='running'&&this._actxState){
         const prev=this._actxState;
@@ -865,7 +841,8 @@ const IM={
     });}catch(e){}
   },
   resumeAudioContext(){
-    if(DS.enabled||(!S.playing&&!S.should&&!this._interrupted))return;
+    if(document.hidden||DS.enabled||(!S.playing&&!S.should&&!this._interrupted))return;
+    this._suspending=false;
     if(!this._actx)this.initAudioContext();
     if(this._actx&&this._actx.state!=='running'){try{this._actx.resume().catch(()=>{});}catch(e){}}
   },
@@ -878,7 +855,7 @@ const IM={
   // context bir daha 'running'e dönemez ve kesinti→devam sinyali kaybolur.
   // Askıya alınmış context ihmal edilebilir güç/veri kullanır.
   suspendAudioContext(){
-    const ctx=this._actx;
+    const ctx=this._actx;this._suspending=true;
     if(ctx&&ctx.state==='running'){try{ctx.suspend().catch(()=>{});}catch(e){}}
   },
   setUStop(v){this._uStop=v;if(v){this._clearTimers();this._interrupted=false;this._type=null;this._hideBanner();}},
@@ -906,9 +883,10 @@ const IOS={
         if(IM._interrupted)IM.resume();
         else if(S.cur&&S.should&&a.paused&&!IM._uStop)this.resume(800);
         this._startRecovery();
+        if(S.cur&&S.playing)NP.start(S.cur);
         if(S.cur&&S.playing&&'mediaSession' in navigator)updateMeta(S.cur);
       }else{
-        this._stopRecovery();
+        this._stopRecovery();NP.stop();IM.suspendAudioContext();
       }
     });
     window.addEventListener('focus',()=>{
@@ -1039,7 +1017,7 @@ const aud=g('aud');
 const _httpWarned=new Set();
 let _resumePromise=null,_resumeToken=0,_lastAutoResumeAt=0;
 const AUTO_RESUME_MIN_GAP_MS=1500;
-let _iosPauseHoldPromise=null,_lastSoftPauseAt=0,_iosHoldSrc='',_iosHoldSwitching=false,_iosHoldReleaseTimer=null,_suppressIOSPauseHold=false;
+let _iosHoldSrc='',_iosHoldReleaseTimer=null,_suppressIOSPauseHold=false;
 /* ── HLS (m3u8) ──
    Safari HLS'i native çalar; diğer tarayıcılarda hls.js (yerelde vendorlanmış,
    yalnızca gerektiğinde yüklenir) MSE üzerinden çalar. */
@@ -1081,10 +1059,11 @@ function _onHlsFatal(){
 }
 /* Yayını <audio>'ya bağlar; m3u8 + MSE gerektiren tarayıcıda hls.js kullanır.
    false dönerse yayın bu tarayıcıda oynatılamaz (kullanıcı bilgilendirildi). */
-async function attachStream(url,force=false){
+async function attachStream(url,force=false,token=_resumeToken){
   if(needsHlsJs(url)){
     let Hls;
     try{Hls=await loadHlsLib();}catch{toast('HLS bileşeni yüklenemedi; bağlantıyı kontrol edin','err');return false;}
+    if(token!==_resumeToken||!S.should)return false;
     if(!Hls.isSupported()){toast('Bu tarayıcı HLS (m3u8) yayınını desteklemiyor','err');return false;}
     if(_hlsInstance&&_hlsUrl===url&&!force&&!aud.error)return true;
     destroyHls();
@@ -1183,9 +1162,6 @@ function play(id){
   renderCards();
 }
 function togglePlay(){if(!S.cur)return;haptic(12);S.playing?pauseForUser({source:'app'}):userResume();}
-function shouldSoftPauseForIOS(source){
-  return _isIOS()&&S.cur&&!aud.paused&&(source==='media-session'||source==='media-session-stop');
-}
 function getIOSHoldSrc(){
   if(_iosHoldSrc)return _iosHoldSrc;
   const sampleRate=8000,seconds=1,samples=sampleRate*seconds,dataBytes=samples*2;
@@ -1226,51 +1202,6 @@ function handleMediaSessionStop(){
   if(_isIOS()){pauseForUser({source:'media-session-stop'});return;}
   stopSession('media-session-stop',{clearCurrent:false});
 }
-async function startIOSHoldAudio(){
-  _iosHoldSwitching=true;
-  try{
-    try{aud.pause();}catch{}
-    destroyHls();
-    aud.loop=true;aud.muted=false;aud.src=getIOSHoldSrc();aud.load();
-    await aud.play();
-    return true;
-  }catch{
-    return false;
-  }finally{
-    setTimeout(()=>{_iosHoldSwitching=false;},600);
-  }
-}
-function enterIOSSoftPause(holdMs=25000){
-  S.should=false;S.resumable=true;S.softPaused=true;_lastSoftPauseAt=Date.now();
-  IOS._stopRecovery();NP.stop();
-  clearIOSHoldReleaseTimer();
-  if(holdMs>0)_iosHoldReleaseTimer=setTimeout(()=>{if(S.softPaused)releaseIOSHoldAudio();},holdMs);
-}
-function softPauseForIOS(){
-  // iOS ignores programmatic volume changes for live audio. Swap the live stream
-  // to a silent loop so the radio really stops while the PWA keeps Now Playing.
-  enterIOSSoftPause();
-  startIOSHoldAudio().catch(()=>{});
-  setPausedUI();updateMeta(S.cur);syncMediaSessionState();
-}
-function holdIOSMediaSessionAfterSystemPause(){
-  if(!_isIOS()||!S.cur||IM._uStop||IM._interrupted||(!S.resumable&&!S.should))return false;
-  enterIOSSoftPause();
-  setPausedUI();updateMeta(S.cur);syncMediaSessionState();
-  if(_iosPauseHoldPromise)return true;
-  _iosPauseHoldPromise=(async()=>{
-    try{
-      await _resumeAudioContext();
-      if(!S.cur||IM._uStop||!S.softPaused)return;
-      await startIOSHoldAudio();
-      if(S.cur&&!IM._uStop&&S.softPaused){setPausedUI();updateMeta(S.cur);syncMediaSessionState();}
-    }catch{
-      // If iOS refuses play() here, the PWA cannot reclaim the lock-screen target
-      // until Safari grants another media-session action or user gesture.
-    }finally{_iosPauseHoldPromise=null;}
-  })();
-  return true;
-}
 function handleIOSInterruptionPause(){
   // iOS, bir bildirim/arama/rota değişimi/kilit nedeniyle <audio>'yu kendiliğinden
   // duraklattı. Oynatma niyetini (S.should) KORUYORUZ ki:
@@ -1289,13 +1220,13 @@ function handleIOSInterruptionPause(){
 }
 function pauseForUser(opts={}){
   if(!S.cur)return;
-  const source=opts.source||'app';
+  _resumeToken++;_resumePromise=null;
   S.should=false;S.resumable=opts.resumable!==false;IM.setUStop(false);
   IOS._stopRecovery();NP.stop();
   // Kilit ekranından devam edebilmek için context'i kapatma, askıya al.
   IM.suspendAudioContext();
-  if(shouldSoftPauseForIOS(source))softPauseForIOS();
-  else{S.softPaused=false;releaseIOSHoldAudio();pauseAudioWithoutIOSHold();setPausedUI();}
+  // A real pause releases audio work; keep metadata for the system play action.
+  S.softPaused=false;releaseIOSHoldAudio();pauseAudioWithoutIOSHold();setPausedUI();
   // Keep station metadata alive so iOS lock screen / Control Center can resume.
   updateMeta(S.cur);syncMediaSessionState();
 }
@@ -1366,6 +1297,7 @@ async function resumeCurrentStation(opts={}){
     try{
       if(S.softPaused)S.softPaused=false;
       if(!(await prepareCurrentStreamForResume(source==='media-session')))throw new Error('attach-failed');
+      if(token!==_resumeToken||!S.should)return false;
       await aud.play();
       if(token===_resumeToken){setPlaying(true);S.retries=0;setStatus('live');IOS._startRecovery();NP.start(S.cur);renderCards();}
       return true;
@@ -1374,8 +1306,11 @@ async function resumeCurrentStation(opts={}){
       try{
         S.softPaused=false;
         if(!(await prepareCurrentStreamForResume(true)))throw new Error('attach-failed');
+        if(token!==_resumeToken||!S.should)return false;
         await _delay(source==='media-session'?350:600);
+        if(token!==_resumeToken||!S.should)return false;
         await _resumeAudioContext();
+        if(token!==_resumeToken||!S.should)return false;
         await aud.play();
         if(token===_resumeToken){setPlaying(true);S.retries=0;setStatus('live');IOS._startRecovery();NP.start(S.cur);renderCards();}
         return true;
@@ -2391,9 +2326,8 @@ function init(){
   setTimeout(()=>g('spl').classList.add('h'),1800);
 
   /* audio events */
-  aud.addEventListener('playing',()=>{if(S.softPaused)return;setPlaying(true);S.retries=0;IM.setUStop(false);setStatus('live');renderCards();IOS._startRecovery();});
+  aud.addEventListener('playing',()=>{if(!S.should||IM._uStop){pauseAudioWithoutIOSHold();return;}if(S.softPaused)return;setPlaying(true);S.retries=0;IM.setUStop(false);setStatus('live');renderCards();IOS._startRecovery();});
   aud.addEventListener('pause',()=>{
-    if(_iosHoldSwitching)return;
     if(_suppressIOSPauseHold){_suppressIOSPauseHold=false;return;}
     // S.should hâlâ true ise bu, kullanıcının bilerek duraklatması DEĞİL —
     // iOS'un istem dışı kesintisidir (bildirim, arama, rota değişimi, kilit).
@@ -2404,7 +2338,6 @@ function init(){
       handleIOSInterruptionPause();
       return;
     }
-    if(holdIOSMediaSessionAfterSystemPause())return;
     S.softPaused=false;
     setPausedUI();
     if(S.cur&&!IM._uStop)updateMeta(S.cur);
