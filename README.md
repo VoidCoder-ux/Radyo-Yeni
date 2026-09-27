@@ -11,10 +11,25 @@ Pulse Radio, tarayıcıda çalışan statik bir canlı radyo PWA uygulamasıdır
 - Media Session kontrolleri, tam ekran oynatıcı ve araba modu
 - Dokunmatik jestler: tam ekran oynatıcıyı ve alt sayfaları aşağı sürükleyip kapatma, mini oynatıcıda yatay kaydırarak istasyon değiştirme, yukarı kaydırarak tam ekranı açma
 - Aktif sekmeye yeniden dokunma listeyi en üste kaydırır (iOS'ta durum çubuğuna dokunma bu düzende çalışmadığı için)
-- Sistem/Koyu/Açık tema seçimi
-- PWA kurulumu, service worker cache ve offline fallback (fontlar dahil self-host)
+- Sistem/Koyu/Açık tema seçimi (koyu tema OLED için saf siyah)
+- Mini oynatıcıda hızlı "sonraki istasyon" düğmesi, geçmişi temizleme, pil dostu uyku zamanlayıcısı
+- PWA kurulumu, service worker cache ve offline fallback
 - JSON yedek dışa/içe aktarma, anonim yedek linki ve tek istasyonluk paylaşım linki
 - Basit veri kullanımı tahmini ve düşük bağlantı uyarıları
+
+## Tasarım ilkeleri (iPhone'u yormayan arayüz)
+
+Arayüz iPhone 13 / iOS 27 hedeflenerek sade, iOS'a özgü gruplu listelerle tasarlandı ve ısınmaya yol açan her şey bilinçli olarak dışarıda bırakıldı:
+
+- `backdrop-filter`, `filter: blur()` ve benzeri GPU süzgeçleri kullanılmaz; tüm yüzeyler opaktır.
+- Sonsuz (infinite) CSS animasyonu yoktur; yalnızca dokunuşla tetiklenen kısa `transform`/`opacity` geçişleri vardır. Hareketli arka plan, dalga çubuğu ve ilerleme animasyonu kaldırıldı.
+- Koyu tema saf siyahtır (`#000`); OLED ekranda siyah piksel güç harcamaz.
+- Web fontu yerine sistem fontu (SF Pro) kullanılır; indirme ve çözme maliyeti yoktur.
+- Uzun listeler `content-visibility` ile yalnızca ekrandayken çizilir.
+- Uyku zamanlayıcısı saniyelik geri sayımı yalnızca oynatıcı açık ve ekran görünürken çizer.
+- iOS'ta `audio.volume` salt okunur olduğundan çalışmayan ses kaydırıcısı gizlenir, yerine donanım tuşu notu gösterilir.
+
+Bu kurallar `tests/unit.test.mjs` içindeki "CSS ısınma bütçesi" testiyle korunur.
 
 ## Geliştirme
 
@@ -50,7 +65,6 @@ Uygulama statik dosyalarla çalışır. GitHub Pages veya herhangi bir statik ho
 - `js/`
 - `src/`
 - `data/`
-- `fonts/`
 - `screenshots/`
 - `icons/`
 

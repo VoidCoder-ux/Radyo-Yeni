@@ -188,30 +188,21 @@ test('orbGradient builds a soft gradient and mirrors darken() for the second orb
   }
 });
 
-test('background orbs never use filter:blur (iPhone ısınma regresyonu)', () => {
-  // blur() çekirdeği her karede GPU'da yeniden çalışır; ölçümde kaydırma
-  // 30 FPS'e düşüyordu. Orb'lar hazır radial-gradient kullanmalı.
-  const css = readFileSync('css/styles.css', 'utf8');
-  for (const line of css.split('\n')) {
-    if (!/^\s*\.?[^{]*(ambient-orb|fp-bg-orb|car-bg-orb)/.test(line)) continue;
-    assert.doesNotMatch(line, /filter:\s*blur\(/, `orb kuralı filter:blur kullanmamalı: ${line.trim().slice(0, 90)}`);
-  }
-  assert.match(css, /\.ambient-orb:nth-child\(1\)\{[^}]*radial-gradient/);
+test('CSS ısınma bütçesi: GPU süzgeci ve sonsuz animasyon yok (iPhone ısınma regresyonu)', () => {
+  // backdrop-filter / filter:blur her karede GPU'da yeniden çalışır; ölçümde
+  // kaydırma 30 FPS'e düşüyordu. Sonsuz bir animasyon ise ekran boştayken bile
+  // compositor'ı 60fps'te uyanık tutuyordu (58.6 -> 0.4 kare/sn farkı).
+  const css = readFileSync('css/styles.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(css, /backdrop-filter/, 'backdrop-filter kullanılmamalı');
+  assert.doesNotMatch(css, /(^|[;{\s])filter\s*:/m, 'filter (blur/brightness) kullanılmamalı');
+  assert.doesNotMatch(css, /\binfinite\b/, 'sonsuz animasyon kullanılmamalı');
 });
 
-test('canlı nokta yalnızca görünürken ve masaüstünde canlanır (boşta ısınma)', () => {
-  // Sürekli dönen tek bir animasyon bile compositor'ı 60fps'te uyanık tutuyor:
-  // ölçümde uygulama boştayken 58.6 kare/sn çiziyordu, bu ayrımla 0.4'e indi.
-  const css = readFileSync('css/styles.css', 'utf8');
-  const base = css.match(/^\.itr-dot,\.cdot\{[^}]*\}/m);
-  assert.ok(base, '.itr-dot,.cdot temel kuralı bulunamadı');
-  assert.doesNotMatch(base[0], /animation/, 'temel kural animasyon içermemeli; nabız görünürlüğe bağlanmalı');
-  // Nabız yalnızca #itr şeridi açıkken (.itr.s) çalışmalı
-  assert.match(css, /\.cdot,\.itr\.s \.itr-dot\{animation:livePulse/);
-  // Dokunmatik cihazlarda tamamen kapalı
-  const coarse = css.match(/@media \(pointer:coarse\)\{[\s\S]*?\n\}/);
-  assert.ok(coarse, 'pointer:coarse bloğu bulunamadı');
-  assert.match(coarse[0], /\.cdot,\.itr\.s \.itr-dot\{animation:none\}/);
+test('HTML dekoratif hareketli katman içermez', () => {
+  const html = readFileSync('index.html', 'utf8');
+  for (const cls of ['ambient', 'noise', 'fp-bg-orb', 'car-bg-orb', 'fp-vis', 'mp-progress']) {
+    assert.doesNotMatch(html, new RegExp(`class="[^"]*\\b${cls}\\b`), `${cls} katmanı geri gelmemeli`);
+  }
 });
 
 test('isHttpUrl flags only plain http URLs', () => {

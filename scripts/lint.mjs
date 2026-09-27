@@ -17,10 +17,6 @@ const required = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',
-  'fonts/plus-jakarta-sans-latin-wght-normal.woff2',
-  'fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2',
-  'fonts/outfit-latin-wght-normal.woff2',
-  'fonts/outfit-latin-ext-wght-normal.woff2',
   'screenshots/home.png',
   'screenshots/channels.png'
 ];

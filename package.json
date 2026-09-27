@@ -1,6 +1,6 @@
 {
   "name": "radyo-yeni",
-  "version": "16.1.7",
+  "version": "17.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,12 +8,9 @@
     "lint": "node scripts/lint.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "node tests/e2e.smoke.mjs",
-    "vendor:hls": "node scripts/vendor-hls.mjs",
-    "vendor:fonts": "node scripts/vendor-fonts.mjs"
+    "vendor:hls": "node scripts/vendor-hls.mjs"
   },
   "devDependencies": {
-    "@fontsource-variable/outfit": "^5.2.8",
-    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "hls.js": "^1.6.16",
     "playwright": "^1.56.1"
   }

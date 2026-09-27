@@ -15,7 +15,6 @@ import {
   debounce,
   relTime,
   darken,
-  orbGradient,
   icon as _ic,
   fetchWithTimeout,
   initialRoute,
@@ -138,15 +137,6 @@ function trapDialogFocus(e){
   return false;
 }
 
-/* ── RIPPLE EFFECT ── */
-function addRipple(e,el){
-  const r=document.createElement('span');r.className='ripple';
-  const rect=el.getBoundingClientRect();
-  const size=Math.max(rect.width,rect.height)*2;
-  r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
-  el.appendChild(r);setTimeout(()=>r.remove(),500);
-}
-
 /* ── HAPTİK ── kısa dokunsal geri bildirim (Android). reduce-motion'a saygı duyar;
    iOS Safari'de Vibration API yoktur, sessizce yok sayılır. */
 let _reduceMotion=false;
@@ -215,7 +205,7 @@ function attachMiniPlayerGestures(mp){
   let x0=0,y0=0,t0=0,tracking=false,horiz=false,dx=0,dy=0;
   const reset=()=>{tracking=false;horiz=false;mp.classList.remove('dragging');mp.style.transform='';mp.style.opacity='';};
   mp.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1||e.target.closest('#btnPP,#mpVol'))return;
+    if(e.touches.length!==1||e.target.closest('button'))return;
     x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=dy=0;t0=performance.now();
     tracking=true;horiz=false;
   },{passive:true});
@@ -228,7 +218,7 @@ function attachMiniPlayerGestures(mp){
       horiz=true;mp.classList.add('dragging');
     }
     e.preventDefault();
-    mp.style.transform=`translateX(calc(-50% + ${dx*.4}px))`;
+    mp.style.transform=`translateX(${dx*.4}px)`;
     mp.style.opacity=String(Math.max(.55,1-Math.abs(dx)/380));
   },{passive:false});
   const end=()=>{
@@ -382,6 +372,7 @@ const DU={
       const bytes=Math.round(dt*br*125); // kbps / 8 * 1000
       this.add(bytes);
       ST.add(S.cur.id,dt);
+      sleepCheck();
     },tickMs);
   },
   stopTick(){if(this._tickT){clearInterval(this._tickT);this._tickT=null;}this.flush();ST.flush();},
@@ -483,7 +474,7 @@ const THEME={
   apply(){
     const t=this.resolved();
     document.documentElement.dataset.theme=t;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',t==='light'?'#f4f5fb':'#06070f');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',t==='light'?'#f2f2f7':'#000000');
     this.syncUI();
   },
   set(mode){
@@ -532,9 +523,9 @@ function makeStarterBox(){
   const box=document.createElement('section');box.className='starter-box';
   box.innerHTML=`<h3>${_ic('radio')}Hazır listeyle başla</h3><p>Türkiye'nin popüler radyolarını tek dokunuşla ekle. Sonradan istediğini silebilir veya düzenleyebilirsin.</p>`;
   const row=document.createElement('div');row.className='starter-btns';
-  const b1=document.createElement('button');b1.type='button';b1.className='fbtn fk';b1.textContent='Popüler radyoları ekle';
+  const b1=document.createElement('button');b1.type='button';b1.className='btn btn-primary';b1.textContent='Popüler radyoları ekle';
   b1.addEventListener('click',()=>loadStarterPack(b1));
-  const b2=document.createElement('button');b2.type='button';b2.className='fbtn fc';b2.textContent='Kendim ekleyeceğim';
+  const b2=document.createElement('button');b2.type='button';b2.className='btn btn-secondary';b2.textContent='Kendim ekleyeceğim';
   b2.addEventListener('click',()=>{lsSave(LS.OB,true);renderCards();openMod();});
   row.appendChild(b1);row.appendChild(b2);box.appendChild(row);
   return box;
@@ -609,12 +600,15 @@ const NP={
   _setTitle(t){
     const clean=(t||'').replace(/\s+/g,' ').trim();
     this._curTitle=clean;
-    const np=g('npPill'),npTxt=g('npTxt'),mNow=g('mNow'),mName=g('mName'),carNp=g('carNp');
+    const np=g('npPill'),npTxt=g('npTxt'),mNow=g('mNow'),mName=g('mName'),carNp=g('carNp'),lyr=g('fpLyrics');
     if(clean){
       npTxt.textContent=clean;np.classList.add('s');
       mNow.textContent=clean;mNow.classList.add('s');
       mName?.classList.add('has-np');
       if(carNp)carNp.textContent=clean;
+      // Şarkı sözü bölümü yalnızca bir şarkı adı varken anlamlıdır; ekonomi
+      // modunda söz araması yapılmadığı için gizli kalır.
+      if(lyr){if(DS.enabled)lyr.classList.add('is-hidden');else lyr.classList.remove('is-hidden');}
       if('mediaSession' in navigator&&navigator.mediaSession.metadata&&S.cur){
         try{navigator.mediaSession.metadata=new MediaMetadata({
           title:clean,
@@ -627,6 +621,7 @@ const NP={
     }else{
       np.classList.remove('s');mNow.classList.remove('s');mName?.classList.remove('has-np');
       if(carNp)carNp.textContent='';
+      lyr?.classList.add('is-hidden');
       this._resetArtwork();
     }
   },
@@ -1013,7 +1008,8 @@ function _onHlsFatal(){
   const delay=Math.min(60000,2000*Math.pow(2,n));
   S.retries++;
   setStatus('retry');
-  if(S.retries<=5)toast(`Bağlantı yeniden deneniyor (${S.retries})`,'warn');
+  // Durum satırı zaten "Yeniden bağlanıyor" gösterir; her denemede toast basma.
+  if(S.retries===1)toast('Bağlantı koptu, yeniden deneniyor','warn');
   else if(S.retries===6)toast('Bağlantı düşük, denemeye devam ediliyor...','warn');
   setTimeout(()=>{
     if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
@@ -1060,7 +1056,6 @@ function setPlaying(v){
   if(v){S.should=true;S.resumable=true;S.softPaused=false;aud.muted=false;aud.volume=IM._baseVol;}
   updatePlayUI();
   syncMediaSessionState();
-  g('ambient').classList.toggle('playing',v);
   g('mplay').classList.toggle('playing',v);
   g('fplay').classList.toggle('playing',v);
   if(v)setVisible('installBar',false);
@@ -1069,7 +1064,7 @@ function setPlaying(v){
 }
 function updatePlayUI(){
   const ic=_ic(S.playing?'pause':'play',{fill:true});
-  g('btnPP').innerHTML=ic;g('btnFpPlay').innerHTML=ic;g('fpVis').classList.toggle('paused',!S.playing);
+  g('btnPP').innerHTML=ic;g('btnFpPlay').innerHTML=ic;
   ['btnPP','btnFpPlay','carPlay'].forEach(id=>g(id)?.setAttribute('aria-pressed',String(S.playing)));
 }
 function syncMediaSessionState(){
@@ -1085,17 +1080,25 @@ function syncMediaSessionState(){
 }
 function setPausedUI(){
   S.playing=false;updatePlayUI();
-  g('ambient').classList.remove('playing');
   g('mplay').classList.remove('playing');
   g('fplay').classList.remove('playing');
   DU.stopTick();updateCarNow();syncMediaSessionState();
 }
+const STATUS_HTML={
+  live:'<span class="cdot"></span>Canlı Yayın',
+  conn:'<span class="cdot warn-dot"></span>Bağlanıyor...',
+  load:'<span class="cdot warn-dot"></span>Yükleniyor...',
+  retry:'<span class="cdot warn-dot"></span>Yeniden bağlanıyor...'
+};
+let _lastStatus='';
 function setStatus(t){
-  const el=g('mStat');
-  if(t==='live')el.innerHTML='<span class="cdot"></span>Canlı Yayın';
-  else if(t==='conn')el.innerHTML='<span class="cdot warn-dot"></span>Bağlanıyor...';
-  else if(t==='load')el.innerHTML='<span class="cdot warn-dot"></span>Yükleniyor...';
-  else if(t==='retry')el.innerHTML='<span class="cdot warn-dot"></span>Yeniden bağlanıyor...';
+  const html=STATUS_HTML[t];if(!html)return;
+  g('mplay').dataset.st=t;
+  // Aynı durum tekrar gelirse DOM'a dokunma (gereksiz stil/yerleşim işi yok).
+  if(_lastStatus===t)return;
+  _lastStatus=t;
+  g('mStat').innerHTML=html;
+  const fp=g('fpStat');if(fp)fp.innerHTML=html;
 }
 
 /* ── PLAY ── */
@@ -1105,17 +1108,9 @@ function play(id){
   _resumeToken++;_resumePromise=null;
   S.cur=s;S.retries=0;S.should=true;S.resumable=true;IM.setUStop(false);
   g('mplay').classList.add('s');g('scr').classList.add('mp-on');
-  // Mini player icon
-  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
-  if(s.img){const mi=document.createElement('img');setImageSrc(mi,s.img);mi.alt='';mi.loading='lazy';mi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};mIco.appendChild(mi);}
-  else{mIco.textContent=s.e;}
+  setVisible('installBar',false);
+  renderStationArt(s);
   g('mName').textContent=s.n;
-  // Full player art
-  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
-  if(s.img){const fi=document.createElement('img');setImageSrc(fi,s.img);fi.alt='';fi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};fpArt.appendChild(fi);}
-  else{fpArt.textContent=s.e;}
-  g('fpOrb1').style.background=orbGradient(s.c||'#7c5cff');
-  g('fpOrb2').style.background=orbGradient(s.c||'#7c5cff',true);
   g('fpName').textContent=s.n;g('fpGenre').textContent=s.g||'Radyo';
   // Bitrate
   if(s.br>0){g('fpBitrate').textContent=`${s.br} kbps`;setVisible('fpBitrate',true,'inline-flex');}else{setVisible('fpBitrate',false);}
@@ -1312,8 +1307,13 @@ function toggleShuffle(){
   g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
   toast(_shuffle?'🔀 Karışık mod açık':'🔀 Karışık mod kapalı');
 }
-function setVol(v){const vol=v/100;if(!S.softPaused){aud.muted=false;aud.volume=vol;}IM.setBaseVol(vol);g('volM').value=v;g('volF').value=v;}
-function syncSliders(){const v=Math.round(IM._baseVol*100);g('volM').value=v;g('volF').value=v;}
+function setVol(v){v=Math.max(0,Math.min(100,Number(v)||0));const vol=v/100;if(!S.softPaused){aud.muted=false;aud.volume=vol;}IM.setBaseVol(vol);g('volF').value=v;}
+function syncSliders(){g('volF').value=Math.round(IM._baseVol*100);}
+/* iOS'ta <audio>.volume salt okunurdur (ses yalnızca donanım tuşlarıyla
+   değişir); çalışmayan kaydırıcıyı göstermek yerine bir not gösterilir. */
+function volumeSettable(){
+  try{const a=document.createElement('audio');a.volume=.5;return Math.abs(a.volume-.5)<.01;}catch{return false;}
+}
 
 /* ── SHARE ── */
 function shareStation(){
@@ -1345,7 +1345,7 @@ function updateFavBtn(){
   if(!S.cur)return;
   const on=fv.includes(S.cur.id);
   const btn=g('btnFpFav');
-  btn.innerHTML=_ic('heart',{fill:on});
+  btn.innerHTML=_ic(on?'heart-fill':'heart');
   btn.setAttribute('aria-pressed',String(on));
   if(on)btn.setAttribute('data-fav','on');else btn.removeAttribute('data-fav');
 }
@@ -1398,15 +1398,14 @@ function createCardChip(text,cls,title){
 }
 function createCardMeta(s,isOn,extraText){
   const gn=document.createElement('div');gn.className='cgen';
-  if(isOn)gn.appendChild(createCardChip(S.playing?'CANLI':'SEÇİLİ','live'));
+  if(isOn&&S.playing)gn.appendChild(createCardChip('CANLI','live'));
   const main=document.createElement('span');main.className='cgen-main';
-  if(isOn){const dot=document.createElement('span');dot.className='cdot';main.appendChild(dot);}
   main.appendChild(document.createTextNode(extraText||s.g||'Radyo'));gn.appendChild(main);
   if(!extraText&&s.br>0)gn.appendChild(createCardChip(s.br+'kbps'));
   if(isHttpUrl(s.u))gn.appendChild(createCardChip('HTTP','http','HTTPS altında engellenebilir'));
   return gn;
 }
-function makeCard(s,showDrag){
+function makeCard(s,showDrag,metaText){
   const isOn=S.cur?.id===s.id,isFav=fv.includes(s.id);
   const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
   div.setAttribute('role','group');div.setAttribute('aria-label',s.n);
@@ -1419,10 +1418,10 @@ function makeCard(s,showDrag){
   const ico=createCardLogo(s,isOn);
   const inf=document.createElement('div');inf.className='cinf';
   const nm=createCardName(s);
-  const gn=createCardMeta(s,isOn);
+  const gn=createCardMeta(s,isOn,metaText);
   inf.appendChild(nm);inf.appendChild(gn);
   const acts=document.createElement('div');acts.className='cacts';
-  const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.innerHTML=_ic('heart',{fill:isFav});fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
+  const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.innerHTML=_ic(isFav?'heart-fill':'heart');fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
   const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.innerHTML=_ic(isOn&&S.playing?'pause':'play',{fill:true});pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
   acts.appendChild(fb);acts.appendChild(pb);
   shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);return div;
@@ -1432,9 +1431,11 @@ function attachDel(container){
   if(_delegated.has(container))return;
   _delegated.add(container);
   container.addEventListener('click',e=>{
+    // Sıralama tutamacına dokunmak çalmayı başlatmamalı.
+    if(e.target.closest('[data-action="drag"]'))return;
     const fb=e.target.closest('[data-action="fav"]'),pb=e.target.closest('[data-action="play"]');
     if(fb){e.stopPropagation();toggleFav(fb.dataset.id);return;}
-    if(pb){addRipple(e,pb);const id=pb.dataset.id;if(S.cur?.id===id){togglePlay();}else{play(id);}}
+    if(pb){const id=pb.dataset.id;if(S.cur?.id===id){togglePlay();}else{play(id);}}
   });
   container.addEventListener('keydown',e=>{
     if(e.key!=='Enter'&&e.key!==' ')return;
@@ -1457,24 +1458,39 @@ function renderMiniLogo(parent,s,cls){
   return box;
 }
 function makeHomePill(s,label){
-  const btn=document.createElement('button');btn.className='home-pill';btn.type='button';
-  btn.setAttribute('aria-label',`${s.n} kanalını çal`);
-  const top=document.createElement('div');top.className='home-pill-top';
-  renderMiniLogo(top,s,'home-pill-ic');
-  const txt=document.createElement('div');txt.className='home-pill-text';
+  const isOn=S.cur?.id===s.id,live=isOn&&S.playing;
+  const btn=document.createElement('button');btn.className='home-pill'+(isOn?' is-on':'');btn.type='button';
+  btn.setAttribute('aria-label',`${s.n} kanalını ${live?'duraklat':'çal'}`);
+  const ic=renderMiniLogo(btn,s,'home-pill-ic');
+  if(live){const b=document.createElement('span');b.className='home-pill-badge';b.innerHTML='<span class="cdot"></span>CANLI';ic.appendChild(b);}
   const nm=document.createElement('div');nm.className='home-pill-name';nm.textContent=s.n;
   const meta=document.createElement('div');meta.className='home-pill-meta';meta.textContent=label||s.g||'Canlı Radyo';
-  txt.appendChild(nm);txt.appendChild(meta);top.appendChild(txt);
-  const chip=createCardChip(S.cur?.id===s.id&&S.playing?'CANLI':(s.br?`${s.br}kbps`:'Dinle'),S.cur?.id===s.id&&S.playing?'live':'');
-  btn.appendChild(top);btn.appendChild(chip);
-  btn.addEventListener('click',()=>play(s.id));
+  btn.appendChild(nm);btn.appendChild(meta);
+  btn.addEventListener('click',()=>{if(S.cur?.id===s.id)togglePlay();else play(s.id);});
   return btn;
 }
 function quickButton(icon,title,sub,handler){
   const btn=document.createElement('button');btn.className='quick-btn';btn.type='button';
   btn.innerHTML=`<span class="quick-ic">${_ic(icon)}</span><span class="quick-txt"><strong>${esc(title)}</strong><span>${esc(sub)}</span></span>`;
+  btn.setAttribute('aria-label',`${title}: ${sub}`);
   btn.addEventListener('click',handler);
   return btn;
+}
+function sectionTitle(text,count){
+  const ttl=document.createElement('div');ttl.className='ttl';
+  ttl.textContent=text+' ';
+  if(count!=null){const c=document.createElement('span');c.className='count-badge';c.textContent=count;ttl.appendChild(c);}
+  return ttl;
+}
+function cardList(stations,opts={}){
+  const list=document.createElement('div');list.className='list';
+  const f=document.createDocumentFragment();
+  stations.forEach((s,i)=>f.appendChild(makeCard(s,!!opts.drag,opts.meta?opts.meta(s,i):undefined)));
+  list.appendChild(f);
+  return list;
+}
+function emptyState(iconName,title,text,btnId){
+  return `<div class="empty"><span class="empty-ic">${_ic(iconName)}</span><h3>${esc(title)}</h3><p>${text}</p>${btnId?`<button class="empty-btn" id="${btnId}">${_ic('plus')}<span>Radyo Ekle</span></button>`:''}</div>`;
 }
 
 /* ── RENDER ── */
@@ -1493,89 +1509,96 @@ function renderCards(){
 }
 function renderHome(){
   const w=g('homeList');if(!w)return;
-  w.innerHTML='';w.className='pad home-pad';
-  const hero=document.createElement('section');hero.className='home-hero';
+  // Yeniden çizimde yatay şeritlerin kaydırma konumunu koru; aksi halde
+  // sağa kaydırılmış bir şeritte istasyona dokunmak şeridi başa sıçratır.
+  const stripPos=new Map([...w.querySelectorAll('.home-strip')].map(x=>[x.dataset.key,x.scrollLeft]));
+  w.innerHTML='';
+  const now=document.createElement('section');now.className='home-now';
   const current=S.cur||ch.find(x=>rc[0]?.id===x.id)||ch.find(x=>fv.includes(x.id))||ch[0]||null;
-  hero.innerHTML=`<div class="home-kicker">Canlı yayın</div><h1 class="home-title">Pulse Radio</h1><p class="home-sub">Favorilerini, son dinlediklerini ve radyolarını tek elle kontrol et.</p>`;
-  const now=document.createElement('div');now.className='home-now';
   if(current){
+    const isCur=S.cur?.id===current.id,live=isCur&&S.playing;
     renderMiniLogo(now,current,'home-now-ic');
-    const copy=document.createElement('div');
-    copy.innerHTML=`<div class="home-now-title">${esc(current.n)}</div><div class="home-now-sub">${S.cur?.id===current.id?(S.playing?'Canlı yayın':'Seçili istasyon'):'Hızlı başlat'} · ${esc(current.g||'Radyo')}</div>`;
-    const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label',`${current.n} kanalını çal`);btn.innerHTML=_ic(S.cur?.id===current.id&&S.playing?'pause':'play',{fill:true});btn.addEventListener('click',()=>{if(S.cur?.id===current.id){togglePlay();}else{play(current.id);}});
+    const copy=document.createElement('div');copy.className='home-now-copy';
+    const kicker=live?'Şimdi çalıyor':isCur?'Duraklatıldı':'Kaldığın yerden';
+    copy.innerHTML=`<div class="home-now-kicker${live?' is-live':''}">${kicker}</div><div class="home-now-title">${esc(current.n)}</div><div class="home-now-sub">${esc((live&&NP._curTitle)||current.g||'Radyo')}</div>`;
+    const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';
+    btn.setAttribute('aria-label',`${current.n} kanalını ${live?'duraklat':'çal'}`);
+    btn.innerHTML=_ic(live?'pause':'play',{fill:true});
+    btn.addEventListener('click',()=>{if(S.cur?.id===current.id){togglePlay();}else{play(current.id);}});
     now.appendChild(copy);now.appendChild(btn);
   }else{
-    now.innerHTML=`<div class="home-now-ic">${_ic('radio')}</div><div><div class="home-now-title">Başlamak için radyo ekle</div><div class="home-now-sub">Türkiye, dünya veya manuel yayın adresi</div></div>`;
+    now.innerHTML=`<div class="home-now-ic">${_ic('radio')}</div><div class="home-now-copy"><div class="home-now-title">Başlamak için radyo ekle</div><div class="home-now-sub">Türkiye, dünya veya manuel yayın adresi</div></div>`;
     const btn=document.createElement('button');btn.className='home-now-btn';btn.type='button';btn.setAttribute('aria-label','Radyo ekle');btn.innerHTML=_ic('plus');btn.addEventListener('click',openMod);now.appendChild(btn);
   }
-  hero.appendChild(now);w.appendChild(hero);
+  w.appendChild(now);
 
-  if(!ch.length&&!starterDismissed()){
-    w.appendChild(makeStarterBox());
-  }
+  if(!ch.length&&!starterDismissed())w.appendChild(makeStarterBox());
 
   const quick=document.createElement('div');quick.className='quick-grid';
   quick.appendChild(quickButton('heart','Favoriler',`${fv.length} kayıt`,()=>goPage('f')));
   quick.appendChild(quickButton('shuffle','Karıştır',ch.length>1?'Rastgele çal':'Kanal ekle',()=>{if(ch.length<2){openMod();return;}shufflePlay();}));
-  quick.appendChild(quickButton('car','Araba Modu','Büyük kontroller',openCar));
-  quick.appendChild(quickButton('plus','Radyo Ekle','Yeni yayın bul',openMod));
+  quick.appendChild(quickButton('car','Araba','Büyük kontroller',openCar));
+  quick.appendChild(quickButton('plus','Ekle','Yeni yayın bul',openMod));
   w.appendChild(quick);
-
-  const favStations=ch.filter(x=>fv.includes(x.id)).sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id)).slice(0,6);
-  const recentStations=rc.map(r=>ch.find(x=>x.id===r.id)).filter(Boolean).slice(0,6);
-  const suggested=getFiltered(ch).filter(x=>!fv.includes(x.id)).slice(0,6);
+  if(!ch.length)return;
 
   const chMap=new Map(ch.map(x=>[x.id,x]));
-  const topStations=ST.top(6).filter(([,sec])=>sec>=60).map(([id])=>chMap.get(id)).filter(Boolean);
+  const favStations=fv.map(id=>chMap.get(id)).filter(Boolean).slice(0,10);
+  const recentStations=rc.map(r=>chMap.get(r.id)).filter(Boolean).slice(0,10);
+  const topStations=ST.top(8).filter(([,sec])=>sec>=60).map(([id])=>chMap.get(id)).filter(Boolean);
+  const suggested=ch.filter(x=>!fv.includes(x.id)).slice(0,10);
   const sections=[
-    ['Hızlı Favoriler',favStations,'Favori'],
-    ['En Çok Dinlenenler',topStations,'⏱'],
-    ['Son Dinlenenler',recentStations,'Son'],
-    ['Önerilen',suggested,'Keşfet']
+    ['fav','Favoriler',favStations,s=>s.g||'Radyo'],
+    ['top','En Çok Dinlenenler',topStations,s=>ST.format(ST.of(s.id))],
+    ['recent','Son Dinlenenler',recentStations,s=>{const r=rc.find(x=>x.id===s.id);return r?relTime(r.t):'Son';}],
+    ['suggest','Keşfet',suggested,s=>s.g||'Radyo']
   ];
-  sections.forEach(([title,list,label])=>{
-    if(title==='En Çok Dinlenenler'&&!list.length)return; // istatistik birikince görünür
-    const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`${title} <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
-    if(list.length){
-      const strip=document.createElement('div');strip.className='home-strip';
-      list.forEach(s=>strip.appendChild(makeHomePill(s,title==='En Çok Dinlenenler'?ST.format(ST.of(s.id)):label)));
-      w.appendChild(strip);
-    }else{
-      const note=document.createElement('div');note.className='home-empty-note';note.textContent=title==='Önerilen'?'Henüz önerilecek kanal yok. Radyo ekleyerek başla.':'Bu bölüm dinleme alışkanlığına göre dolacak.';
-      w.appendChild(note);
+  sections.forEach(([key,title,list,label])=>{
+    if(!list.length){
+      if(key==='fav'){
+        w.appendChild(sectionTitle(title));
+        const note=document.createElement('div');note.className='home-empty-note';note.textContent='Kalp simgesiyle favori ekle; burada tek dokunuşla açılır.';
+        w.appendChild(note);
+      }
+      return;
     }
+    w.appendChild(sectionTitle(title,list.length));
+    const strip=document.createElement('div');strip.className='home-strip';strip.dataset.key=key;
+    list.forEach(s=>strip.appendChild(makeHomePill(s,label(s))));
+    w.appendChild(strip);
+    const pos=stripPos.get(key);if(pos)strip.scrollLeft=pos;
   });
-  attachDel(w);
+}
+function sortBar(){
+  const bar=document.createElement('div');bar.className='seg sort-bar';bar.setAttribute('role','group');bar.setAttribute('aria-label','Sıralama');
+  [['default','Eklenme'],['az','A → Z'],['za','Z → A']].forEach(([mode,label])=>{
+    const btn=document.createElement('button');btn.type='button';btn.textContent=label;
+    const on=mode===_sortMode;if(on)btn.className='a';btn.setAttribute('aria-pressed',String(on));
+    btn.addEventListener('click',()=>{if(_sortMode===mode)return;_sortMode=mode;renderAll();});
+    bar.appendChild(btn);
+  });
+  return bar;
 }
 function renderAll(){
   const w=g('allList');w.innerHTML='';
-  w.classList.add('card-grid');
+  if(!ch.length){w.innerHTML=emptyState('broadcast','Henüz kanal yok','Radyo arayıp ekleyin veya Türk radyolarını keşfedin','eaA');g('eaA')?.addEventListener('click',openMod);return;}
   const filtered=getFiltered(ch);
-  if(!ch.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('broadcast')}</span><h3>Henüz kanal yok</h3><p>Radyo arayıp ekleyin veya Türk radyolarını keşfedin</p><button class="empty-btn" id="eaA">${_ic('plus')}<span>Radyo Ekle</span></button></div>`;g('eaA')?.addEventListener('click',openMod);return;}
-  if(!filtered.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('search')}</span><h3>Sonuç bulunamadı</h3><p>Farklı bir filtre veya arama deneyin</p></div>`;return;}
-  // Sort bar
-  const sortBar=document.createElement('div');sortBar.className='sort-bar';
-  ['default','az','za'].forEach(mode=>{
-    const btn=document.createElement('button');btn.className='sort-btn'+(mode===_sortMode?' a':'');
-    btn.textContent={default:'Varsayılan',az:'A → Z',za:'Z → A'}[mode];
-    btn.addEventListener('click',()=>{_sortMode=mode;renderAll();});
-    sortBar.appendChild(btn);
-  });
-  const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Kanallarım <span class="count-badge">${filtered.length}</span>`;
-  w.appendChild(sortBar);w.appendChild(ttl);
-  const f=document.createDocumentFragment();filtered.forEach(s=>f.appendChild(makeCard(s)));w.appendChild(f);attachDel(w);
+  w.appendChild(sortBar());
+  if(!filtered.length){w.insertAdjacentHTML('beforeend',emptyState('search','Sonuç bulunamadı','Farklı bir filtre veya arama deneyin'));return;}
+  w.appendChild(sectionTitle('Tüm kanallar',filtered.length));
+  w.appendChild(cardList(filtered));attachDel(w);
 }
 function renderFavs(){
   const w=g('favList');w.innerHTML='';
-  w.classList.add('card-grid');
   const favStations=ch.filter(x=>fv.includes(x.id));
   favStations.sort((a,b)=>fv.indexOf(a.id)-fv.indexOf(b.id));
   const list=getFiltered(favStations);
-  if(!favStations.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('heart')}</span><h3>Favori yok</h3><p>Kanallarım sekmesinden kalp simgesi ile ekleyin<br>veya yeni radyo arayın</p><button class="empty-btn" id="eaF">${_ic('plus')}<span>Radyo Ekle</span></button></div>`;g('eaF')?.addEventListener('click',openMod);return;}
-  if(!list.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('search')}</span><h3>Filtre sonucu boş</h3><p>Farklı bir kategori deneyin</p></div>`;return;}
-  w.classList.add('fav-mode');
-  const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Favorilerim <span class="count-badge">${list.length}</span>`;w.appendChild(ttl);
-  const f=document.createDocumentFragment();list.forEach(s=>f.appendChild(makeCard(s,true)));w.appendChild(f);attachDel(w);initFavDrag(w);
+  if(!favStations.length){w.innerHTML=emptyState('heart','Favori yok','Kanallarım sekmesinde kalp simgesine dokunarak ekleyin','eaF');g('eaF')?.addEventListener('click',openMod);return;}
+  if(!list.length){w.innerHTML=emptyState('search','Filtre sonucu boş','Farklı bir kategori deneyin');return;}
+  // Sıralama yalnızca filtresiz, varsayılan düzende anlamlıdır.
+  const canDrag=_sortMode==='default'&&_filterGenre==='Tümü'&&!_searchQ&&list.length>1;
+  w.appendChild(sectionTitle('Favorilerim',list.length));
+  w.appendChild(cardList(list,{drag:canDrag}));attachDel(w);initFavDrag(w);
 }
 /* ── DRAG & DROP (favoriler) ── */
 const _dragReady=new WeakSet();
@@ -1639,46 +1662,38 @@ function initFavDrag(container){
 }
 function renderRecent(){
   const w=g('recList');w.innerHTML='';const chMap=new Map(ch.map(x=>[x.id,x]));const valid=rc.filter(r=>chMap.has(r.id));
-  w.classList.add('card-grid');
-  if(!valid.length){w.innerHTML=`<div class="empty"><span class="empty-ic">${_ic('history')}</span><h3>Geçmiş yok</h3><p>Dinlediğiniz radyolar burada görünür</p></div>`;return;}
-  const ttl=document.createElement('div');ttl.className='ttl';ttl.innerHTML=`Son Dinlenenler <span class="count-badge">${valid.length}</span>`;w.appendChild(ttl);
-  const f=document.createDocumentFragment();
-  valid.forEach((r,i)=>{
-    const s=chMap.get(r.id);
-    const isOn=S.cur?.id===s.id;
-    const div=document.createElement('div');div.className='card'+(isOn?' on':'')+(isOn&&S.playing?' playing':'');div.dataset.action='play';div.dataset.id=s.id;setStationTone(div,s);
-    div.setAttribute('role','group');div.setAttribute('aria-label',s.n);
-    if(isOn)div.setAttribute('aria-current','true');
-    const shell=document.createElement('div');shell.className='card-shell';
-    const ico=createCardLogo(s,isOn);
-    const inf=document.createElement('div');inf.className='cinf';
-    const nm=document.createElement('div');nm.className='cnam';nm.textContent=s.n;
-    const gn=createCardMeta(s,isOn,relTime(r.t));
-    const acts=document.createElement('div');acts.className='cacts';
-    const isFav=fv.includes(s.id);
-    const fb=document.createElement('button');fb.className='cfav';fb.dataset.action='fav';fb.dataset.id=s.id;fb.innerHTML=_ic('heart',{fill:isFav});fb.setAttribute('aria-label',isFav?'Favoriden çıkar':'Favorilere ekle');fb.setAttribute('aria-pressed',String(isFav));
-    const pb=document.createElement('button');pb.className='cplay';pb.dataset.action='play';pb.dataset.id=s.id;pb.innerHTML=_ic(isOn&&S.playing?'pause':'play',{fill:true});pb.setAttribute('aria-label',`${s.n} kanalını çal`);pb.setAttribute('aria-pressed',String(isOn&&S.playing));
-    acts.appendChild(fb);acts.appendChild(pb);inf.appendChild(nm);inf.appendChild(gn);shell.appendChild(ico);shell.appendChild(inf);shell.appendChild(acts);div.appendChild(shell);f.appendChild(div);
-  });
-  w.appendChild(f);attachDel(w);
+  if(!valid.length){w.innerHTML=emptyState('history','Geçmiş yok','Dinlediğiniz radyolar burada görünür');return;}
+  const ttl=sectionTitle('Son dinlenenler',valid.length);
+  const clr=document.createElement('button');clr.type='button';clr.className='txt-btn ttl-act';clr.textContent='Temizle';
+  clr.addEventListener('click',clearHistory);ttl.appendChild(clr);
+  w.appendChild(ttl);
+  w.appendChild(cardList(valid.map(r=>chMap.get(r.id)),{meta:(_s,i)=>relTime(valid[i].t)}));
+  attachDel(w);
+}
+async function clearHistory(){
+  const ok=await confirm2('Geçmişi temizle','Son dinlenenler listesi silinecek. Kanallar ve favoriler korunur.','Temizle');
+  if(!ok)return;
+  const prev=rc.slice();rc=[];
+  if(!dataSave()){rc=prev;toast('Geçmiş temizlenemedi','err');return;}
+  renderCards();toast('Geçmiş temizlendi','ok');
 }
 function renderSettings(){
   const w=g('chList');g('chCount').textContent=ch.length;w.innerHTML='';
   g('statCh').textContent=ch.length;g('statFav').textContent=fv.length;g('statRec').textContent=rc.length;
   const stTime=g('statTime');if(stTime){const t=ST.total();stTime.textContent=t<60?'0 dk':ST.format(t);}
-  if(!ch.length){const r=document.createElement('div');r.className='set-row is-static';r.innerHTML=`<div class="set-ic ic-muted">${_ic('broadcast')}</div><div class="set-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div>`;w.appendChild(r);return;}
+  if(!ch.length){w.innerHTML=`<div class="row is-static"><div class="row-ic tint-gray">${_ic('broadcast')}</div><div class="row-lb"><h4>Kanal yok</h4><p>Radyo arayıp ekleyin</p></div></div>`;return;}
   const f=document.createDocumentFragment();
   ch.forEach(s=>{
-    const r=document.createElement('div');r.className='set-row is-static';
-    const ic=document.createElement('div');ic.className='set-ic';ic.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;ic.style.color='#fff';
-    if(s.img){const img=document.createElement('img');setImageSrc(img,s.img);img.alt='';img.loading='lazy';img.className='set-logo-img';img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(img);}
+    const r=document.createElement('div');r.className='row is-static has-logo';
+    const ic=document.createElement('div');ic.className='row-ic is-logo';ic.style.background=`linear-gradient(145deg,${s.c||COLORS[0]},${darken(s.c||COLORS[0])})`;
+    if(s.img){const img=document.createElement('img');setImageSrc(img,s.img);img.alt='';img.loading='lazy';img.decoding='async';img.onerror=function(){this.replaceWith(document.createTextNode(s.e));};ic.appendChild(img);}
     else{ic.textContent=s.e;}
-    const lb=document.createElement('div');lb.className='set-lb';
-    const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=(s.g||'Radyo')+(s.br?' · '+s.br+'kbps':'');
+    const lb=document.createElement('div');lb.className='row-lb';
+    const h4=document.createElement('h4');h4.textContent=s.n;const p=document.createElement('p');p.textContent=(s.g||'Radyo')+(s.br?' · '+s.br+' kbps':'')+(isHttpUrl(s.u)?' · HTTP':'');
     lb.appendChild(h4);lb.appendChild(p);
-    const acts=document.createElement('div');acts.className='set-row-acts';
-    const eb=document.createElement('button');eb.className='edit-b';eb.dataset.action='edit';eb.dataset.id=s.id;eb.innerHTML=_ic('edit');eb.setAttribute('aria-label',`${s.n} kanalını düzenle`);
-    const btn=document.createElement('button');btn.className='del-b';btn.dataset.action='del';btn.dataset.id=s.id;btn.innerHTML=_ic('trash');btn.setAttribute('aria-label',`${s.n} kanalını sil`);
+    const acts=document.createElement('div');acts.className='row-acts';
+    const eb=document.createElement('button');eb.type='button';eb.className='icon-btn';eb.dataset.action='edit';eb.dataset.id=s.id;eb.innerHTML=_ic('edit');eb.setAttribute('aria-label',`${s.n} kanalını düzenle`);
+    const btn=document.createElement('button');btn.type='button';btn.className='icon-btn danger';btn.dataset.action='del';btn.dataset.id=s.id;btn.innerHTML=_ic('trash');btn.setAttribute('aria-label',`${s.n} kanalını sil`);
     acts.appendChild(eb);acts.appendChild(btn);
     r.appendChild(ic);r.appendChild(lb);r.appendChild(acts);f.appendChild(r);
   });
@@ -1708,15 +1723,15 @@ function renderChips(){
 
 /* ── NAV ── */
 let _curPage='h';
+const PAGE_TITLES={h:'Pulse Radio',f:'Favoriler',a:'Kanallarım',r:'Son Dinlenenler',s:'Ayarlar'};
 function goPage(p){
   _curPage=p;
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('a'));
   document.querySelectorAll('.bnav button').forEach(x=>{x.classList.remove('a');x.removeAttribute('aria-current');});
   g({h:'pH',f:'pF',a:'pA',r:'pR',s:'pS'}[p]).classList.add('a');
   const nav=g({h:'navH',f:'navF',a:'navA',r:'navR',s:'navS'}[p]);nav.classList.add('a');nav.setAttribute('aria-current','page');
-  const showSearch=(p==='h'||p==='f'||p==='a')&&ch.length>0;
-  setVisible('searchBar',showSearch,'block');
-  setVisible('chips',showSearch,'flex');
+  g('pgTitle').textContent=PAGE_TITLES[p]||'Pulse Radio';
+  updateSearchVisibility();
   if(p==='h')renderHome();if(p==='f')renderFavs();if(p==='a')renderAll();if(p==='r')renderRecent();if(p==='s')renderSettings();
   g('scr').scrollTop=0;
 }
@@ -1726,9 +1741,10 @@ let _fpPrevFocus=null,_carPrevFocus=null;
 function openFP(){
   _fpPrevFocus=document.activeElement;
   setDialogOpen('fplay',true);syncSliders();syncIntUI();g('btnFpShuffle').classList.toggle('shuffle-on',_shuffle);g('btnFpShuffle').setAttribute('aria-pressed',String(_shuffle));
+  _sleepLabel();_sleepTick(true);
   setTimeout(()=>g('btnFpClose').focus?.(),30);
 }
-function closeFP(){if(_deferDialogClose('fplay'))return;setDialogOpen('fplay',false);setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
+function closeFP(){if(_deferDialogClose('fplay'))return;setDialogOpen('fplay',false);_sleepTick(false);setTimeout(()=>_fpPrevFocus?.focus?.(),0);}
 
 /* ── CAR MODE ── */
 let _carOpen=false,_wakeLock=null,_wakeRetryT=null,_wakeRetryMs=1000;
@@ -1800,14 +1816,35 @@ function renderCarFavs(){
   w.onclick=e=>{const b=e.target.closest('.car-fav');if(b)play(b.dataset.id);};
 }
 
-/* ── SLEEP ── */
-let _slT=null;
-function setSleep(min){
-  if(_slT){clearInterval(_slT);_slT=null;}const lbl=g('sleepLbl');
-  if(min===0){lbl.classList.remove('s');return;}
-  const end=Date.now()+min*60000;lbl.classList.add('s');
-  _slT=setInterval(()=>{const l=end-Date.now();if(l<=0){stopSession('sleep-timer');clearInterval(_slT);_slT=null;lbl.classList.remove('s');g('sleepSel').value='0';toast('Uyku zamanlayıcısı: durdu');return;}lbl.textContent=`⏰ ${Math.floor(l/60000)}:${Math.floor((l%60000)/1000).toString().padStart(2,'0')}`;},1000);
-  toast(`⏰ ${min} dk sonra durur`);
+/* ── SLEEP ──
+   Saniyelik geri sayım yalnızca tam ekran oynatıcı açık ve ekran görünürken
+   çizilir; arka planda tek bir zamanlayıcı + görünür olunca/veri tikinde
+   yapılan kontrol yeterlidir (her saniye uyanan bir interval pil harcar). */
+let _slEnd=0,_slEndT=null,_slTickT=null;
+function _sleepLabel(){
+  const lbl=g('sleepLbl');if(!lbl)return;
+  if(!_slEnd){lbl.textContent='Kapalı';lbl.classList.remove('s');return;}
+  const l=Math.max(0,_slEnd-Date.now());
+  lbl.textContent=`${Math.floor(l/60000)}:${Math.floor((l%60000)/1000).toString().padStart(2,'0')} sonra durur`;
+  lbl.classList.add('s');
+}
+function _sleepTick(on){
+  clearInterval(_slTickT);_slTickT=null;
+  if(on&&_slEnd&&!document.hidden&&g('fplay').classList.contains('s'))_slTickT=setInterval(()=>{sleepCheck();_sleepLabel();},1000);
+}
+function sleepCheck(){
+  if(!_slEnd||Date.now()<_slEnd)return;
+  setSleep(0,true);
+  if(S.cur&&(S.playing||S.should))pauseForUser({source:'sleep-timer'});
+  toast('Uyku zamanlayıcısı: yayın durduruldu');
+}
+function setSleep(min,silent){
+  clearTimeout(_slEndT);_slEndT=null;
+  _slEnd=min>0?Date.now()+min*60000:0;
+  const sel=g('sleepSel');if(sel&&String(sel.value)!==String(min||0))sel.value=String(min||0);
+  if(_slEnd)_slEndT=setTimeout(sleepCheck,min*60000+50);
+  _sleepLabel();_sleepTick(true);
+  if(!silent)toast(_slEnd?`⏰ ${min} dk sonra durur`:'Uyku zamanlayıcısı kapalı');
 }
 
 /* ── ADD/DEL ── */
@@ -1834,8 +1871,9 @@ async function delCh(id){
   renderCards();renderSettings();updateSearchVisibility();updateNavBadge();toast('Silindi');
 }
 
+/* Arama ve tür filtresi yalnızca liste sayfalarında görünür; ana sayfa sade kalır. */
 function updateSearchVisibility(){
-  const show=(_curPage==='h'||_curPage==='f'||_curPage==='a')&&ch.length>0;
+  const show=(_curPage==='f'||_curPage==='a')&&ch.length>0;
   setVisible('searchBar',show,'block');
   setVisible('chips',show,'flex');
 }
@@ -1851,7 +1889,7 @@ function closeMod(){
   g('fgN').classList.remove('bad');g('fgU').classList.remove('bad');
   if(_editId){
     _editId=null;
-    g('addModalTitle').innerHTML=`${_ic('radio')}Radyo Ekle`;
+    g('addModalTitle').textContent='Radyo Ekle';
     g('btnMAdd').textContent='Ekle';
     document.querySelector('.add-tabs').classList.remove('is-hidden');
     _activateAddTab('tr');
@@ -1860,7 +1898,7 @@ function closeMod(){
 function openEditCh(id){
   const s=ch.find(x=>x.id===id);if(!s)return;
   _editId=id;
-  g('addModalTitle').innerHTML=`${_ic('edit')}Radyoyu Düzenle`;
+  g('addModalTitle').textContent='Radyoyu Düzenle';
   g('btnMAdd').textContent='Kaydet';
   document.querySelector('.add-tabs').classList.add('is-hidden');
   _activateAddTab('manual');
@@ -2077,16 +2115,23 @@ async function autoFetchLogos(limit=20){
     toast(left?`${updated} logo indirildi, ${left} sonraya bırakıldı`:`${updated} logo otomatik indirildi`,'ok');
   }
 }
+/* Mini ve tam ekran oynatıcıdaki istasyon görselini tek yerden çizer. Tam
+   ekran arka planı istasyon rengine göre statik bir geçişle tonlanır
+   (--fp-tint); hareketli/bulanık katman yoktur. */
+function renderStationArt(s){
+  const color=s.c||COLORS[0],grad=`linear-gradient(145deg,${color},${darken(color)})`;
+  const fill=(box)=>{
+    box.innerHTML='';box.style.background=grad;
+    if(s.img){const im=document.createElement('img');setImageSrc(im,s.img);im.alt='';im.decoding='async';im.onerror=function(){this.replaceWith(document.createTextNode(s.e));};box.appendChild(im);}
+    else{box.textContent=s.e;}
+  };
+  fill(g('mIco'));fill(g('fpArt'));
+  g('fplay').style.setProperty('--fp-tint',color);
+}
 function updatePlayerArt(){
   if(!S.cur)return;
-  const s=S.cur;
-  const mIco=g('mIco');mIco.innerHTML='';mIco.style.background=`linear-gradient(145deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
-  if(s.img){const mi=document.createElement('img');setImageSrc(mi,s.img);mi.alt='';mi.loading='lazy';mi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};mIco.appendChild(mi);}
-  else{mIco.textContent=s.e;}
-  const fpArt=g('fpArt');fpArt.innerHTML='';fpArt.style.background=`linear-gradient(135deg,${s.c||'#7c5cff'},${darken(s.c||'#7c5cff')})`;
-  if(s.img){const fi=document.createElement('img');setImageSrc(fi,s.img);fi.alt='';fi.loading='lazy';fi.onerror=function(){this.replaceWith(document.createTextNode(s.e));};fpArt.appendChild(fi);}
-  else{fpArt.textContent=s.e;}
-  updateMeta(s);
+  renderStationArt(S.cur);
+  updateMeta(S.cur);
 }
 
 /* ── EXPORT/IMPORT/RESET ── */
@@ -2124,7 +2169,7 @@ async function doReset(){
 }
 
 /* ── KEYBOARD SHORTCUTS ── */
-let _kbdTimer=null;
+let _kbdTimer=null,_mutedVol=0;
 function showKbdHint(text){
   const el=g('kbdHint');el.textContent=text;el.classList.add('s');
   clearTimeout(_kbdTimer);_kbdTimer=setTimeout(()=>el.classList.remove('s'),1500);
@@ -2147,9 +2192,9 @@ function handleKeyboard(e){
     case 'Space':e.preventDefault();if(S.cur){togglePlay();showKbdHint(S.playing?'⏸ Durduruldu':'▶ Oynatılıyor');}break;
     case 'ArrowLeft':e.preventDefault();prevSt();if(S.cur)showKbdHint('⏮ '+S.cur.n);break;
     case 'ArrowRight':e.preventDefault();nextSt();if(S.cur)showKbdHint('⏭ '+S.cur.n);break;
-    case 'ArrowUp':e.preventDefault();setVol(Math.min(100,parseInt(g('volM').value)+5));showKbdHint('🔊 '+g('volM').value+'%');break;
-    case 'ArrowDown':e.preventDefault();setVol(Math.max(0,parseInt(g('volM').value)-5));showKbdHint('🔉 '+g('volM').value+'%');break;
-    case 'KeyM':if(aud.volume>0){aud._prevVol=aud.volume;setVol(0);showKbdHint('🔇 Sessiz');}else{setVol(Math.round((aud._prevVol||0.8)*100));showKbdHint('🔊 Ses açıldı');}break;
+    case 'ArrowUp':e.preventDefault();setVol(parseInt(g('volF').value,10)+5);showKbdHint('🔊 '+g('volF').value+'%');break;
+    case 'ArrowDown':e.preventDefault();setVol(parseInt(g('volF').value,10)-5);showKbdHint('🔉 '+g('volF').value+'%');break;
+    case 'KeyM':if(IM._baseVol>0){_mutedVol=IM._baseVol;setVol(0);showKbdHint('🔇 Sessiz');}else{setVol(Math.round((_mutedVol||0.8)*100));showKbdHint('🔊 Ses açıldı');}break;
     case 'KeyF':if(S.cur){toggleFav(S.cur.id);showKbdHint(fv.includes(S.cur.id)?'❤️ Favorilere eklendi':'💔 Favoriden çıkarıldı');}break;
     case 'KeyS':toggleShuffle();break;
   }
@@ -2264,10 +2309,9 @@ function init(){
   // Auto-fetch missing logos after a short delay
   scheduleAutoFetchLogos(2500,5);
 
-  // Visualizer bars — HTML'deki statik çubukları temizle ki stilsiz 5 çubuk
-  // JS'in rastgele stillendirdiği 12'liyle yan yana kalmasın.
-  const vis=g('fpVis');vis.innerHTML='';
-  for(let i=0;i<12;i++){const b=document.createElement('i');b.style.height=(Math.random()*38+6)+'px';b.style.animationDelay=(Math.random()*.5)+'s';b.style.animationDuration=(.3+Math.random()*.4)+'s';vis.appendChild(b);}
+  // iOS'ta ses yalnızca donanım tuşlarıyla değişir: çalışmayan kaydırıcıyı gizle.
+  if(!volumeSettable())document.documentElement.classList.add('no-vol');
+  _sleepLabel();
 
   IM.init(aud);IOS.init(aud);setupMS();setupInstallPrompt();setupOfflineDetection();setupAccessibleRows();
 
@@ -2287,7 +2331,8 @@ function init(){
     document.removeEventListener('touchstart',u);
   },{once:true});
 
-  setTimeout(()=>g('spl').classList.add('h'),1800);
+  // Açılış ekranı yalnızca ilk boyamayı örter; kullanıcıyı bekletmez.
+  requestAnimationFrame(()=>setTimeout(()=>g('spl').classList.add('h'),350));
 
   /* audio events */
   aud.addEventListener('playing',()=>{if(!S.should||IM._uStop){pauseAudioWithoutIOSHold();return;}if(S.softPaused)return;setPlaying(true);S.retries=0;IM.setUStop(false);setStatus('live');renderCards();IOS._startRecovery();});
@@ -2315,7 +2360,7 @@ function init(){
     const delay=Math.min(60000,2000*Math.pow(2,n));
     S.retries++;
     setStatus('retry');
-    if(S.retries<=5)toast(`Bağlantı yeniden deneniyor (${S.retries})`,'warn');
+    if(S.retries===1)toast('Bağlantı koptu, yeniden deneniyor','warn');
     else if(S.retries===6)toast('Bağlantı düşük, denemeye devam ediliyor...','warn');
     setTimeout(()=>{
       if(!S.cur||!S.should||IM._uStop||IM._interrupted)return;
@@ -2358,8 +2403,7 @@ function init(){
   // stopPropagation, document'taki global Space kısayolunun da tetiklenmesini önler.
   g('mplay').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target===e.currentTarget){e.preventDefault();e.stopPropagation();openFP();}});
   g('btnPP').addEventListener('click',e=>{e.stopPropagation();togglePlay();});
-  g('mpVol').addEventListener('click',e=>e.stopPropagation());
-  g('volM').addEventListener('input',e=>{e.stopPropagation();setVol(e.target.value);});
+  g('btnMpNext').addEventListener('click',e=>{e.stopPropagation();if(ch.length<2){toast('En az 2 kanal gerekli','warn');return;}haptic(8);nextSt();});
 
   /* full player */
   g('btnFpClose').addEventListener('click',closeFP);
@@ -2367,9 +2411,7 @@ function init(){
 
   /* alt sayfalar da aşağı sürüklenerek kapanır (kendi kaydırma alanları) */
   [['addMod','.modal-c',closeMod],
-   ['iosInstallOv','.ios-box',closeIOSInstall],
-   ['cfmOv','.cfm-box',()=>_cfmClose(false)],
-   ['inpOv','.cfm-box',()=>_inpClose(null)]].forEach(([id,sel,onClose])=>{
+   ['iosInstallOv','.ios-box',closeIOSInstall]].forEach(([id,sel,onClose])=>{
     const box=g(id)?.querySelector(sel);
     attachSheetDrag(box,{scroller:box,onClose,threshold:80});
   });
@@ -2383,16 +2425,12 @@ function init(){
   g('sleepSel').addEventListener('change',e=>setSleep(Number(e.target.value)));
 
   /* lyrics panel */
-  const lHdr = g('fpLyricsHdr');
-  if(lHdr) {
-    lHdr.addEventListener('click', ()=>{
-      const p = g('fpLyrics');
-      p.classList.toggle('open');
-    });
-  }
+  g('fpLyricsHdr').addEventListener('click',()=>{const open=g('fpLyrics').classList.toggle('open');g('fpLyricsHdr').setAttribute('aria-expanded',String(open));});
 
   /* interrupt panel */
   g('fpIntHdr').addEventListener('click',()=>{const open=g('fpIntBody').classList.toggle('open');g('fpIntHdr').classList.toggle('open',open);g('fpIntHdr').setAttribute('aria-expanded',String(open));});
+  ['fpLyricsHdr','fpIntHdr'].forEach(id=>g(id).addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.currentTarget.click();}}));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){_sleepTick(false);}else{sleepCheck();_sleepLabel();_sleepTick(true);}});
   g('swCall').addEventListener('change',e=>{IM.opts.call=e.target.checked;saveIntOpts();toast(e.target.checked?'Arama koruması açık':'Arama koruması kapalı');});
   g('swNotif').addEventListener('change',e=>{IM.opts.notif=e.target.checked;saveIntOpts();toast(e.target.checked?'Bildirim ses kısma açık':'Bildirim ses kısma kapalı');});
   g('resumeDelay').addEventListener('input',e=>{const v=parseInt(e.target.value);IM.opts.resumeDelay=v;g('resumeDelayVal').textContent=(v/1000).toFixed(2).replace(/\.?0+$/,'')+'s';});
